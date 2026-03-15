@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     const categoryIcon = getCategoryIcon(role_category);
     const isFilled = status === "Filled";
     const websiteUrl =
-      process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+      process.env.NEXT_PUBLIC_SITE_URL || "https://auros-applactions.vercel.app/apply";
 
     const embed = isFilled
       ? {

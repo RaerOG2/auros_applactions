@@ -82,7 +82,7 @@ export async function POST(req: Request) {
     const embedColor = getCategoryColor(category);
     const categoryIcon = getCategoryIcon(category);
     const logoUrl = process.env.AUROS_LOGO_URL || undefined;
-    const adminBaseUrl = process.env.ADMIN_DASHBOARD_URL || "http://localhost:3000/admin";
+    const adminBaseUrl = process.env.ADMIN_DASHBOARD_URL || "https://auros-applactions.vercel.app/admin";
 
     const encodedTrackingCode = encodeURIComponent(safeText(trackingCode));
     const reviewUrl = `${adminBaseUrl}?tracking=${encodedTrackingCode}&action=review`;
