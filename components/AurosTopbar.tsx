@@ -51,6 +51,13 @@ export default function AurosTopbar({ current }: AurosTopbarProps) {
     overflow: "hidden",
   };
 
+  const logoImageStyle: React.CSSProperties = {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    display: "block",
+  };
+
   const brandTextWrapStyle: React.CSSProperties = {
     minWidth: 0,
   };
@@ -126,17 +133,12 @@ export default function AurosTopbar({ current }: AurosTopbarProps) {
         <div className="auros-topbar-inner" style={barStyle}>
           <div className="auros-topbar-brand" style={brandStyle}>
             <div style={logoBoxStyle}>
-  <img
-    src="/auros-logo.png"
-    alt="Auros"
-    style={{
-      width: "100%",
-      height: "100%",
-      objectFit: "cover",
-    }}
-  />
-</div>
-
+              <img
+                src="/auros_royale_pfp_draft_1.png"
+                alt="Auros Logo"
+                style={logoImageStyle}
+              />
+            </div>
 
             <div style={brandTextWrapStyle}>
               <p style={brandTitleStyle}>Auros</p>
