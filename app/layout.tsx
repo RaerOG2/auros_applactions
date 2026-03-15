@@ -12,11 +12,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Auros Royale Applications",
   description: "Official application portal for Auros Royale",
   icons: {
     icon: "/auros_royale_pfp_draft_1.png",
+    shortcut: "/auros_royale_pfp_draft_1.png",
+    apple: "/auros_royale_pfp_draft_1.png",
   },
 };
 
