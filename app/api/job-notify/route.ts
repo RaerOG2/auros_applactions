@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     const categoryIcon = getCategoryIcon(role_category);
     const color = getCategoryColor(role_category);
     const logoUrl = process.env.AUROS_LOGO_URL || undefined;
-    const websiteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://auros-applactions.vercel.app/apply";
+    const websiteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://auros-applactions.vercel.app";
     const applyUrl = `${websiteUrl}/apply`;
 
     const requirementsText =
