@@ -6,11 +6,20 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
+function normalizeEmail(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function normalizeTrackingCode(value: string) {
+  return value.trim().toUpperCase().replace(/\s+/g, "");
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const email = String(body?.email || "").trim().toLowerCase();
-    const trackingCode = String(body?.trackingCode || "").trim();
+
+    const email = normalizeEmail(String(body?.email || ""));
+    const trackingCode = normalizeTrackingCode(String(body?.trackingCode || ""));
 
     if (!email || !trackingCode) {
       return NextResponse.json(
@@ -33,8 +42,7 @@ export async function POST(req: NextRequest) {
         )
       `
       )
-      .ilike("email", email)
-      .eq("tracking_code", trackingCode)
+      .ilike("tracking_code", trackingCode)
       .maybeSingle();
 
     if (error) {
@@ -46,6 +54,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (!data) {
+      return NextResponse.json({ result: null }, { status: 200 });
+    }
+
+    const storedEmail = normalizeEmail(data.email || "");
+
+    if (storedEmail !== email) {
       return NextResponse.json({ result: null }, { status: 200 });
     }
 

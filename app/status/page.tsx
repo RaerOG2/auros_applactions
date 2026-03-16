@@ -114,7 +114,7 @@ export default function StatusPage() {
 
   async function checkStatus() {
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedTrackingCode = trackingCode.trim();
+    const normalizedTrackingCode = trackingCode.trim().toUpperCase().replace(/\s+/g, "");
 
     if (!normalizedEmail || !normalizedTrackingCode) {
       alert("Please enter your email and tracking code.");
@@ -141,7 +141,6 @@ export default function StatusPage() {
 
       if (!response.ok) {
         alert(payload?.error || "Could not check status.");
-        setLoading(false);
         return;
       }
 
