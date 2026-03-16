@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "../../lib/supabase";
 import AurosBackground from "../../components/AurosBackground";
 import AurosTopbar from "../../components/AurosTopbar";
 
@@ -63,6 +62,25 @@ const pillStyle: React.CSSProperties = {
   fontWeight: 700,
 };
 
+const messageBoxStyle: React.CSSProperties = {
+  padding: "18px",
+  borderRadius: "18px",
+  background: "rgba(11, 21, 43, 0.88)",
+  border: "1px solid #22304d",
+  color: "#9fb0d0",
+};
+
+type StatusResult = {
+  name: string | null;
+  email: string | null;
+  status: string | null;
+  tracking_code: string | null;
+  created_at: string | null;
+  jobs?: {
+    title?: string | null;
+  } | null;
+};
+
 const statusBadge = (status: string | null) => {
   if (status === "Accepted") {
     return {
@@ -90,44 +108,50 @@ const statusBadge = (status: string | null) => {
 export default function StatusPage() {
   const [email, setEmail] = useState("");
   const [trackingCode, setTrackingCode] = useState("");
-  const [result, setResult] = useState<any | null>(null);
+  const [result, setResult] = useState<StatusResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
   async function checkStatus() {
-    if (!email || !trackingCode) {
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedTrackingCode = trackingCode.trim();
+
+    if (!normalizedEmail || !normalizedTrackingCode) {
       alert("Please enter your email and tracking code.");
       return;
     }
 
     setLoading(true);
     setSearched(true);
+    setResult(null);
 
-    const { data, error } = await supabase
-      .from("applications")
-      .select(`
-        name,
-        email,
-        status,
-        tracking_code,
-        created_at,
-        jobs (
-          title
-        )
-      `)
-      .eq("email", email)
-      .eq("tracking_code", trackingCode)
-      .maybeSingle();
+    try {
+      const response = await fetch("/api/check-status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          trackingCode: normalizedTrackingCode,
+        }),
+      });
 
-    setLoading(false);
+      const payload = await response.json();
 
-    if (error) {
-      console.log(error);
+      if (!response.ok) {
+        alert(payload?.error || "Could not check status.");
+        setLoading(false);
+        return;
+      }
+
+      setResult(payload?.result ?? null);
+    } catch (error) {
+      console.error("Status page fetch error:", error);
       alert("Could not check status.");
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    setResult(data || null);
   }
 
   const badge = statusBadge(result?.status || null);
@@ -240,7 +264,11 @@ export default function StatusPage() {
 
               <button
                 onClick={checkStatus}
-                style={primaryButtonStyle}
+                style={{
+                  ...primaryButtonStyle,
+                  opacity: loading ? 0.7 : 1,
+                  cursor: loading ? "not-allowed" : "pointer",
+                }}
                 disabled={loading}
               >
                 {loading ? "Checking..." : "Check Status"}
@@ -277,30 +305,10 @@ export default function StatusPage() {
               ) : null}
             </div>
 
-            {!searched && (
-              <div
-                style={{
-                  padding: "18px",
-                  borderRadius: "18px",
-                  background: "rgba(11, 21, 43, 0.88)",
-                  border: "1px solid #22304d",
-                  color: "#9fb0d0",
-                }}
-              >
-                No status loaded yet.
-              </div>
-            )}
+            {!searched && <div style={messageBoxStyle}>No status loaded yet.</div>}
 
             {searched && !loading && !result && (
-              <div
-                style={{
-                  padding: "18px",
-                  borderRadius: "18px",
-                  background: "rgba(11, 21, 43, 0.88)",
-                  border: "1px solid #22304d",
-                  color: "#9fb0d0",
-                }}
-              >
+              <div style={messageBoxStyle}>
                 No application was found with that email and tracking code.
               </div>
             )}
