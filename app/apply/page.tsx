@@ -114,7 +114,6 @@ export default function ApplyPage() {
 
   const [name, setName] = useState("");
   const [discord, setDiscord] = useState("");
-  const [discordName, setDiscordName] = useState("");
   const [age, setAge] = useState("");
   const [email, setEmail] = useState("");
   const [timezone, setTimezone] = useState("");
@@ -137,6 +136,7 @@ export default function ApplyPage() {
   const [loading, setLoading] = useState(false);
   const [submittedCode, setSubmittedCode] = useState("");
   const [submittedRole, setSubmittedRole] = useState("");
+  const [copiedTrackingCode, setCopiedTrackingCode] = useState(false);
 
   async function loadJobs() {
     const { data, error } = await supabase
@@ -211,6 +211,22 @@ export default function ApplyPage() {
     return true;
   }
 
+  async function copyTrackingCode() {
+    if (!submittedCode) return;
+
+    try {
+      await navigator.clipboard.writeText(submittedCode);
+      setCopiedTrackingCode(true);
+
+      window.setTimeout(() => {
+        setCopiedTrackingCode(false);
+      }, 2000);
+    } catch (error) {
+      console.log("Copy failed:", error);
+      alert("Could not copy the tracking code.");
+    }
+  }
+
   async function submitApplication() {
     if (!jobId || !name || !discord || !motivation || !email) {
       alert("Please fill in role, name, discord, email, and motivation.");
@@ -221,30 +237,30 @@ export default function ApplyPage() {
 
     setLoading(true);
 
-    const trackingCode = createTrackingCode();
+    const normalizedEmail = email.trim().toLowerCase();
+    const trackingCode = createTrackingCode().trim().toUpperCase();
 
     const { error } = await supabase.from("applications").insert({
       job_id: jobId,
-      name,
-      discord,
-      discord_name: discordName,
-      age,
-      email,
-      timezone,
-      experience,
-      motivation,
-      availability,
-      developer_skills: developerSkills,
-      developer_projects: developerProjects,
-      support_cases: supportCases,
-      support_communication: supportCommunication,
-      competitive_knowledge: competitiveKnowledge,
-      competitive_plans: competitivePlans,
-      manager_leadership: managerLeadership,
-      manager_organization: managerOrganization,
-      director_vision: directorVision,
-      director_responsibility: directorResponsibility,
-      other_strengths: otherStrengths,
+      name: name.trim(),
+      discord: discord.trim(),
+      age: age.trim(),
+      email: normalizedEmail,
+      timezone: timezone.trim(),
+      experience: experience.trim(),
+      motivation: motivation.trim(),
+      availability: availability.trim(),
+      developer_skills: developerSkills.trim(),
+      developer_projects: developerProjects.trim(),
+      support_cases: supportCases.trim(),
+      support_communication: supportCommunication.trim(),
+      competitive_knowledge: competitiveKnowledge.trim(),
+      competitive_plans: competitivePlans.trim(),
+      manager_leadership: managerLeadership.trim(),
+      manager_organization: managerOrganization.trim(),
+      director_vision: directorVision.trim(),
+      director_responsibility: directorResponsibility.trim(),
+      other_strengths: otherStrengths.trim(),
       tracking_code: trackingCode,
       status: "New",
     });
@@ -265,15 +281,14 @@ export default function ApplyPage() {
         body: JSON.stringify({
           jobTitle: selectedJob?.title || "-",
           category: selectedCategory,
-          name,
-          discord,
-          discordName,
-          age,
-          email,
-          timezone,
-          experience,
-          motivation,
-          availability,
+          name: name.trim(),
+          discord: discord.trim(),
+          age: age.trim(),
+          email: normalizedEmail,
+          timezone: timezone.trim(),
+          experience: experience.trim(),
+          motivation: motivation.trim(),
+          availability: availability.trim(),
           trackingCode,
         }),
       });
@@ -287,10 +302,10 @@ export default function ApplyPage() {
     setLoading(false);
     setSubmittedCode(trackingCode);
     setSubmittedRole(selectedJob?.title || "Role");
+    setCopiedTrackingCode(false);
 
     setName("");
     setDiscord("");
-    setDiscordName("");
     setAge("");
     setEmail("");
     setTimezone("");
@@ -355,6 +370,30 @@ export default function ApplyPage() {
                 >
                   {submittedCode}
                 </h2>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "12px",
+                    flexWrap: "wrap",
+                    marginTop: "16px",
+                    alignItems: "center",
+                  }}
+                >
+                  <button
+                    onClick={copyTrackingCode}
+                    style={{
+                      ...ghostButtonStyle,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {copiedTrackingCode ? "Copied!" : "Copy Code"}
+                  </button>
+
+                  <span style={{ color: "#9fb0d0", fontSize: "14px" }}>
+                    Save this code somewhere safe.
+                  </span>
+                </div>
               </div>
 
               <div
@@ -372,6 +411,7 @@ export default function ApplyPage() {
                   onClick={() => {
                     setSubmittedCode("");
                     setSubmittedRole("");
+                    setCopiedTrackingCode(false);
                   }}
                   style={{ ...primaryButtonStyle, width: "auto" }}
                 >
@@ -545,7 +585,8 @@ export default function ApplyPage() {
                       color: "#dbe7ff",
                     }}
                   >
-                    After submitting, you receive a tracking code for status checks.
+                    After submitting, you receive a tracking code for status
+                    checks.
                   </div>
                 </div>
               </div>
@@ -613,8 +654,12 @@ export default function ApplyPage() {
                             marginBottom: "10px",
                           }}
                         >
-                          <h3 style={{ margin: 0 }}>{job.title || "Untitled Role"}</h3>
-                          <span style={pillStyle}>{job.role_category || "Other"}</span>
+                          <h3 style={{ margin: 0 }}>
+                            {job.title || "Untitled Role"}
+                          </h3>
+                          <span style={pillStyle}>
+                            {job.role_category || "Other"}
+                          </span>
                         </div>
 
                         <p
@@ -627,7 +672,9 @@ export default function ApplyPage() {
                           {job.department || "-"} • {job.location || "-"}
                         </p>
 
-                        <p style={{ margin: 0, color: "#dbe7ff", lineHeight: 1.6 }}>
+                        <p
+                          style={{ margin: 0, color: "#dbe7ff", lineHeight: 1.6 }}
+                        >
                           {job.description || "No description available."}
                         </p>
                       </button>
@@ -638,7 +685,9 @@ export default function ApplyPage() {
             </section>
 
             <section style={glassCardStyle}>
-              <h2 style={{ marginTop: 0, marginBottom: 12 }}>Application Form</h2>
+              <h2 style={{ marginTop: 0, marginBottom: 12 }}>
+                Application Form
+              </h2>
               <p
                 style={{
                   color: "#9fb0d0",
@@ -687,7 +736,8 @@ export default function ApplyPage() {
                           value={job.id}
                           style={{ background: "#0b152b", color: "white" }}
                         >
-                          {job.title} {job.department ? `- ${job.department}` : ""}
+                          {job.title}{" "}
+                          {job.department ? `- ${job.department}` : ""}
                         </option>
                       ))}
                     </select>
@@ -706,9 +756,12 @@ export default function ApplyPage() {
                           <strong>{selectedJob.title || "Selected Role"}</strong>
                         </p>
                         <p style={{ margin: "0 0 8px 0", color: "#9fb0d0" }}>
-                          {selectedJob.department || "-"} • {selectedJob.location || "-"}
+                          {selectedJob.department || "-"} •{" "}
+                          {selectedJob.location || "-"}
                         </p>
-                        <p style={{ margin: 0, color: "#dbe7ff", lineHeight: 1.6 }}>
+                        <p
+                          style={{ margin: 0, color: "#dbe7ff", lineHeight: 1.6 }}
+                        >
                           {selectedJob.description || "-"}
                         </p>
 
@@ -757,16 +810,6 @@ export default function ApplyPage() {
 
                   <div className="twoCol">
                     <div>
-                      <label style={labelStyle}>Discord Name</label>
-                      <input
-                        style={inputStyle}
-                        placeholder="Display name / nickname"
-                        value={discordName}
-                        onChange={(e) => setDiscordName(e.target.value)}
-                      />
-                    </div>
-
-                    <div>
                       <label style={labelStyle}>Timezone</label>
                       <input
                         style={inputStyle}
@@ -775,9 +818,7 @@ export default function ApplyPage() {
                         onChange={(e) => setTimezone(e.target.value)}
                       />
                     </div>
-                  </div>
 
-                  <div className="twoCol">
                     <div>
                       <label style={labelStyle}>Age</label>
                       <input
@@ -787,16 +828,16 @@ export default function ApplyPage() {
                         onChange={(e) => setAge(e.target.value)}
                       />
                     </div>
+                  </div>
 
-                    <div>
-                      <label style={labelStyle}>Email</label>
-                      <input
-                        style={inputStyle}
-                        placeholder="Your email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </div>
+                  <div>
+                    <label style={labelStyle}>Email</label>
+                    <input
+                      style={inputStyle}
+                      placeholder="Your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
                   </div>
 
                   <div>
@@ -851,7 +892,9 @@ export default function ApplyPage() {
                           style={textareaStyle}
                           placeholder="How do you deal with difficult users or conflict situations?"
                           value={supportCommunication}
-                          onChange={(e) => setSupportCommunication(e.target.value)}
+                          onChange={(e) =>
+                            setSupportCommunication(e.target.value)
+                          }
                         />
                       </div>
                     </>
@@ -865,7 +908,9 @@ export default function ApplyPage() {
                           style={textareaStyle}
                           placeholder="Describe your knowledge of competitive systems, teams, or tournaments."
                           value={competitiveKnowledge}
-                          onChange={(e) => setCompetitiveKnowledge(e.target.value)}
+                          onChange={(e) =>
+                            setCompetitiveKnowledge(e.target.value)
+                          }
                         />
                       </div>
 
@@ -899,7 +944,9 @@ export default function ApplyPage() {
                           style={textareaStyle}
                           placeholder="How do you organize people, tasks, and priorities?"
                           value={managerOrganization}
-                          onChange={(e) => setManagerOrganization(e.target.value)}
+                          onChange={(e) =>
+                            setManagerOrganization(e.target.value)
+                          }
                         />
                       </div>
                     </>
@@ -923,7 +970,9 @@ export default function ApplyPage() {
                           style={textareaStyle}
                           placeholder="Why are you ready for a high-responsibility leadership role?"
                           value={directorResponsibility}
-                          onChange={(e) => setDirectorResponsibility(e.target.value)}
+                          onChange={(e) =>
+                            setDirectorResponsibility(e.target.value)
+                          }
                         />
                       </div>
                     </>

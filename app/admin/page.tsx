@@ -144,6 +144,15 @@ function statusPillStyle(status: string | null): React.CSSProperties {
     };
   }
 
+  if (status === "In Review") {
+    return {
+      ...pillStyle,
+      background: "rgba(245, 158, 11, 0.12)",
+      color: "#ffd58f",
+      border: "1px solid rgba(245, 158, 11, 0.18)",
+    };
+  }
+
   return {
     ...pillStyle,
     background: "rgba(76, 201, 240, 0.12)",
@@ -1307,6 +1316,9 @@ async function updateJobStatus(id: string, status: string) {
                 <option style={{ background: "#0b152b" }} value="Rejected">
                   Rejected
                 </option>
+                <option style={{ background: "#0b152b" }} value="In Review">
+                  In Review
+                </option>
               </select>
 
               <select
@@ -1379,6 +1391,22 @@ async function updateJobStatus(id: string, status: string) {
                           {app.email || "-"} • {app.discord || "-"} •{" "}
                           {app.tracking_code || "-"}
                         </p>
+
+                        <button
+                          onClick={() => navigator.clipboard.writeText(app.tracking_code)}
+                          style={{
+                            marginTop: 6,
+                            padding: "6px 10px",
+                            borderRadius: "10px",
+                            border: "1px solid #22304d",
+                            background: "rgba(11, 21, 43, 0.9)",
+                            color: "white",
+                            cursor: "pointer",
+                            fontSize: "13px"
+                          }}
+                        >
+                          Copy Tracking Code
+                        </button>
                       </div>
 
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -1387,6 +1415,12 @@ async function updateJobStatus(id: string, status: string) {
                           style={ghostButtonStyle}
                         >
                           {isOpen ? "Hide Details" : "Show Details"}
+                        </button>
+                        <button
+                          onClick={() => updateApplicationStatus(app.id, "In Review")}
+                          style={ghostButtonStyle}
+                        >
+                          In Review
                         </button>
                         <button
                           onClick={() =>
@@ -1441,12 +1475,6 @@ async function updateJobStatus(id: string, status: string) {
                                   Discord Username:
                                 </strong>{" "}
                                 {app.discord || "-"}
-                              </p>
-                              <p style={{ margin: 0 }}>
-                                <strong style={{ color: "#dbe7ff" }}>
-                                  Discord Name:
-                                </strong>{" "}
-                                {app.discord_name || "-"}
                               </p>
                               <p style={{ margin: 0 }}>
                                 <strong style={{ color: "#dbe7ff" }}>
@@ -1962,6 +1990,12 @@ async function updateJobStatus(id: string, status: string) {
                                 style={dangerButtonStyle}
                               >
                                 Rejected
+                              </button>
+                              <button
+                                onClick={() => updateApplicationStatus(app.id, "In Review")}
+                                 style={ghostButtonStyle}
+                              >
+                                In Review
                               </button>
                               <button
                                 onClick={() => deleteApplication(app.id)}

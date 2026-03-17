@@ -49,6 +49,16 @@ const primaryButtonStyle: React.CSSProperties = {
   cursor: "pointer",
 };
 
+const ghostButtonStyle: React.CSSProperties = {
+  padding: "10px 14px",
+  borderRadius: "12px",
+  border: "1px solid #22304d",
+  background: "rgba(11, 21, 43, 0.9)",
+  color: "white",
+  fontWeight: 600,
+  cursor: "pointer",
+};
+
 const pillStyle: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
@@ -98,6 +108,14 @@ const statusBadge = (status: string | null) => {
     };
   }
 
+  if (status === "In Review") {
+    return {
+      background: "rgba(245, 158, 11, 0.12)",
+      border: "1px solid rgba(245, 158, 11, 0.18)",
+      color: "#ffd58f",
+    };
+  }
+
   return {
     background: "rgba(76, 201, 240, 0.12)",
     border: "1px solid rgba(76, 201, 240, 0.18)",
@@ -105,16 +123,40 @@ const statusBadge = (status: string | null) => {
   };
 };
 
+function statusMessage(status: string | null) {
+  if (status === "Accepted") {
+    return "Congratulations! Your application has been accepted. A team member may contact you soon.";
+  }
+
+  if (status === "Rejected") {
+    return "Your application was reviewed but was not selected this time.";
+  }
+
+  if (status === "In Review") {
+    return "Your application is currently being reviewed by the Auros team.";
+  }
+
+  if (status === "New") {
+    return "Your application was received and will be reviewed soon.";
+  }
+
+  return "Status information unavailable.";
+}
+
 export default function StatusPage() {
   const [email, setEmail] = useState("");
   const [trackingCode, setTrackingCode] = useState("");
   const [result, setResult] = useState<StatusResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   async function checkStatus() {
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedTrackingCode = trackingCode.trim().toUpperCase().replace(/\s+/g, "");
+    const normalizedTrackingCode = trackingCode
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, "");
 
     if (!normalizedEmail || !normalizedTrackingCode) {
       alert("Please enter your email and tracking code.");
@@ -124,6 +166,7 @@ export default function StatusPage() {
     setLoading(true);
     setSearched(true);
     setResult(null);
+    setCopied(false);
 
     try {
       const response = await fetch("/api/check-status", {
@@ -150,6 +193,21 @@ export default function StatusPage() {
       alert("Could not check status.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function copyTrackingCode() {
+    if (!result?.tracking_code) return;
+
+    try {
+      await navigator.clipboard.writeText(result.tracking_code);
+      setCopied(true);
+
+      setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+    } catch {
+      alert("Could not copy tracking code.");
     }
   }
 
@@ -214,8 +272,8 @@ export default function StatusPage() {
                     maxWidth: "680px",
                   }}
                 >
-                  Enter the email used for your application and your tracking code
-                  to see the current review status.
+                  Enter the email used for your application and your tracking
+                  code to see the current review status.
                 </p>
               </div>
 
@@ -239,6 +297,9 @@ export default function StatusPage() {
                   placeholder="Your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") checkStatus();
+                  }}
                 />
               </div>
 
@@ -258,6 +319,9 @@ export default function StatusPage() {
                   placeholder="e.g. AU-ABCD-123456"
                   value={trackingCode}
                   onChange={(e) => setTrackingCode(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") checkStatus();
+                  }}
                 />
               </div>
 
@@ -304,7 +368,9 @@ export default function StatusPage() {
               ) : null}
             </div>
 
-            {!searched && <div style={messageBoxStyle}>No status loaded yet.</div>}
+            {!searched && (
+              <div style={messageBoxStyle}>No status loaded yet.</div>
+            )}
 
             {searched && !loading && !result && (
               <div style={messageBoxStyle}>
@@ -336,6 +402,28 @@ export default function StatusPage() {
                   <span style={pillStyle}>{result.jobs?.title || "-"}</span>
                 </div>
 
+                {result.status && (
+                  <div
+                    style={{
+                      marginBottom: "14px",
+                      padding: "14px",
+                      borderRadius: "14px",
+                      background: "#081225",
+                      border: "1px solid #22304d",
+                    }}
+                  >
+                    <p
+                      style={{
+                        margin: 0,
+                        color: "#9fb0d0",
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {statusMessage(result.status)}
+                    </p>
+                  </div>
+                )}
+
                 <div style={{ display: "grid", gap: "10px", color: "#dbe7ff" }}>
                   <p style={{ margin: 0 }}>
                     <strong>Role:</strong> {result.jobs?.title || "-"}
@@ -355,6 +443,24 @@ export default function StatusPage() {
                       ? new Date(result.created_at).toLocaleDateString()
                       : "-"}
                   </p>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "10px",
+                    flexWrap: "wrap",
+                    marginTop: "16px",
+                    alignItems: "center",
+                  }}
+                >
+                  <button onClick={copyTrackingCode} style={ghostButtonStyle}>
+                    {copied ? "Copied!" : "Copy Tracking Code"}
+                  </button>
+
+                  <span style={{ color: "#9fb0d0", fontSize: "14px" }}>
+                    Save your tracking code for future status checks.
+                  </span>
                 </div>
               </div>
             )}

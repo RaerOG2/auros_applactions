@@ -57,7 +57,6 @@ export async function POST(req: Request) {
       category,
       name,
       discord,
-      discordName,
       age,
       email,
       timezone,
@@ -82,14 +81,20 @@ export async function POST(req: Request) {
     const embedColor = getCategoryColor(category);
     const categoryIcon = getCategoryIcon(category);
     const logoUrl = process.env.AUROS_LOGO_URL || undefined;
-    const adminBaseUrl = process.env.ADMIN_DASHBOARD_URL || "https://auros-applactions.vercel.app/admin";
+    const adminBaseUrl =
+      process.env.ADMIN_DASHBOARD_URL ||
+      "https://auros-applactions.vercel.app/admin";
 
     const encodedTrackingCode = encodeURIComponent(safeText(trackingCode));
     const reviewUrl = `${adminBaseUrl}?tracking=${encodedTrackingCode}&action=review`;
     const acceptUrl = `${adminBaseUrl}?tracking=${encodedTrackingCode}&action=accept`;
     const rejectUrl = `${adminBaseUrl}?tracking=${encodedTrackingCode}&action=reject`;
 
-    const roleSpecificFields: Array<{ name: string; value: string; inline?: boolean }> = [];
+    const roleSpecificFields: Array<{
+      name: string;
+      value: string;
+      inline?: boolean;
+    }> = [];
 
     if (category === "Developer") {
       roleSpecificFields.push(
@@ -208,13 +213,8 @@ export async function POST(req: Request) {
             inline: true,
           },
           {
-            name: "💬 Discord Username",
+            name: "💬 Discord",
             value: safeText(discord),
-            inline: true,
-          },
-          {
-            name: "🏷️ Discord Name",
-            value: safeText(discordName),
             inline: true,
           },
           {
@@ -302,14 +302,14 @@ export async function POST(req: Request) {
         category === "Developer"
           ? `Developer Skills:\n${safeText(developerSkills)}\n\nDeveloper Projects:\n${safeText(developerProjects)}`
           : category === "Supporter"
-          ? `Support Experience:\n${safeText(supportCases)}\n\nCommunication Skills:\n${safeText(supportCommunication)}`
-          : category === "Competitive Manager"
-          ? `Competitive Knowledge:\n${safeText(competitiveKnowledge)}\n\nCompetitive Plans:\n${safeText(competitivePlans)}`
-          : category === "Manager"
-          ? `Leadership Experience:\n${safeText(managerLeadership)}\n\nOrganization Skills:\n${safeText(managerOrganization)}`
-          : category === "Director"
-          ? `Vision:\n${safeText(directorVision)}\n\nResponsibility:\n${safeText(directorResponsibility)}`
-          : `Role Fit:\n${safeText(otherStrengths)}`;
+            ? `Support Experience:\n${safeText(supportCases)}\n\nCommunication Skills:\n${safeText(supportCommunication)}`
+            : category === "Competitive Manager"
+              ? `Competitive Knowledge:\n${safeText(competitiveKnowledge)}\n\nCompetitive Plans:\n${safeText(competitivePlans)}`
+              : category === "Manager"
+                ? `Leadership Experience:\n${safeText(managerLeadership)}\n\nOrganization Skills:\n${safeText(managerOrganization)}`
+                : category === "Director"
+                  ? `Vision:\n${safeText(directorVision)}\n\nResponsibility:\n${safeText(directorResponsibility)}`
+                  : `Role Fit:\n${safeText(otherStrengths)}`;
 
       const mailInfo = await transporter.sendMail({
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -321,8 +321,7 @@ A new application was submitted.
 Role: ${safeText(jobTitle)}
 Category: ${safeText(category, "Other")}
 Name: ${safeText(name)}
-Discord Username: ${safeText(discord)}
-Discord Name: ${safeText(discordName)}
+Discord: ${safeText(discord)}
 Email: ${safeText(email)}
 Age: ${safeText(age)}
 Timezone: ${safeText(timezone)}
