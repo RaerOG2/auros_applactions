@@ -688,6 +688,47 @@ async function updateJobStatus(id: string, status: string) {
 
   useEffect(() => {
     checkUser();
+
+    const channel = supabase
+      .channel("admin-live-applications")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "applications",
+        },
+        async () => {
+          await loadApplications();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "jobs",
+        },
+        async () => {
+          await loadJobs();
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "patchnotes",
+        },
+        async () => {
+          await loadPatchnotes();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   if (loading) {
@@ -904,6 +945,7 @@ async function updateJobStatus(id: string, status: string) {
             </div>
 
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <span style={pillStyle}>🟢 Live</span>
               <span style={pillStyle}>{jobs.length} Jobs</span>
               <span style={pillStyle}>{applications.length} Applications</span>
               <span style={pillStyle}>{patchnotes.length} Patchnotes</span>
