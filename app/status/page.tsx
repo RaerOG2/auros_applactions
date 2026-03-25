@@ -1,22 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import AurosBackground from "../../components/AurosBackground";
-import AurosTopbar from "../../components/AurosTopbar";
-
-const pageStyle: React.CSSProperties = {
-  minHeight: "100vh",
-  background: "transparent",
-  color: "white",
-  padding: "32px 20px 60px",
-  position: "relative",
-  zIndex: 1,
-};
-
-const containerStyle: React.CSSProperties = {
-  maxWidth: "900px",
-  margin: "0 auto",
-};
 
 const glassCardStyle: React.CSSProperties = {
   background: "rgba(15, 27, 52, 0.74)",
@@ -91,55 +75,11 @@ type StatusResult = {
   } | null;
 };
 
-const statusBadge = (status: string | null) => {
-  if (status === "Accepted") {
-    return {
-      background: "rgba(34, 197, 94, 0.12)",
-      border: "1px solid rgba(34, 197, 94, 0.18)",
-      color: "#9ef1b5",
-    };
-  }
-
-  if (status === "Rejected") {
-    return {
-      background: "rgba(239, 68, 68, 0.12)",
-      border: "1px solid rgba(239, 68, 68, 0.18)",
-      color: "#ffb0b0",
-    };
-  }
-
-  if (status === "In Review") {
-    return {
-      background: "rgba(245, 158, 11, 0.12)",
-      border: "1px solid rgba(245, 158, 11, 0.18)",
-      color: "#ffd58f",
-    };
-  }
-
-  return {
-    background: "rgba(76, 201, 240, 0.12)",
-    border: "1px solid rgba(76, 201, 240, 0.18)",
-    color: "#aaf3ff",
-  };
-};
-
 function statusMessage(status: string | null) {
-  if (status === "Accepted") {
-    return "Congratulations! Your application has been accepted. A team member may contact you soon.";
-  }
-
-  if (status === "Rejected") {
-    return "Your application was reviewed but was not selected this time.";
-  }
-
-  if (status === "In Review") {
-    return "Your application is currently being reviewed by the Auros team.";
-  }
-
-  if (status === "New") {
-    return "Your application was received and will be reviewed soon.";
-  }
-
+  if (status === "Accepted") return "Congratulations! Your application has been accepted.";
+  if (status === "Rejected") return "Your application was not selected this time.";
+  if (status === "In Review") return "Your application is currently being reviewed.";
+  if (status === "New") return "Your application was received.";
   return "Status information unavailable.";
 }
 
@@ -153,10 +93,7 @@ export default function StatusPage() {
 
   async function checkStatus() {
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedTrackingCode = trackingCode
-      .trim()
-      .toUpperCase()
-      .replace(/\s+/g, "");
+    const normalizedTrackingCode = trackingCode.trim().toUpperCase();
 
     if (!normalizedEmail || !normalizedTrackingCode) {
       alert("Please enter your email and tracking code.");
@@ -166,7 +103,6 @@ export default function StatusPage() {
     setLoading(true);
     setSearched(true);
     setResult(null);
-    setCopied(false);
 
     try {
       const response = await fetch("/api/check-status", {
@@ -183,14 +119,11 @@ export default function StatusPage() {
       const payload = await response.json();
 
       if (!response.ok) {
-        alert(payload?.error || "Could not check status.");
+        alert(payload?.error || "Error");
         return;
       }
 
       setResult(payload?.result ?? null);
-    } catch (error) {
-      console.error("Status page fetch error:", error);
-      alert("Could not check status.");
     } finally {
       setLoading(false);
     }
@@ -199,274 +132,69 @@ export default function StatusPage() {
   async function copyTrackingCode() {
     if (!result?.tracking_code) return;
 
-    try {
-      await navigator.clipboard.writeText(result.tracking_code);
-      setCopied(true);
+    await navigator.clipboard.writeText(result.tracking_code);
+    setCopied(true);
 
-      setTimeout(() => {
-        setCopied(false);
-      }, 2000);
-    } catch {
-      alert("Could not copy tracking code.");
-    }
+    setTimeout(() => setCopied(false), 2000);
   }
-
-  const badge = statusBadge(result?.status || null);
 
   return (
     <>
-      <AurosBackground />
+      <section style={{ ...glassCardStyle, marginBottom: 22 }}>
+        <h1 style={{ marginTop: 0 }}>Check Application Status</h1>
 
-      <main style={pageStyle}>
-        <div style={containerStyle}>
-          <AurosTopbar current="status" />
+        <div style={{ display: "grid", gap: "14px", marginTop: 18 }}>
+          <input
+            style={inputStyle}
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
 
-          <section
-            style={{
-              ...glassCardStyle,
-              padding: "34px",
-              marginBottom: 22,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: "14px",
-                alignItems: "center",
-                flexWrap: "wrap",
-                marginBottom: "18px",
-              }}
-            >
-              <div>
-                <p
-                  style={{
-                    color: "#4cc9f0",
-                    fontWeight: 800,
-                    marginBottom: 10,
-                    fontSize: "13px",
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  AUROS APPLICATION TRACKING
-                </p>
+          <input
+            style={inputStyle}
+            placeholder="Tracking Code"
+            value={trackingCode}
+            onChange={(e) => setTrackingCode(e.target.value)}
+          />
 
-                <h1
-                  style={{
-                    marginTop: 0,
-                    fontSize: "42px",
-                    marginBottom: "14px",
-                    lineHeight: 1.05,
-                  }}
-                >
-                  Check Application Status
-                </h1>
-
-                <p
-                  style={{
-                    color: "#9fb0d0",
-                    lineHeight: 1.75,
-                    fontSize: "17px",
-                    marginTop: 0,
-                    marginBottom: 0,
-                    maxWidth: "680px",
-                  }}
-                >
-                  Enter the email used for your application and your tracking
-                  code to see the current review status.
-                </p>
-              </div>
-
-              <span style={pillStyle}>Tracking Portal</span>
-            </div>
-
-            <div style={{ display: "grid", gap: "14px", marginTop: 18 }}>
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: 8,
-                    fontWeight: 700,
-                    color: "#dbe7ff",
-                  }}
-                >
-                  Email
-                </label>
-                <input
-                  style={inputStyle}
-                  placeholder="Your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") checkStatus();
-                  }}
-                />
-              </div>
-
-              <div>
-                <label
-                  style={{
-                    display: "block",
-                    marginBottom: 8,
-                    fontWeight: 700,
-                    color: "#dbe7ff",
-                  }}
-                >
-                  Tracking Code
-                </label>
-                <input
-                  style={inputStyle}
-                  placeholder="e.g. AU-ABCD-123456"
-                  value={trackingCode}
-                  onChange={(e) => setTrackingCode(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") checkStatus();
-                  }}
-                />
-              </div>
-
-              <button
-                onClick={checkStatus}
-                style={{
-                  ...primaryButtonStyle,
-                  opacity: loading ? 0.7 : 1,
-                  cursor: loading ? "not-allowed" : "pointer",
-                }}
-                disabled={loading}
-              >
-                {loading ? "Checking..." : "Check Status"}
-              </button>
-            </div>
-          </section>
-
-          <section style={glassCardStyle}>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 12,
-                alignItems: "center",
-                flexWrap: "wrap",
-                marginBottom: 14,
-              }}
-            >
-              <h2 style={{ margin: 0 }}>Result</h2>
-              {result?.status ? (
-                <span
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    padding: "8px 12px",
-                    borderRadius: "999px",
-                    fontWeight: 700,
-                    fontSize: "13px",
-                    ...badge,
-                  }}
-                >
-                  {result.status}
-                </span>
-              ) : null}
-            </div>
-
-            {!searched && (
-              <div style={messageBoxStyle}>No status loaded yet.</div>
-            )}
-
-            {searched && !loading && !result && (
-              <div style={messageBoxStyle}>
-                No application was found with that email and tracking code.
-              </div>
-            )}
-
-            {result && (
-              <div
-                style={{
-                  padding: "20px",
-                  borderRadius: "20px",
-                  background: "rgba(11, 21, 43, 0.88)",
-                  border: "1px solid #22304d",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: "12px",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    marginBottom: "14px",
-                  }}
-                >
-                  <h3 style={{ margin: 0 }}>{result.name || "-"}</h3>
-
-                  <span style={pillStyle}>{result.jobs?.title || "-"}</span>
-                </div>
-
-                {result.status && (
-                  <div
-                    style={{
-                      marginBottom: "14px",
-                      padding: "14px",
-                      borderRadius: "14px",
-                      background: "#081225",
-                      border: "1px solid #22304d",
-                    }}
-                  >
-                    <p
-                      style={{
-                        margin: 0,
-                        color: "#9fb0d0",
-                        lineHeight: 1.6,
-                      }}
-                    >
-                      {statusMessage(result.status)}
-                    </p>
-                  </div>
-                )}
-
-                <div style={{ display: "grid", gap: "10px", color: "#dbe7ff" }}>
-                  <p style={{ margin: 0 }}>
-                    <strong>Role:</strong> {result.jobs?.title || "-"}
-                  </p>
-                  <p style={{ margin: 0, wordBreak: "break-word" }}>
-                    <strong>Email:</strong> {result.email || "-"}
-                  </p>
-                  <p style={{ margin: 0, wordBreak: "break-word" }}>
-                    <strong>Tracking Code:</strong> {result.tracking_code || "-"}
-                  </p>
-                  <p style={{ margin: 0 }}>
-                    <strong>Status:</strong> {result.status || "-"}
-                  </p>
-                  <p style={{ margin: 0 }}>
-                    <strong>Submitted:</strong>{" "}
-                    {result.created_at
-                      ? new Date(result.created_at).toLocaleDateString()
-                      : "-"}
-                  </p>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "10px",
-                    flexWrap: "wrap",
-                    marginTop: "16px",
-                    alignItems: "center",
-                  }}
-                >
-                  <button onClick={copyTrackingCode} style={ghostButtonStyle}>
-                    {copied ? "Copied!" : "Copy Tracking Code"}
-                  </button>
-
-                  <span style={{ color: "#9fb0d0", fontSize: "14px" }}>
-                    Save your tracking code for future status checks.
-                  </span>
-                </div>
-              </div>
-            )}
-          </section>
+          <button onClick={checkStatus} style={primaryButtonStyle}>
+            {loading ? "Checking..." : "Check Status"}
+          </button>
         </div>
-      </main>
+      </section>
+
+      <section style={glassCardStyle}>
+        {!searched && <div style={messageBoxStyle}>No status loaded yet.</div>}
+
+        {searched && !result && !loading && (
+          <div style={messageBoxStyle}>No result found.</div>
+        )}
+
+        {result && (
+          <div style={messageBoxStyle}>
+            <h3>{result.name}</h3>
+
+            <p>{statusMessage(result.status)}</p>
+
+            <p>
+              <strong>Role:</strong> {result.jobs?.title}
+            </p>
+
+            <p>
+              <strong>Status:</strong> {result.status}
+            </p>
+
+            <p>
+              <strong>Tracking Code:</strong> {result.tracking_code}
+            </p>
+
+            <button onClick={copyTrackingCode} style={ghostButtonStyle}>
+              {copied ? "Copied!" : "Copy Code"}
+            </button>
+          </div>
+        )}
+      </section>
     </>
   );
 }

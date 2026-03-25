@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import AurosSiteShell from "../components/AurosSiteShell";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,11 +16,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Auros Royale Applications",
   description: "Official application portal for Auros Royale",
-  icons: {
-    icon: "/auros_royale_pfp_draft_1.png",
-    shortcut: "/auros_royale_pfp_draft_1.png",
-    apple: "/auros_royale_pfp_draft_1.png",
-  },
 };
 
 export default function RootLayout({
@@ -32,7 +28,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <AurosSiteShell>{children}</AurosSiteShell>
       </body>
     </html>
   );
