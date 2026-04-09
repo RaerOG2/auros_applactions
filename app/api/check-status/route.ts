@@ -6,10 +6,6 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-function normalizeEmail(value: string) {
-  return value.trim().toLowerCase();
-}
-
 function normalizeTrackingCode(value: string) {
   return value.trim().toUpperCase().replace(/\s+/g, "");
 }
@@ -18,12 +14,11 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const email = normalizeEmail(String(body?.email || ""));
     const trackingCode = normalizeTrackingCode(String(body?.trackingCode || ""));
 
-    if (!email || !trackingCode) {
+    if (!trackingCode) {
       return NextResponse.json(
-        { error: "Email and tracking code are required." },
+        { error: "Tracking code is required." },
         { status: 400 }
       );
     }
@@ -33,7 +28,6 @@ export async function POST(req: NextRequest) {
       .select(
         `
         name,
-        email,
         status,
         tracking_code,
         created_at,
@@ -42,7 +36,7 @@ export async function POST(req: NextRequest) {
         )
       `
       )
-      .ilike("tracking_code", trackingCode)
+      .eq("tracking_code", trackingCode)
       .maybeSingle();
 
     if (error) {
@@ -54,12 +48,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (!data) {
-      return NextResponse.json({ result: null }, { status: 200 });
-    }
-
-    const storedEmail = normalizeEmail(data.email || "");
-
-    if (storedEmail !== email) {
       return NextResponse.json({ result: null }, { status: 200 });
     }
 

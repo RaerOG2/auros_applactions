@@ -1,810 +1,20 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "../../lib/supabase";
-
-type StatusHistoryItem = {
-  id: string;
-  application_id: string;
-  status: string;
-  changed_at: string;
-  changed_by?: string | null;
-  note?: string | null;
-};
-
-type ApplicationItem = {
-  id: string;
-  name: string | null;
-  discord: string | null;
-  age: string | null;
-  email: string | null;
-  timezone: string | null;
-  experience: string | null;
-  motivation: string | null;
-  availability: string | null;
-  developer_skills: string | null;
-  developer_projects: string | null;
-  support_cases: string | null;
-  support_communication: string | null;
-  competitive_knowledge: string | null;
-  competitive_plans: string | null;
-  manager_leadership: string | null;
-  manager_organization: string | null;
-  director_vision: string | null;
-  director_responsibility: string | null;
-  other_strengths: string | null;
-  tracking_code: string | null;
-  status: string | null;
-  notes: string | null;
-  rating: number | null;
-  review_label: string | null;
-  created_at: string | null;
-  jobs?: {
-    title?: string | null;
-    role_category?: string | null;
-  } | null;
-  status_history?: StatusHistoryItem[];
-};
-
-const glassCardStyle: React.CSSProperties = {
-  background: "rgba(15, 27, 52, 0.74)",
-  border: "1px solid rgba(34, 48, 77, 0.95)",
-  borderRadius: "24px",
-  padding: "24px",
-  backdropFilter: "blur(12px)",
-  boxShadow: "0 20px 50px rgba(0,0,0,0.22)",
-};
-
-const panelStyle: React.CSSProperties = {
-  background: "rgba(11, 21, 43, 0.88)",
-  border: "1px solid #22304d",
-  borderRadius: "20px",
-  padding: "18px",
-  boxShadow: "0 10px 24px rgba(0,0,0,0.16)",
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "13px 14px",
-  borderRadius: "14px",
-  border: "1px solid #22304d",
-  background: "rgba(11, 21, 43, 0.92)",
-  color: "white",
-  outline: "none",
-  fontSize: "15px",
-};
-
-const textareaStyle: React.CSSProperties = {
-  ...inputStyle,
-  minHeight: "120px",
-  resize: "vertical",
-};
-
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontSize: "14px",
-  fontWeight: 700,
-  color: "#dbe7ff",
-  marginBottom: "8px",
-};
-
-const primaryButtonStyle: React.CSSProperties = {
-  padding: "12px 16px",
-  borderRadius: "14px",
-  border: "none",
-  background: "linear-gradient(90deg, #4cc9f0 0%, #7b61ff 100%)",
-  color: "white",
-  fontWeight: 800,
-  cursor: "pointer",
-  boxShadow: "0 14px 30px rgba(76, 201, 240, 0.18)",
-  textDecoration: "none",
-};
-
-const successButtonStyle: React.CSSProperties = {
-  padding: "12px 16px",
-  borderRadius: "14px",
-  border: "none",
-  background: "linear-gradient(90deg, #22c55e 0%, #16a34a 100%)",
-  color: "white",
-  fontWeight: 800,
-  cursor: "pointer",
-};
-
-const ghostButtonStyle: React.CSSProperties = {
-  padding: "12px 16px",
-  borderRadius: "14px",
-  border: "1px solid #22304d",
-  background: "rgba(11, 21, 43, 0.9)",
-  color: "white",
-  fontWeight: 600,
-  cursor: "pointer",
-  textDecoration: "none",
-};
-
-const dangerButtonStyle: React.CSSProperties = {
-  padding: "12px 16px",
-  borderRadius: "14px",
-  border: "1px solid #5b2333",
-  background: "#1d1220",
-  color: "white",
-  fontWeight: 700,
-  cursor: "pointer",
-};
-
-const pillStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "8px",
-  padding: "8px 12px",
-  borderRadius: "999px",
-  border: "1px solid rgba(76, 201, 240, 0.18)",
-  background: "rgba(76, 201, 240, 0.10)",
-  color: "#95ecff",
-  fontSize: "13px",
-  fontWeight: 700,
-};
-
-const emptyJobForm = {
-  title: "",
-  department: "",
-  type: "",
-  location: "",
-  description: "",
-  requirements: "",
-  role_category: "Other",
-};
-
-function statusPillStyle(status: string | null): React.CSSProperties {
-  if (status === "Accepted") {
-    return {
-      ...pillStyle,
-      background: "rgba(34, 197, 94, 0.12)",
-      color: "#9ef1b5",
-      border: "1px solid rgba(34, 197, 94, 0.16)",
-    };
-  }
-
-  if (status === "Rejected") {
-    return {
-      ...pillStyle,
-      background: "rgba(239, 68, 68, 0.12)",
-      color: "#ffb0b0",
-      border: "1px solid rgba(239, 68, 68, 0.16)",
-    };
-  }
-
-  if (status === "In Review") {
-    return {
-      ...pillStyle,
-      background: "rgba(245, 158, 11, 0.12)",
-      color: "#ffd58f",
-      border: "1px solid rgba(245, 158, 11, 0.18)",
-    };
-  }
-
-  return {
-    ...pillStyle,
-    background: "rgba(76, 201, 240, 0.12)",
-    color: "#aaf3ff",
-    border: "1px solid rgba(76, 201, 240, 0.18)",
-  };
-}
-
-function reviewLabelStyle(label: string | null): React.CSSProperties {
-  if (label === "interessant") {
-    return {
-      ...pillStyle,
-      background: "rgba(76, 201, 240, 0.12)",
-      color: "#aaf3ff",
-      border: "1px solid rgba(76, 201, 240, 0.18)",
-    };
-  }
-
-  if (label === "später") {
-    return {
-      ...pillStyle,
-      background: "rgba(245, 158, 11, 0.12)",
-      color: "#ffd58f",
-      border: "1px solid rgba(245, 158, 11, 0.18)",
-    };
-  }
-
-  if (label === "abgelehnt") {
-    return {
-      ...pillStyle,
-      background: "rgba(239, 68, 68, 0.12)",
-      color: "#ffb0b0",
-      border: "1px solid rgba(239, 68, 68, 0.16)",
-    };
-  }
-
-  return pillStyle;
-}
-
-function formatDate(value?: string | null) {
-  if (!value) return "-";
-  return new Date(value).toLocaleDateString();
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "-";
-  return new Date(value).toLocaleString();
-}
+import AdminLogin from "../../components/AdminLogin";
+import AdminShell from "../../components/admin/AdminShell";
+import {
+  ghostButtonStyle,
+  glassCardStyle,
+  pillStyle,
+} from "../../lib/admin-styles";
+import { useAdminDashboard } from "../../hooks/useAdminDashboard";
 
 export default function AdminPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const admin = useAdminDashboard();
 
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  const [applications, setApplications] = useState<ApplicationItem[]>([]);
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [patchnotes, setPatchnotes] = useState<any[]>([]);
-
-  const [jobForm, setJobForm] = useState(emptyJobForm);
-  const [editingJobId, setEditingJobId] = useState<string | null>(null);
-
-  const [searchName, setSearchName] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [roleFilter, setRoleFilter] = useState("All");
-  const [expandedApplications, setExpandedApplications] = useState<string[]>([]);
-  const [expandedPatchnotes, setExpandedPatchnotes] = useState<string[]>([]);
-
-  const [patchVersion, setPatchVersion] = useState("");
-  const [patchTitle, setPatchTitle] = useState("");
-  const [patchContent, setPatchContent] = useState("");
-  const [editingPatchId, setEditingPatchId] = useState<string | null>(null);
-
-  async function loadApplications() {
-    const { data, error } = await supabase
-      .from("applications")
-      .select(`
-        id,
-        name,
-        discord,
-        age,
-        email,
-        timezone,
-        experience,
-        motivation,
-        availability,
-        developer_skills,
-        developer_projects,
-        support_cases,
-        support_communication,
-        competitive_knowledge,
-        competitive_plans,
-        manager_leadership,
-        manager_organization,
-        director_vision,
-        director_responsibility,
-        other_strengths,
-        tracking_code,
-        status,
-        notes,
-        rating,
-        review_label,
-        created_at,
-        jobs (
-          title,
-          role_category
-        )
-      `)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.log(error);
-      return;
-    }
-
-    const { data: historyData, error: historyError } = await supabase
-      .from("application_status_history")
-      .select("id, application_id, status, changed_at, changed_by, note")
-      .order("changed_at", { ascending: false });
-
-    if (historyError) {
-      console.log(historyError);
-    }
-
-    const groupedHistory = new Map<string, StatusHistoryItem[]>();
-
-    (historyData ?? []).forEach((item) => {
-      const existing = groupedHistory.get(item.application_id) ?? [];
-      existing.push(item as StatusHistoryItem);
-      groupedHistory.set(item.application_id, existing);
-    });
-
-    const mergedApplications = (data ?? []).map((app) => ({
-      ...(app as ApplicationItem),
-      status_history: groupedHistory.get(app.id) ?? [],
-    }));
-
-    setApplications(mergedApplications);
-  }
-
-  async function loadJobs() {
-    const { data, error } = await supabase
-      .from("jobs")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.log(error);
-      return;
-    }
-
-    setJobs(data ?? []);
-  }
-
-  async function loadPatchnotes() {
-    const { data, error } = await supabase
-      .from("patchnotes")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.log(error);
-      return;
-    }
-
-    setPatchnotes(data ?? []);
-  }
-
-  async function checkUser() {
-    setLoading(true);
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setUserEmail(null);
-      setIsAdmin(false);
-      setApplications([]);
-      setJobs([]);
-      setPatchnotes([]);
-      setLoading(false);
-      return;
-    }
-
-    setUserEmail(user.email ?? null);
-
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError || !profile || profile.role !== "admin") {
-      setIsAdmin(false);
-      setApplications([]);
-      setJobs([]);
-      setPatchnotes([]);
-      setLoading(false);
-      return;
-    }
-
-    setIsAdmin(true);
-    await Promise.all([loadApplications(), loadJobs(), loadPatchnotes()]);
-    setLoading(false);
-  }
-
-  async function login() {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    setEmail("");
-    setPassword("");
-    await checkUser();
-  }
-
-  async function logout() {
-    await supabase.auth.signOut();
-    await checkUser();
-  }
-
-  async function updateApplicationStatus(id: string, status: string) {
-    const { error } = await supabase
-      .from("applications")
-      .update({ status })
-      .eq("id", id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    await loadApplications();
-  }
-
-  async function updateApplicationNotes(id: string, notes: string) {
-    const { error } = await supabase
-      .from("applications")
-      .update({ notes })
-      .eq("id", id);
-
-    if (error) {
-      alert("Notes could not be saved.");
-      console.log(error);
-      return;
-    }
-
-    setApplications((prev) =>
-      prev.map((app) => (app.id === id ? { ...app, notes } : app))
-    );
-  }
-
-  async function updateApplicationRating(id: string, rating: number) {
-    const { error } = await supabase
-      .from("applications")
-      .update({ rating })
-      .eq("id", id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    setApplications((prev) =>
-      prev.map((app) => (app.id === id ? { ...app, rating } : app))
-    );
-  }
-
-  async function updateApplicationReviewLabel(
-    id: string,
-    review_label: string
-  ) {
-    const { error } = await supabase
-      .from("applications")
-      .update({ review_label })
-      .eq("id", id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    setApplications((prev) =>
-      prev.map((app) => (app.id === id ? { ...app, review_label } : app))
-    );
-  }
-
-  async function deleteApplication(id: string) {
-    const confirmed = window.confirm(
-      "Do you really want to delete this application?"
-    );
-    if (!confirmed) return;
-
-    const { error } = await supabase
-      .from("applications")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    setExpandedApplications((prev) => prev.filter((item) => item !== id));
-    await loadApplications();
-  }
-
-  async function saveJob() {
-    if (!jobForm.title || !jobForm.department || !jobForm.description) {
-      alert("Please fill in title, department, and description.");
-      return;
-    }
-
-    const requirementsArray = jobForm.requirements
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-
-    const payload = {
-      title: jobForm.title,
-      department: jobForm.department,
-      type: jobForm.type || "Volunteer",
-      location: jobForm.location || "Remote",
-      description: jobForm.description,
-      requirements: requirementsArray,
-      role_category: jobForm.role_category || "Other",
-    };
-
-    if (editingJobId) {
-      const { error } = await supabase
-        .from("jobs")
-        .update(payload)
-        .eq("id", editingJobId);
-
-      if (error) {
-        alert(error.message);
-        return;
-      }
-    } else {
-      const { error } = await supabase.from("jobs").insert({
-        ...payload,
-        status: "Open",
-      });
-
-      if (error) {
-        alert(error.message);
-        return;
-      }
-
-      try {
-        await fetch("/api/job-notify", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-      } catch (notifyError) {
-        console.log("Job Discord notify failed:", notifyError);
-      }
-    }
-
-    setJobForm(emptyJobForm);
-    setEditingJobId(null);
-    await loadJobs();
-  }
-
-  function startEditJob(job: any) {
-    setEditingJobId(job.id);
-    setJobForm({
-      title: job.title || "",
-      department: job.department || "",
-      type: job.type || "",
-      location: job.location || "",
-      description: job.description || "",
-      requirements: Array.isArray(job.requirements)
-        ? job.requirements.join(", ")
-        : "",
-      role_category: job.role_category || "Other",
-    });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function cancelEditJob() {
-    setEditingJobId(null);
-    setJobForm(emptyJobForm);
-  }
-
-  async function updateJobStatus(id: string, status: string) {
-    const job = jobs.find((item) => item.id === id);
-
-    const { error } = await supabase.from("jobs").update({ status }).eq("id", id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    if (job && (status === "Filled" || status === "Open")) {
-      try {
-        await fetch("/api/job-status-notify", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            title: job.title,
-            department: job.department,
-            location: job.location,
-            role_category: job.role_category,
-            status,
-          }),
-        });
-      } catch (notifyError) {
-        console.log("Job status notify failed:", notifyError);
-      }
-    }
-
-    await loadJobs();
-  }
-
-  async function deleteJob(id: string) {
-    const confirmed = window.confirm("Do you really want to delete this job?");
-    if (!confirmed) return;
-
-    const { error } = await supabase.from("jobs").delete().eq("id", id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    if (editingJobId === id) {
-      cancelEditJob();
-    }
-
-    await loadJobs();
-  }
-
-  async function savePatchnote() {
-    if (!patchVersion || !patchTitle || !patchContent) {
-      alert("Please fill in version, title, and content.");
-      return;
-    }
-
-    if (editingPatchId) {
-      const { error } = await supabase
-        .from("patchnotes")
-        .update({
-          version: patchVersion,
-          title: patchTitle,
-          content: patchContent,
-        })
-        .eq("id", editingPatchId);
-
-      if (error) {
-        alert(error.message);
-        return;
-      }
-    } else {
-      const { error } = await supabase.from("patchnotes").insert({
-        version: patchVersion,
-        title: patchTitle,
-        content: patchContent,
-      });
-
-      if (error) {
-        alert(error.message);
-        return;
-      }
-    }
-
-    setPatchVersion("");
-    setPatchTitle("");
-    setPatchContent("");
-    setEditingPatchId(null);
-    await loadPatchnotes();
-  }
-
-  function startEditPatchnote(note: any) {
-    setEditingPatchId(note.id);
-    setPatchVersion(note.version || "");
-    setPatchTitle(note.title || "");
-    setPatchContent(note.content || "");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function cancelEditPatchnote() {
-    setEditingPatchId(null);
-    setPatchVersion("");
-    setPatchTitle("");
-    setPatchContent("");
-  }
-
-  async function deletePatchnote(id: string) {
-    const confirmed = window.confirm(
-      "Do you really want to delete this patchnote?"
-    );
-    if (!confirmed) return;
-
-    const { error } = await supabase.from("patchnotes").delete().eq("id", id);
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    if (editingPatchId === id) {
-      cancelEditPatchnote();
-    }
-
-    setExpandedPatchnotes((prev) => prev.filter((item) => item !== id));
-    await loadPatchnotes();
-  }
-
-  function toggleApplication(id: string) {
-    setExpandedApplications((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  }
-
-  function togglePatchnote(id: string) {
-    setExpandedPatchnotes((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  }
-
-  const filteredApplications = useMemo(() => {
-    return applications.filter((app) => {
-      const searchValue = searchName.trim().toLowerCase();
-
-      const haystack = [
-        app.name || "",
-        app.email || "",
-        app.discord || "",
-        app.tracking_code || "",
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      const matchesSearch = !searchValue || haystack.includes(searchValue);
-      const matchesStatus = statusFilter === "All" || app.status === statusFilter;
-      const matchesRole = roleFilter === "All" || app.jobs?.title === roleFilter;
-
-      return matchesSearch && matchesStatus && matchesRole;
-    });
-  }, [applications, searchName, statusFilter, roleFilter]);
-
-  const roleOptions = useMemo(() => {
-    return Array.from(
-      new Set(applications.map((app) => app.jobs?.title).filter(Boolean))
-    );
-  }, [applications]);
-
-  useEffect(() => {
-    checkUser();
-
-    const channel = supabase
-      .channel("admin-live-applications")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "applications",
-        },
-        async () => {
-          await loadApplications();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "jobs",
-        },
-        async () => {
-          await loadJobs();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "patchnotes",
-        },
-        async () => {
-          await loadPatchnotes();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "application_status_history",
-        },
-        async () => {
-          await loadApplications();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  if (loading) {
+  if (admin.loading) {
     return (
-      <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
         <div
           style={{
             minHeight: "50vh",
@@ -819,7 +29,7 @@ export default function AdminPage() {
     );
   }
 
-  if (!userEmail) {
+  if (!admin.userEmail) {
     return (
       <div style={{ maxWidth: 520, margin: "0 auto" }}>
         <section style={{ ...glassCardStyle, padding: "34px" }}>
@@ -846,47 +56,25 @@ export default function AdminPage() {
               lineHeight: 1.7,
             }}
           >
-            Sign in to access applications, jobs, internal notes, and patchnotes.
+            Sign in to access applications, jobs, internal notes, patchnotes, and logs.
           </p>
 
-          <div style={{ display: "grid", gap: "14px" }}>
-            <div>
-              <label style={labelStyle}>Admin Email</label>
-              <input
-                placeholder="Admin email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>Password</label>
-              <input
-                placeholder="Password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={inputStyle}
-              />
-            </div>
-
-            <button onClick={login} style={primaryButtonStyle}>
-              Login
-            </button>
-          </div>
+          <AdminLogin onSuccess={admin.checkUser} />
         </section>
       </div>
     );
   }
 
-  if (!isAdmin) {
+  if (!admin.isAdmin) {
     return (
       <div style={{ maxWidth: 560, margin: "0 auto" }}>
         <section style={glassCardStyle}>
           <h1>No admin access</h1>
-          <p style={{ color: "#9fb0d0" }}>Logged in as: {userEmail}</p>
-          <button onClick={logout} style={ghostButtonStyle}>
+          <p style={{ color: "#9fb0d0" }}>Logged in as: {admin.userEmail}</p>
+          <p style={{ color: "#9fb0d0", lineHeight: 1.7 }}>
+            Your account is logged in, but no admin role was found in the profile.
+          </p>
+          <button onClick={admin.logout} style={ghostButtonStyle}>
             Logout
           </button>
         </section>
@@ -897,44 +85,71 @@ export default function AdminPage() {
   return (
     <>
       <style jsx>{`
+        .adminPageWrap {
+          max-width: 1280px;
+          margin: 0 auto;
+        }
+
+        .adminHeader {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 18px;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+        }
+
+        .adminBadges {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .adminShellGrid {
+          display: grid;
+          grid-template-columns: 260px minmax(0, 1fr);
+          gap: 18px;
+          align-items: start;
+        }
+
         .statsGrid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(4, 1fr);
           gap: 18px;
         }
 
         .splitGrid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 22px;
+          gap: 18px;
           align-items: start;
         }
 
         .patchGrid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 22px;
+          gap: 18px;
           align-items: start;
         }
 
         .filtersGrid {
           display: grid;
           grid-template-columns: 1.2fr 0.8fr 0.8fr;
-          gap: 12px;
-          margin-bottom: 20px;
+          gap: 10px;
+          margin-bottom: 18px;
         }
 
         .applicationGrid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 18px;
+          gap: 16px;
           align-items: start;
         }
 
         .miniGrid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 14px;
+          gap: 12px;
         }
 
         .historyGrid {
@@ -943,7 +158,14 @@ export default function AdminPage() {
           margin-top: 12px;
         }
 
+        @media (max-width: 1100px) {
+          .statsGrid {
+            grid-template-columns: 1fr 1fr;
+          }
+        }
+
         @media (max-width: 980px) {
+          .adminShellGrid,
           .statsGrid,
           .splitGrid,
           .patchGrid,
@@ -955,1166 +177,120 @@ export default function AdminPage() {
         }
 
         @media (max-width: 640px) {
+          .statsGrid {
+            grid-template-columns: 1fr;
+          }
+
           .appHeaderRow,
           .jobHeaderRow,
-          .patchHeaderRow {
+          .patchHeaderRow,
+          .sectionHeaderRow {
             flex-direction: column;
             align-items: flex-start !important;
           }
         }
       `}</style>
 
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 20,
-          marginBottom: 22,
-          flexWrap: "wrap",
-        }}
-      >
-        <div>
-          <p
-            style={{
-              color: "#4cc9f0",
-              fontWeight: 800,
-              marginBottom: 8,
-              fontSize: "13px",
-              letterSpacing: "0.08em",
-            }}
-          >
-            AUROS ADMIN DASHBOARD
-          </p>
-          <h1 style={{ margin: 0, fontSize: "44px", lineHeight: 1.05 }}>
-            Staff Management
-          </h1>
-          <p style={{ color: "#9fb0d0", marginTop: 8 }}>
-            Logged in as: {userEmail}
-          </p>
-        </div>
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <span style={pillStyle}>🟢 Live</span>
-          <span style={pillStyle}>{jobs.length} Jobs</span>
-          <span style={pillStyle}>{applications.length} Applications</span>
-          <span style={pillStyle}>{patchnotes.length} Patchnotes</span>
-          <button onClick={logout} style={ghostButtonStyle}>
-            Logout
-          </button>
-        </div>
-      </div>
-
-      <section style={{ ...glassCardStyle, padding: "30px", marginBottom: 22 }}>
-        <div className="statsGrid">
-          <div style={panelStyle}>
-            <p style={{ margin: 0, color: "#9fb0d0" }}>Applications</p>
-            <h3 style={{ margin: "10px 0 0 0", fontSize: "32px" }}>
-              {applications.length}
-            </h3>
-          </div>
-
-          <div style={panelStyle}>
-            <p style={{ margin: 0, color: "#9fb0d0" }}>Open Jobs</p>
-            <h3 style={{ margin: "10px 0 0 0", fontSize: "32px" }}>
-              {jobs.filter((job) => job.status === "Open").length}
-            </h3>
-          </div>
-
-          <div style={panelStyle}>
-            <p style={{ margin: 0, color: "#9fb0d0" }}>Patchnotes</p>
-            <h3 style={{ margin: "10px 0 0 0", fontSize: "32px" }}>
-              {patchnotes.length}
-            </h3>
-          </div>
-        </div>
-      </section>
-
-      <div className="splitGrid">
-        <section style={glassCardStyle}>
-          <h2 style={{ marginTop: 0 }}>
-            {editingJobId ? "Edit Job" : "Create Job"}
-          </h2>
-
-          <div style={{ display: "grid", gap: "14px" }}>
-            <div>
-              <label style={labelStyle}>Job Title</label>
-              <input
-                value={jobForm.title}
-                onChange={(e) =>
-                  setJobForm((prev) => ({ ...prev, title: e.target.value }))
-                }
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>Department</label>
-              <input
-                value={jobForm.department}
-                onChange={(e) =>
-                  setJobForm((prev) => ({
-                    ...prev,
-                    department: e.target.value,
-                  }))
-                }
-                style={inputStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>Role Category</label>
-              <select
-                value={jobForm.role_category}
-                onChange={(e) =>
-                  setJobForm((prev) => ({
-                    ...prev,
-                    role_category: e.target.value,
-                  }))
-                }
-                style={inputStyle}
-              >
-                <option style={{ background: "#0b152b" }} value="Developer">
-                  Developer
-                </option>
-                <option style={{ background: "#0b152b" }} value="Supporter">
-                  Supporter
-                </option>
-                <option
-                  style={{ background: "#0b152b" }}
-                  value="Competitive Manager"
-                >
-                  Competitive Manager
-                </option>
-                <option style={{ background: "#0b152b" }} value="Manager">
-                  Manager
-                </option>
-                <option style={{ background: "#0b152b" }} value="Director">
-                  Director
-                </option>
-                <option style={{ background: "#0b152b" }} value="Other">
-                  Other
-                </option>
-              </select>
-            </div>
-
-            <div className="miniGrid">
-              <div>
-                <label style={labelStyle}>Type</label>
-                <input
-                  value={jobForm.type}
-                  onChange={(e) =>
-                    setJobForm((prev) => ({
-                      ...prev,
-                      type: e.target.value,
-                    }))
-                  }
-                  style={inputStyle}
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Location</label>
-                <input
-                  value={jobForm.location}
-                  onChange={(e) =>
-                    setJobForm((prev) => ({
-                      ...prev,
-                      location: e.target.value,
-                    }))
-                  }
-                  style={inputStyle}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label style={labelStyle}>Description</label>
-              <textarea
-                value={jobForm.description}
-                onChange={(e) =>
-                  setJobForm((prev) => ({
-                    ...prev,
-                    description: e.target.value,
-                  }))
-                }
-                style={textareaStyle}
-              />
-            </div>
-
-            <div>
-              <label style={labelStyle}>Requirements</label>
-              <input
-                value={jobForm.requirements}
-                onChange={(e) =>
-                  setJobForm((prev) => ({
-                    ...prev,
-                    requirements: e.target.value,
-                  }))
-                }
-                style={inputStyle}
-              />
-            </div>
-
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <button onClick={saveJob} style={primaryButtonStyle}>
-                {editingJobId ? "Save Changes" : "Create Job"}
-              </button>
-
-              {editingJobId && (
-                <button onClick={cancelEditJob} style={ghostButtonStyle}>
-                  Cancel Edit
-                </button>
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section style={glassCardStyle}>
-          <h2 style={{ marginTop: 0 }}>Job Listings</h2>
-
-          <div style={{ display: "grid", gap: "14px" }}>
-            {jobs.map((job) => (
-              <div key={job.id} style={panelStyle}>
-                <div
-                  className="jobHeaderRow"
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 12,
-                    alignItems: "start",
-                    flexWrap: "wrap",
-                    marginBottom: 12,
-                  }}
-                >
-                  <div>
-                    <h3 style={{ marginTop: 0, marginBottom: 8 }}>
-                      {job.title || "No title"}
-                    </h3>
-                    <p style={{ color: "#9fb0d0", margin: "4px 0" }}>
-                      {job.department || "-"} • {job.type || "-"} •{" "}
-                      {job.location || "-"}
-                    </p>
-                    <p style={{ color: "#9fb0d0", margin: "4px 0" }}>
-                      Category: {job.role_category || "Other"}
-                    </p>
-                  </div>
-
-                  <span style={pillStyle}>{job.status || "-"}</span>
-                </div>
-
-                <p style={{ color: "#dbe7ff", lineHeight: 1.6 }}>
-                  {job.description || "-"}
-                </p>
-
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  <button
-                    onClick={() => startEditJob(job)}
-                    style={ghostButtonStyle}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => updateJobStatus(job.id, "Open")}
-                    style={primaryButtonStyle}
-                  >
-                    Open
-                  </button>
-                  <button
-                    onClick={() => updateJobStatus(job.id, "Filled")}
-                    style={ghostButtonStyle}
-                  >
-                    Filled
-                  </button>
-                  <button
-                    onClick={() => deleteJob(job.id)}
-                    style={dangerButtonStyle}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
-
-      <section style={{ ...glassCardStyle, marginTop: 22 }}>
-        <div className="patchGrid">
+      <div className="adminPageWrap">
+        <div className="adminHeader">
           <div>
-            <h2 style={{ marginTop: 0 }}>
-              {editingPatchId ? "Edit Patchnote" : "Create Patchnote"}
-            </h2>
+            <p
+              style={{
+                color: "#4cc9f0",
+                fontWeight: 800,
+                marginBottom: 6,
+                fontSize: "12px",
+                letterSpacing: "0.08em",
+              }}
+            >
+              AUROS ADMIN DASHBOARD
+            </p>
 
-            <div style={{ display: "grid", gap: "14px" }}>
-              <div>
-                <label style={labelStyle}>Version</label>
-                <input
-                  value={patchVersion}
-                  onChange={(e) => setPatchVersion(e.target.value)}
-                  style={inputStyle}
-                />
-              </div>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: "40px",
+                lineHeight: 1.02,
+              }}
+            >
+              Staff Management
+            </h1>
 
-              <div>
-                <label style={labelStyle}>Title</label>
-                <input
-                  value={patchTitle}
-                  onChange={(e) => setPatchTitle(e.target.value)}
-                  style={inputStyle}
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Content</label>
-                <textarea
-                  value={patchContent}
-                  onChange={(e) => setPatchContent(e.target.value)}
-                  style={{ ...textareaStyle, minHeight: 180 }}
-                />
-              </div>
-
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <button onClick={savePatchnote} style={primaryButtonStyle}>
-                  {editingPatchId ? "Save Patchnote" : "Create Patchnote"}
-                </button>
-
-                {editingPatchId && (
-                  <button
-                    onClick={cancelEditPatchnote}
-                    style={ghostButtonStyle}
-                  >
-                    Cancel Edit
-                  </button>
-                )}
-              </div>
-            </div>
+            <p
+              style={{
+                color: "#9fb0d0",
+                marginTop: 6,
+                fontSize: 14,
+              }}
+            >
+              Logged in as: {admin.userEmail}
+            </p>
           </div>
 
-          <div>
-            <h2 style={{ marginTop: 0 }}>Patchnote Entries</h2>
+          <div className="adminBadges">
+            <span style={pillStyle}>🟢 Live</span>
+            <span style={pillStyle}>{admin.jobs.length} Jobs</span>
+            <span style={pillStyle}>{admin.applications.length} Applications</span>
+            <span style={pillStyle}>{admin.patchnotes.length} Patchnotes</span>
 
-            <div style={{ display: "grid", gap: "14px" }}>
-              {patchnotes.map((note) => {
-                const isOpen = expandedPatchnotes.includes(note.id);
-
-                return (
-                  <div key={note.id} style={panelStyle}>
-                    <div
-                      className="patchHeaderRow"
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        gap: 12,
-                        flexWrap: "wrap",
-                        alignItems: "center",
-                      }}
-                    >
-                      <div>
-                        <h3 style={{ margin: 0 }}>
-                          {note.version || "No Version"} —{" "}
-                          {note.title || "No Title"}
-                        </h3>
-                        <p style={{ margin: "8px 0 0 0", color: "#9fb0d0" }}>
-                          {note.created_at
-                            ? new Date(note.created_at).toLocaleDateString()
-                            : "-"}
-                        </p>
-                      </div>
-
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <button
-                          onClick={() => togglePatchnote(note.id)}
-                          style={ghostButtonStyle}
-                        >
-                          {isOpen ? "Hide Details" : "Show Details"}
-                        </button>
-                        <button
-                          onClick={() => startEditPatchnote(note)}
-                          style={ghostButtonStyle}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => deletePatchnote(note.id)}
-                          style={dangerButtonStyle}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-
-                    {isOpen && (
-                      <div
-                        style={{
-                          color: "#dbe7ff",
-                          whiteSpace: "pre-wrap",
-                          lineHeight: 1.7,
-                          marginTop: 14,
-                          padding: "14px",
-                          borderRadius: "14px",
-                          background: "#081225",
-                          border: "1px solid #22304d",
-                        }}
-                      >
-                        {note.content || "-"}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-
-              {patchnotes.length === 0 && (
-                <div style={{ ...panelStyle, color: "#9fb0d0" }}>
-                  No patchnotes created yet.
-                </div>
-              )}
-            </div>
+            <button onClick={admin.logout} style={ghostButtonStyle}>
+              Logout
+            </button>
           </div>
         </div>
-      </section>
 
-      <section style={{ ...glassCardStyle, marginTop: 22 }}>
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            marginBottom: "10px",
-            flexWrap: "wrap",
-          }}
-        >
-          <button onClick={() => setStatusFilter("New")} style={ghostButtonStyle}>
-            New
-          </button>
-          <button
-            onClick={() => setStatusFilter("In Review")}
-            style={ghostButtonStyle}
-          >
-            In Review
-          </button>
-          <button
-            onClick={() => setStatusFilter("Accepted")}
-            style={successButtonStyle}
-          >
-            Accepted
-          </button>
-          <button
-            onClick={() => setStatusFilter("Rejected")}
-            style={dangerButtonStyle}
-          >
-            Rejected
-          </button>
-          <button onClick={() => setStatusFilter("All")} style={ghostButtonStyle}>
-            All
-          </button>
-        </div>
-
-        <div className="filtersGrid">
-          <input
-            placeholder="Search by name, email, discord or tracking code"
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
-            style={inputStyle}
-          />
-
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            style={inputStyle}
-          >
-            <option style={{ background: "#0b152b" }} value="All">
-              All Statuses
-            </option>
-            <option style={{ background: "#0b152b" }} value="New">
-              New
-            </option>
-            <option style={{ background: "#0b152b" }} value="Accepted">
-              Accepted
-            </option>
-            <option style={{ background: "#0b152b" }} value="Rejected">
-              Rejected
-            </option>
-            <option style={{ background: "#0b152b" }} value="In Review">
-              In Review
-            </option>
-          </select>
-
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            style={inputStyle}
-          >
-            <option style={{ background: "#0b152b" }} value="All">
-              All Roles
-            </option>
-            {roleOptions.map((role) => (
-              <option
-                key={role}
-                style={{ background: "#0b152b" }}
-                value={roleFilter}
-              >
-                {role}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div style={{ display: "grid", gap: "16px" }}>
-          {filteredApplications.map((app) => {
-            const isOpen = expandedApplications.includes(app.id);
-            const history = app.status_history ?? [];
-
-            return (
-              <div key={app.id} style={panelStyle}>
-                <div
-                  className="appHeaderRow"
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 12,
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div style={{ minWidth: 0 }}>
-                    <h3 style={{ margin: "0 0 8px 0" }}>
-                      {app.name || "No name"}
-                    </h3>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 8,
-                        flexWrap: "wrap",
-                        alignItems: "center",
-                      }}
-                    >
-                      <span style={statusPillStyle(app.status)}>
-                        {app.status || "-"}
-                      </span>
-                      <span style={pillStyle}>{app.jobs?.title || "-"}</span>
-                      <span style={pillStyle}>
-                        {app.jobs?.role_category || "Other"}
-                      </span>
-                      {app.review_label ? (
-                        <span style={reviewLabelStyle(app.review_label)}>
-                          {app.review_label}
-                        </span>
-                      ) : null}
-                      {app.rating ? (
-                        <span style={pillStyle}>{"★".repeat(app.rating)}</span>
-                      ) : null}
-                      <span style={pillStyle}>
-                        {history.length} History Event{history.length === 1 ? "" : "s"}
-                      </span>
-                    </div>
-                    <p style={{ margin: "10px 0 0 0", color: "#9fb0d0" }}>
-                      {app.email || "-"} • {app.discord || "-"} •{" "}
-                      {app.tracking_code || "-"}
-                    </p>
-
-                    <button
-                      onClick={() =>
-                        navigator.clipboard.writeText(app.tracking_code || "")
-                      }
-                      style={{
-                        marginTop: 6,
-                        padding: "6px 10px",
-                        borderRadius: "10px",
-                        border: "1px solid #22304d",
-                        background: "rgba(11, 21, 43, 0.9)",
-                        color: "white",
-                        cursor: "pointer",
-                        fontSize: "13px",
-                      }}
-                    >
-                      Copy Tracking Code
-                    </button>
-                  </div>
-
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <Link
-                      href={`/admin/applications/${app.id}`}
-                      style={ghostButtonStyle}
-                    >
-                      Open Card
-                    </Link>
-                    <button
-                      onClick={() => toggleApplication(app.id)}
-                      style={ghostButtonStyle}
-                    >
-                      {isOpen ? "Hide Details" : "Show Details"}
-                    </button>
-                    <button
-                      onClick={() =>
-                        updateApplicationStatus(app.id, "In Review")
-                      }
-                      style={ghostButtonStyle}
-                    >
-                      In Review
-                    </button>
-                    <button
-                      onClick={() =>
-                        updateApplicationStatus(app.id, "Accepted")
-                      }
-                      style={successButtonStyle}
-                    >
-                      Accept
-                    </button>
-                    <button
-                      onClick={() =>
-                        updateApplicationStatus(app.id, "Rejected")
-                      }
-                      style={dangerButtonStyle}
-                    >
-                      Reject
-                    </button>
-                  </div>
-                </div>
-
-                {isOpen && (
-                  <div style={{ marginTop: 18 }}>
-                    <div className="applicationGrid">
-                      <div>
-                        <div
-                          style={{
-                            display: "grid",
-                            gap: "6px",
-                            color: "#9fb0d0",
-                          }}
-                        >
-                          <p style={{ margin: 0 }}>
-                            <strong style={{ color: "#dbe7ff" }}>Role:</strong>{" "}
-                            {app.jobs?.title || "-"}
-                          </p>
-                          <p style={{ margin: 0 }}>
-                            <strong style={{ color: "#dbe7ff" }}>
-                              Category:
-                            </strong>{" "}
-                            {app.jobs?.role_category || "Other"}
-                          </p>
-                          <p style={{ margin: 0 }}>
-                            <strong style={{ color: "#dbe7ff" }}>
-                              Tracking Code:
-                            </strong>{" "}
-                            {app.tracking_code || "-"}
-                          </p>
-                          <p style={{ margin: 0 }}>
-                            <strong style={{ color: "#dbe7ff" }}>
-                              Discord Username:
-                            </strong>{" "}
-                            {app.discord || "-"}
-                          </p>
-                          <p style={{ margin: 0 }}>
-                            <strong style={{ color: "#dbe7ff" }}>Email:</strong>{" "}
-                            {app.email || "-"}
-                          </p>
-                          <p style={{ margin: 0 }}>
-                            <strong style={{ color: "#dbe7ff" }}>Age:</strong>{" "}
-                            {app.age || "-"}
-                          </p>
-                          <p style={{ margin: 0 }}>
-                            <strong style={{ color: "#dbe7ff" }}>
-                              Timezone:
-                            </strong>{" "}
-                            {app.timezone || "-"}
-                          </p>
-                          <p style={{ margin: 0 }}>
-                            <strong style={{ color: "#dbe7ff" }}>
-                              Availability:
-                            </strong>{" "}
-                            {app.availability || "-"}
-                          </p>
-                          <p style={{ margin: 0 }}>
-                            <strong style={{ color: "#dbe7ff" }}>
-                              Submitted:
-                            </strong>{" "}
-                            {formatDate(app.created_at)}
-                          </p>
-                        </div>
-
-                        <div
-                          style={{
-                            marginTop: 14,
-                            padding: "14px",
-                            borderRadius: "14px",
-                            background: "#081225",
-                            border: "1px solid #22304d",
-                          }}
-                        >
-                          <strong>Experience</strong>
-                          <p
-                            style={{
-                              marginBottom: 0,
-                              color: "#dbe7ff",
-                              lineHeight: 1.7,
-                            }}
-                          >
-                            {app.experience || "-"}
-                          </p>
-                        </div>
-
-                        <div
-                          style={{
-                            marginTop: 14,
-                            padding: "14px",
-                            borderRadius: "14px",
-                            background: "#081225",
-                            border: "1px solid #22304d",
-                          }}
-                        >
-                          <strong>Motivation</strong>
-                          <p
-                            style={{
-                              marginBottom: 0,
-                              color: "#dbe7ff",
-                              lineHeight: 1.7,
-                            }}
-                          >
-                            {app.motivation || "-"}
-                          </p>
-                        </div>
-
-                        <div
-                          style={{
-                            marginTop: 14,
-                            padding: "14px",
-                            borderRadius: "14px",
-                            background: "#081225",
-                            border: "1px solid #22304d",
-                          }}
-                        >
-                          <strong>Status History</strong>
-
-                          {history.length === 0 ? (
-                            <p
-                              style={{
-                                margin: "12px 0 0 0",
-                                color: "#9fb0d0",
-                                lineHeight: 1.7,
-                              }}
-                            >
-                              No history entries available yet.
-                            </p>
-                          ) : (
-                            <div className="historyGrid">
-                              {history.map((entry, index) => (
-                                <div
-                                  key={entry.id}
-                                  style={{
-                                    display: "flex",
-                                    gap: 12,
-                                    alignItems: "flex-start",
-                                    padding: "12px",
-                                    borderRadius: "12px",
-                                    background: "rgba(11, 21, 43, 0.75)",
-                                    border: "1px solid #22304d",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      width: 28,
-                                      height: 28,
-                                      borderRadius: "999px",
-                                      background:
-                                        "linear-gradient(90deg, #4cc9f0 0%, #7b61ff 100%)",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      fontSize: 12,
-                                      fontWeight: 800,
-                                      color: "white",
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    {history.length - index}
-                                  </div>
-
-                                  <div style={{ minWidth: 0 }}>
-                                    <p
-                                      style={{
-                                        margin: 0,
-                                        color: "#dbe7ff",
-                                        fontWeight: 700,
-                                      }}
-                                    >
-                                      {entry.status}
-                                    </p>
-                                    <p
-                                      style={{
-                                        margin: "4px 0 0 0",
-                                        color: "#9fb0d0",
-                                        fontSize: 14,
-                                      }}
-                                    >
-                                      {formatDateTime(entry.changed_at)}
-                                    </p>
-                                    {entry.note ? (
-                                      <p
-                                        style={{
-                                          margin: "6px 0 0 0",
-                                          color: "#cfdcff",
-                                          lineHeight: 1.6,
-                                        }}
-                                      >
-                                        {entry.note}
-                                      </p>
-                                    ) : null}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div
-                          style={{
-                            padding: "14px",
-                            borderRadius: "14px",
-                            background: "#081225",
-                            border: "1px solid #22304d",
-                            marginBottom: 14,
-                          }}
-                        >
-                          <strong>Internal Review</strong>
-
-                          <div style={{ marginTop: 12 }}>
-                            <p
-                              style={{
-                                margin: "0 0 8px 0",
-                                color: "#9fb0d0",
-                              }}
-                            >
-                              Rating
-                            </p>
-
-                            <div
-                              style={{
-                                display: "flex",
-                                gap: "8px",
-                                flexWrap: "wrap",
-                              }}
-                            >
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <button
-                                  key={star}
-                                  onClick={() =>
-                                    updateApplicationRating(app.id, star)
-                                  }
-                                  style={{
-                                    padding: "10px 14px",
-                                    borderRadius: "12px",
-                                    border:
-                                      app.rating === star
-                                        ? "1px solid rgba(76, 201, 240, 0.4)"
-                                        : "1px solid #22304d",
-                                    background:
-                                      app.rating === star
-                                        ? "linear-gradient(90deg, #4cc9f0 0%, #7b61ff 100%)"
-                                        : "rgba(11, 21, 43, 0.9)",
-                                    color: "white",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  {"★".repeat(star)}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div style={{ marginTop: 14 }}>
-                            <p
-                              style={{
-                                margin: "0 0 8px 0",
-                                color: "#9fb0d0",
-                              }}
-                            >
-                              Review Label
-                            </p>
-
-                            <div
-                              style={{
-                                display: "flex",
-                                gap: "8px",
-                                flexWrap: "wrap",
-                              }}
-                            >
-                              {["interessant", "später", "abgelehnt"].map(
-                                (label) => (
-                                  <button
-                                    key={label}
-                                    onClick={() =>
-                                      updateApplicationReviewLabel(app.id, label)
-                                    }
-                                    style={{
-                                      padding: "10px 14px",
-                                      borderRadius: "12px",
-                                      border:
-                                        app.review_label === label
-                                          ? "1px solid rgba(76, 201, 240, 0.4)"
-                                          : "1px solid #22304d",
-                                      background:
-                                        app.review_label === label
-                                          ? "linear-gradient(90deg, #4cc9f0 0%, #7b61ff 100%)"
-                                          : "rgba(11, 21, 43, 0.9)",
-                                      color: "white",
-                                      fontWeight: 700,
-                                      cursor: "pointer",
-                                      textTransform: "capitalize",
-                                    }}
-                                  >
-                                    {label}
-                                  </button>
-                                )
-                              )}
-                            </div>
-                          </div>
-
-                          <div
-                            style={{
-                              marginTop: 14,
-                              color: "#9fb0d0",
-                              lineHeight: 1.7,
-                            }}
-                          >
-                            <p style={{ margin: 0 }}>
-                              <strong style={{ color: "#dbe7ff" }}>
-                                Current Rating:
-                              </strong>{" "}
-                              {app.rating ? `${app.rating}/5` : "-"}
-                            </p>
-                            <p style={{ margin: 0 }}>
-                              <strong style={{ color: "#dbe7ff" }}>
-                                Current Label:
-                              </strong>{" "}
-                              {app.review_label || "-"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div
-                          style={{
-                            padding: "14px",
-                            borderRadius: "14px",
-                            background: "#081225",
-                            border: "1px solid #22304d",
-                            marginBottom: 14,
-                          }}
-                        >
-                          <strong>Category Answers</strong>
-                          <div
-                            style={{
-                              display: "grid",
-                              gap: "10px",
-                              marginTop: 12,
-                            }}
-                          >
-                            <div>
-                              <p style={{ margin: "0 0 6px 0", color: "#9fb0d0" }}>
-                                <strong style={{ color: "#dbe7ff" }}>
-                                  Developer Skills
-                                </strong>
-                              </p>
-                              <p style={{ margin: 0, color: "#dbe7ff", lineHeight: 1.7 }}>
-                                {app.developer_skills || "-"}
-                              </p>
-                            </div>
-                            <div>
-                              <p style={{ margin: "0 0 6px 0", color: "#9fb0d0" }}>
-                                <strong style={{ color: "#dbe7ff" }}>
-                                  Developer Projects
-                                </strong>
-                              </p>
-                              <p style={{ margin: 0, color: "#dbe7ff", lineHeight: 1.7 }}>
-                                {app.developer_projects || "-"}
-                              </p>
-                            </div>
-                            <div>
-                              <p style={{ margin: "0 0 6px 0", color: "#9fb0d0" }}>
-                                <strong style={{ color: "#dbe7ff" }}>
-                                  Support Cases
-                                </strong>
-                              </p>
-                              <p style={{ margin: 0, color: "#dbe7ff", lineHeight: 1.7 }}>
-                                {app.support_cases || "-"}
-                              </p>
-                            </div>
-                            <div>
-                              <p style={{ margin: "0 0 6px 0", color: "#9fb0d0" }}>
-                                <strong style={{ color: "#dbe7ff" }}>
-                                  Support Communication
-                                </strong>
-                              </p>
-                              <p style={{ margin: 0, color: "#dbe7ff", lineHeight: 1.7 }}>
-                                {app.support_communication || "-"}
-                              </p>
-                            </div>
-                            <div>
-                              <p style={{ margin: "0 0 6px 0", color: "#9fb0d0" }}>
-                                <strong style={{ color: "#dbe7ff" }}>
-                                  Competitive Knowledge
-                                </strong>
-                              </p>
-                              <p style={{ margin: 0, color: "#dbe7ff", lineHeight: 1.7 }}>
-                                {app.competitive_knowledge || "-"}
-                              </p>
-                            </div>
-                            <div>
-                              <p style={{ margin: "0 0 6px 0", color: "#9fb0d0" }}>
-                                <strong style={{ color: "#dbe7ff" }}>
-                                  Competitive Plans
-                                </strong>
-                              </p>
-                              <p style={{ margin: 0, color: "#dbe7ff", lineHeight: 1.7 }}>
-                                {app.competitive_plans || "-"}
-                              </p>
-                            </div>
-                            <div>
-                              <p style={{ margin: "0 0 6px 0", color: "#9fb0d0" }}>
-                                <strong style={{ color: "#dbe7ff" }}>
-                                  Manager Leadership
-                                </strong>
-                              </p>
-                              <p style={{ margin: 0, color: "#dbe7ff", lineHeight: 1.7 }}>
-                                {app.manager_leadership || "-"}
-                              </p>
-                            </div>
-                            <div>
-                              <p style={{ margin: "0 0 6px 0", color: "#9fb0d0" }}>
-                                <strong style={{ color: "#dbe7ff" }}>
-                                  Manager Organization
-                                </strong>
-                              </p>
-                              <p style={{ margin: 0, color: "#dbe7ff", lineHeight: 1.7 }}>
-                                {app.manager_organization || "-"}
-                              </p>
-                            </div>
-                            <div>
-                              <p style={{ margin: "0 0 6px 0", color: "#9fb0d0" }}>
-                                <strong style={{ color: "#dbe7ff" }}>
-                                  Director Vision
-                                </strong>
-                              </p>
-                              <p style={{ margin: 0, color: "#dbe7ff", lineHeight: 1.7 }}>
-                                {app.director_vision || "-"}
-                              </p>
-                            </div>
-                            <div>
-                              <p style={{ margin: "0 0 6px 0", color: "#9fb0d0" }}>
-                                <strong style={{ color: "#dbe7ff" }}>
-                                  Director Responsibility
-                                </strong>
-                              </p>
-                              <p style={{ margin: 0, color: "#dbe7ff", lineHeight: 1.7 }}>
-                                {app.director_responsibility || "-"}
-                              </p>
-                            </div>
-                            <div>
-                              <p style={{ margin: "0 0 6px 0", color: "#9fb0d0" }}>
-                                <strong style={{ color: "#dbe7ff" }}>
-                                  Other Strengths
-                                </strong>
-                              </p>
-                              <p style={{ margin: 0, color: "#dbe7ff", lineHeight: 1.7 }}>
-                                {app.other_strengths || "-"}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div
-                          style={{
-                            padding: "14px",
-                            borderRadius: "14px",
-                            background: "#081225",
-                            border: "1px solid #22304d",
-                          }}
-                        >
-                          <strong>Internal Admin Notes</strong>
-                          <textarea
-                            defaultValue={app.notes || ""}
-                            placeholder="Add internal notes for this application..."
-                            style={{
-                              ...textareaStyle,
-                              minHeight: 120,
-                              marginTop: 10,
-                            }}
-                            onBlur={(e) =>
-                              updateApplicationNotes(app.id, e.target.value)
-                            }
-                          />
-                        </div>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: "8px",
-                            marginTop: "14px",
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <button
-                            onClick={() =>
-                              updateApplicationStatus(app.id, "New")
-                            }
-                            style={ghostButtonStyle}
-                          >
-                            New
-                          </button>
-                          <button
-                            onClick={() =>
-                              updateApplicationStatus(app.id, "Accepted")
-                            }
-                            style={successButtonStyle}
-                          >
-                            Accepted
-                          </button>
-                          <button
-                            onClick={() =>
-                              updateApplicationStatus(app.id, "Rejected")
-                            }
-                            style={dangerButtonStyle}
-                          >
-                            Rejected
-                          </button>
-                          <button
-                            onClick={() =>
-                              updateApplicationStatus(app.id, "In Review")
-                            }
-                            style={ghostButtonStyle}
-                          >
-                            In Review
-                          </button>
-                          <Link
-                            href={`/admin/applications/${app.id}`}
-                            style={ghostButtonStyle}
-                          >
-                            Open Card
-                          </Link>
-                          <button
-                            onClick={() => deleteApplication(app.id)}
-                            style={dangerButtonStyle}
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {filteredApplications.length === 0 && (
-            <div style={{ ...panelStyle, color: "#9fb0d0" }}>
-              No applications found with the current filters.
-            </div>
-          )}
-        </div>
-      </section>
+        <AdminShell
+          applications={admin.applications}
+          jobs={admin.jobs}
+          patchnotes={admin.patchnotes}
+          averageScore={admin.averageScore}
+          jobsOpen={admin.jobsOpen}
+          setJobsOpen={admin.setJobsOpen}
+          editingJobId={admin.editingJobId}
+          jobForm={admin.jobForm}
+          setJobForm={admin.setJobForm}
+          saveJob={admin.saveJob}
+          cancelEditJob={admin.cancelEditJob}
+          startEditJob={admin.startEditJob}
+          updateJobStatus={admin.updateJobStatus}
+          deleteJob={admin.deleteJob}
+          patchnotesOpen={admin.patchnotesOpen}
+          setPatchnotesOpen={admin.setPatchnotesOpen}
+          patchVersion={admin.patchVersion}
+          setPatchVersion={admin.setPatchVersion}
+          patchTitle={admin.patchTitle}
+          setPatchTitle={admin.setPatchTitle}
+          patchContent={admin.patchContent}
+          setPatchContent={admin.setPatchContent}
+          editingPatchId={admin.editingPatchId}
+          expandedPatchnotes={admin.expandedPatchnotes}
+          savePatchnote={admin.savePatchnote}
+          cancelEditPatchnote={admin.cancelEditPatchnote}
+          startEditPatchnote={admin.startEditPatchnote}
+          togglePatchnote={admin.togglePatchnote}
+          deletePatchnote={admin.deletePatchnote}
+          applicationsOpen={admin.applicationsOpen}
+          setApplicationsOpen={admin.setApplicationsOpen}
+          statusFilter={admin.statusFilter}
+          setStatusFilter={admin.setStatusFilter}
+          searchName={admin.searchName}
+          setSearchName={admin.setSearchName}
+          roleFilter={admin.roleFilter}
+          setRoleFilter={admin.setRoleFilter}
+          roleOptions={admin.roleOptions}
+          filteredApplications={admin.filteredApplications}
+          expandedApplications={admin.expandedApplications}
+          toggleApplication={admin.toggleApplication}
+          updateApplicationStatus={admin.updateApplicationStatus}
+          updateApplicationNotes={admin.updateApplicationNotes}
+          updateApplicationRating={admin.updateApplicationRating}
+          updateApplicationScore={admin.updateApplicationScore}
+          updateApplicationReviewLabel={admin.updateApplicationReviewLabel}
+          recalculateApplicationScore={admin.recalculateApplicationScore}
+          setManualApplicationScore={admin.setManualApplicationScore}
+          deleteApplication={admin.deleteApplication}
+        />
+      </div>
     </>
   );
 }

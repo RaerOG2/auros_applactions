@@ -65,6 +65,12 @@ export async function POST(req: Request) {
       availability,
       trackingCode,
 
+      portfolioUrl,
+      extraLinks,
+      attachmentUrl,
+      attachmentType,
+      attachmentName,
+
       developerSkills,
       developerProjects,
       supportCases,
@@ -179,6 +185,13 @@ export async function POST(req: Request) {
       });
     }
 
+    const attachmentBlock =
+      safeText(attachmentUrl) !== "-"
+        ? `[Open Attachment](${safeText(attachmentUrl)})\nType: ${safeText(
+            attachmentType
+          )}\nName: ${safeText(attachmentName)}`
+        : "-";
+
     if (process.env.DISCORD_WEBHOOK_URL) {
       const embed: Record<string, unknown> = {
         color: embedColor,
@@ -188,7 +201,9 @@ export async function POST(req: Request) {
         },
         title: `${categoryIcon} New Auros Staff Application`,
         description:
-          `**${safeText(name)}** has submitted a new application for **${safeText(jobTitle)}**.\n\n` +
+          `**${safeText(name)}** has submitted a new application for **${safeText(
+            jobTitle
+          )}**.\n\n` +
           `> Premium intake alert from the Auros recruitment system.`,
         thumbnail: logoUrl ? { url: logoUrl } : undefined,
         fields: [
@@ -213,7 +228,7 @@ export async function POST(req: Request) {
             inline: true,
           },
           {
-            name: "💬 Discord",
+            name: "💬 Discord Username",
             value: safeText(discord),
             inline: true,
           },
@@ -236,6 +251,21 @@ export async function POST(req: Request) {
             name: "⏳ Availability",
             value: safeText(availability),
             inline: true,
+          },
+          {
+            name: "🌐 Portfolio URL",
+            value: safeText(portfolioUrl),
+            inline: false,
+          },
+          {
+            name: "🔗 Extra Links",
+            value: cut(extraLinks),
+            inline: false,
+          },
+          {
+            name: "📎 Attachment",
+            value: attachmentBlock,
+            inline: false,
           },
           {
             name: "📚 Experience",
@@ -300,16 +330,26 @@ export async function POST(req: Request) {
 
       const roleSpecificText =
         category === "Developer"
-          ? `Developer Skills:\n${safeText(developerSkills)}\n\nDeveloper Projects:\n${safeText(developerProjects)}`
+          ? `Developer Skills:\n${safeText(
+              developerSkills
+            )}\n\nDeveloper Projects:\n${safeText(developerProjects)}`
           : category === "Supporter"
-            ? `Support Experience:\n${safeText(supportCases)}\n\nCommunication Skills:\n${safeText(supportCommunication)}`
-            : category === "Competitive Manager"
-              ? `Competitive Knowledge:\n${safeText(competitiveKnowledge)}\n\nCompetitive Plans:\n${safeText(competitivePlans)}`
-              : category === "Manager"
-                ? `Leadership Experience:\n${safeText(managerLeadership)}\n\nOrganization Skills:\n${safeText(managerOrganization)}`
-                : category === "Director"
-                  ? `Vision:\n${safeText(directorVision)}\n\nResponsibility:\n${safeText(directorResponsibility)}`
-                  : `Role Fit:\n${safeText(otherStrengths)}`;
+          ? `Support Experience:\n${safeText(
+              supportCases
+            )}\n\nCommunication Skills:\n${safeText(supportCommunication)}`
+          : category === "Competitive Manager"
+          ? `Competitive Knowledge:\n${safeText(
+              competitiveKnowledge
+            )}\n\nCompetitive Plans:\n${safeText(competitivePlans)}`
+          : category === "Manager"
+          ? `Leadership Experience:\n${safeText(
+              managerLeadership
+            )}\n\nOrganization Skills:\n${safeText(managerOrganization)}`
+          : category === "Director"
+          ? `Vision:\n${safeText(
+              directorVision
+            )}\n\nResponsibility:\n${safeText(directorResponsibility)}`
+          : `Role Fit:\n${safeText(otherStrengths)}`;
 
       const mailInfo = await transporter.sendMail({
         from: process.env.SMTP_FROM || process.env.SMTP_USER,
@@ -321,12 +361,27 @@ A new application was submitted.
 Role: ${safeText(jobTitle)}
 Category: ${safeText(category, "Other")}
 Name: ${safeText(name)}
-Discord: ${safeText(discord)}
+Discord Username: ${safeText(discord)}
 Email: ${safeText(email)}
 Age: ${safeText(age)}
 Timezone: ${safeText(timezone)}
 Availability: ${safeText(availability)}
 Tracking Code: ${safeText(trackingCode)}
+
+Portfolio URL:
+${safeText(portfolioUrl)}
+
+Extra Links:
+${safeText(extraLinks)}
+
+Attachment URL:
+${safeText(attachmentUrl)}
+
+Attachment Type:
+${safeText(attachmentType)}
+
+Attachment Name:
+${safeText(attachmentName)}
 
 Experience:
 ${safeText(experience)}

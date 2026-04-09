@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useApplicationStatus } from "../../hooks/useApplicationStatus";
+import StatusLookupForm from "../../components/status/StatusLookupForm";
+import StatusResultCard from "../../components/status/StatusResultCard";
+import StatusEmptyState from "../../components/status/StatusEmptyState";
 
 const glassCardStyle: React.CSSProperties = {
   background: "rgba(15, 27, 52, 0.74)",
@@ -64,135 +67,37 @@ const messageBoxStyle: React.CSSProperties = {
   color: "#9fb0d0",
 };
 
-type StatusResult = {
-  name: string | null;
-  email: string | null;
-  status: string | null;
-  tracking_code: string | null;
-  created_at: string | null;
-  jobs?: {
-    title?: string | null;
-  } | null;
-};
-
-function statusMessage(status: string | null) {
-  if (status === "Accepted") return "Congratulations! Your application has been accepted.";
-  if (status === "Rejected") return "Your application was not selected this time.";
-  if (status === "In Review") return "Your application is currently being reviewed.";
-  if (status === "New") return "Your application was received.";
-  return "Status information unavailable.";
-}
-
 export default function StatusPage() {
-  const [email, setEmail] = useState("");
-  const [trackingCode, setTrackingCode] = useState("");
-  const [result, setResult] = useState<StatusResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  async function checkStatus() {
-    const normalizedEmail = email.trim().toLowerCase();
-    const normalizedTrackingCode = trackingCode.trim().toUpperCase();
-
-    if (!normalizedEmail || !normalizedTrackingCode) {
-      alert("Please enter your email and tracking code.");
-      return;
-    }
-
-    setLoading(true);
-    setSearched(true);
-    setResult(null);
-
-    try {
-      const response = await fetch("/api/check-status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: normalizedEmail,
-          trackingCode: normalizedTrackingCode,
-        }),
-      });
-
-      const payload = await response.json();
-
-      if (!response.ok) {
-        alert(payload?.error || "Error");
-        return;
-      }
-
-      setResult(payload?.result ?? null);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function copyTrackingCode() {
-    if (!result?.tracking_code) return;
-
-    await navigator.clipboard.writeText(result.tracking_code);
-    setCopied(true);
-
-    setTimeout(() => setCopied(false), 2000);
-  }
+  const status = useApplicationStatus();
 
   return (
     <>
-      <section style={{ ...glassCardStyle, marginBottom: 22 }}>
-        <h1 style={{ marginTop: 0 }}>Check Application Status</h1>
-
-        <div style={{ display: "grid", gap: "14px", marginTop: 18 }}>
-          <input
-            style={inputStyle}
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-
-          <input
-            style={inputStyle}
-            placeholder="Tracking Code"
-            value={trackingCode}
-            onChange={(e) => setTrackingCode(e.target.value)}
-          />
-
-          <button onClick={checkStatus} style={primaryButtonStyle}>
-            {loading ? "Checking..." : "Check Status"}
-          </button>
-        </div>
-      </section>
+      <StatusLookupForm
+        trackingCode={status.trackingCode}
+        setTrackingCode={status.setTrackingCode}
+        checkStatus={status.checkStatus}
+        loading={status.loading}
+        glassCardStyle={glassCardStyle}
+        inputStyle={inputStyle}
+        primaryButtonStyle={primaryButtonStyle}
+      />
 
       <section style={glassCardStyle}>
-        {!searched && <div style={messageBoxStyle}>No status loaded yet.</div>}
-
-        {searched && !result && !loading && (
-          <div style={messageBoxStyle}>No result found.</div>
-        )}
-
-        {result && (
-          <div style={messageBoxStyle}>
-            <h3>{result.name}</h3>
-
-            <p>{statusMessage(result.status)}</p>
-
-            <p>
-              <strong>Role:</strong> {result.jobs?.title}
-            </p>
-
-            <p>
-              <strong>Status:</strong> {result.status}
-            </p>
-
-            <p>
-              <strong>Tracking Code:</strong> {result.tracking_code}
-            </p>
-
-            <button onClick={copyTrackingCode} style={ghostButtonStyle}>
-              {copied ? "Copied!" : "Copy Code"}
-            </button>
-          </div>
+        {!status.result ? (
+          <StatusEmptyState
+            searched={status.searched}
+            loading={status.loading}
+            messageBoxStyle={messageBoxStyle}
+          />
+        ) : (
+          <StatusResultCard
+            result={status.result}
+            copied={status.copied}
+            copyTrackingCode={status.copyTrackingCode}
+            messageBoxStyle={messageBoxStyle}
+            ghostButtonStyle={ghostButtonStyle}
+            pillStyle={pillStyle}
+          />
         )}
       </section>
     </>
