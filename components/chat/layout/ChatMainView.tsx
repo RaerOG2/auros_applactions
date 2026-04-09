@@ -20,7 +20,7 @@ import DmMessageInput from "../DmMessageInput";
 import ChannelAccessDenied from "../ChannelAccessDenied";
 import FriendsHomeView from "../friends/FriendsHomeView";
 import DmHomeView from "../dm/DmHomeView";
-import StartChatModal from "../friends/StartChatModal";
+import { StartChatModal } from "../friends/StartChatModal";
 
 type OnlineUserItem = {
   profileId: string;
