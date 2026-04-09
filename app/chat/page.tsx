@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ChatAppShell from "../../components/chat/layout/ChatAppShell";
 import { useCurrentUserProfile } from "../../hooks/useCurrentUserProfile";
@@ -11,7 +11,7 @@ import { usePresence } from "../../hooks/usePresence";
 import { useUnreadCounts } from "../../hooks/useUnreadCounts";
 import { useFriends } from "../../hooks/useFriends";
 
-export default function ChatPage() {
+function ChatPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -110,7 +110,6 @@ export default function ChatPage() {
       onPickMention={mode === "dm" ? dm.applyMention : chat.applyMention}
       onlineUsers={presence.onlineUsers}
       isUserOnline={presence.isUserOnline}
-
       acceptedFriends={friends.acceptedFriends}
       incomingRequests={friends.incomingRequests}
       outgoingRequests={friends.outgoingRequests}
@@ -125,5 +124,13 @@ export default function ChatPage() {
       onRemoveFriend={friends.removeFriend}
       onStartFriendDm={startFriendDm}
     />
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 20 }}>Chat lädt...</div>}>
+      <ChatPageInner />
+    </Suspense>
   );
 }
