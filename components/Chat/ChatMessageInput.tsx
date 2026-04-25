@@ -1,63 +1,95 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type ChatMessageInputProps = {
-  disabled?: boolean;
-  placeholder?: string;
-  onSendMessage: (value: string) => void | Promise<void>;
+  placeholder: string;
+  onSendMessage: (content: string, files?: File[]) => Promise<void>;
+  onTyping?: () => void;
 };
 
 export default function ChatMessageInput({
-  disabled,
   placeholder,
   onSendMessage,
+  onTyping,
 }: ChatMessageInputProps) {
-  const [value, setValue] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [content, setContent] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [sending, setSending] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (disabled || submitting) return;
-
-    const trimmed = value.trim();
-    if (!trimmed) return;
+    if (!content.trim() && files.length === 0) return;
 
     try {
-      setSubmitting(true);
-      await onSendMessage(trimmed);
-      setValue("");
+      setSending(true);
+      await onSendMessage(content, files);
+      setContent("");
+      setFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     } finally {
-      setSubmitting(false);
+      setSending(false);
     }
   }
 
   return (
     <form className="aurosMessageInputWrap" onSubmit={handleSubmit}>
-      <button type="button" className="aurosInputActionButton">
-        +
-      </button>
+      {files.length > 0 && (
+        <div className="aurosAttachmentPreviewRow">
+          {files.map((file, index) => (
+            <div key={`${file.name}-${index}`} className="aurosAttachmentPreview">
+              <span>{file.name}</span>
+              <button
+                type="button"
+                onClick={() =>
+                  setFiles((prev) => prev.filter((_, fileIndex) => fileIndex !== index))
+                }
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
-      <input
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        className="aurosMessageInput"
-        placeholder={placeholder ?? "Write a message..."}
-        disabled={disabled || submitting}
-      />
+      <div className="aurosMessageInputBar">
+        <button
+          type="button"
+          className="aurosMessageAttachButton"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          +
+        </button>
 
-      <button type="button" className="aurosInputActionButton">
-        :)
-      </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*,.pdf,.txt,.zip,.rar,.7z,.doc,.docx"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const selectedFiles = Array.from(e.target.files ?? []);
+            setFiles(selectedFiles);
+          }}
+        />
 
-      <button
-        type="submit"
-        className="aurosSendButton"
-        disabled={disabled || submitting}
-      >
-        {submitting ? "Sending..." : "Send"}
-      </button>
+        <input
+          className="aurosMessageInput"
+          value={content}
+          placeholder={placeholder}
+          disabled={sending}
+          onChange={(e) => {
+            setContent(e.target.value);
+            onTyping?.();
+          }}
+        />
+
+        <button className="aurosMessageSendButton" type="submit" disabled={sending}>
+          {sending ? "Sending..." : "Send"}
+        </button>
+      </div>
     </form>
   );
 }

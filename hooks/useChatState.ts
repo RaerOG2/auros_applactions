@@ -52,6 +52,7 @@ import {
   uploadServerIcon,
   uploadUserAvatar,
   uploadUserBanner,
+  uploadChatAttachment,
 } from "../services/storage.service";
 import { supabase } from "../lib/supabase";
 
@@ -86,7 +87,7 @@ type ChatStateReturn = {
   selectDM: (dmId: string) => void;
   selectApplicationChat: (applicationChatId: string) => void;
 
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (content: string, files?: File[]) => Promise<void>;
   toggleMessageReaction: (messageId: string, emoji: string) => Promise<void>;
 
   createNewServer: (input: {
@@ -608,52 +609,67 @@ useEffect(() => {
     setActiveView({ type: "home" });
   }
 
-  async function sendMessage(content: string) {
-    const trimmed = content.trim();
-    if (!trimmed) return;
+async function sendMessage(content: string, files: File[] = []) {
+  const trimmed = content.trim();
 
-    try {
-      setError(null);
+  if (!trimmed && files.length === 0) return;
 
-      if (activeView.type === "server") {
-        await sendChannelMessage({
-          channelId: activeView.channelId,
-          content: trimmed,
-        });
+  try {
+    setError(null);
 
-        const refreshed = await getChannelMessages(activeView.channelId);
-        setActiveMessages(refreshed);
-      }
+    const uploadedAttachments = await Promise.all(
+      files.map(async (file) => {
+        const fileUrl = await uploadChatAttachment(file);
 
-      if (activeView.type === "dm") {
-        await sendDirectMessage({
-          directConversationId: activeView.dmId,
-          content: trimmed,
-        });
+        return {
+          fileUrl,
+          fileName: file.name,
+          fileType: file.type || null,
+          fileSize: file.size || null,
+        };
+      })
+    );
 
-        const refreshed = await getDirectMessages(activeView.dmId);
-        setActiveMessages(refreshed);
-      }
+    if (activeView.type === "server") {
+      await sendChannelMessage({
+        channelId: activeView.channelId,
+        content: trimmed,
+        attachments: uploadedAttachments,
+      });
 
-      if (activeView.type === "application") {
-        await sendApplicationChatMessage({
-          applicationChatId: activeView.applicationChatId,
-          content: trimmed,
-        });
-
-        const refreshed = await getApplicationChatMessages(
-          activeView.applicationChatId
-        );
-        setActiveMessages(refreshed);
-      }
-    } catch (sendError) {
-      console.warn("[useChatState] Failed to send message:", sendError);
-
-      setError(
-        sendError instanceof Error ? sendError.message : "Failed to send message."
-      );
+      const refreshed = await getChannelMessages(activeView.channelId);
+      setActiveMessages(refreshed);
     }
+
+    if (activeView.type === "dm") {
+      await sendDirectMessage({
+        directConversationId: activeView.dmId,
+        content: trimmed,
+      });
+
+      const refreshed = await getDirectMessages(activeView.dmId);
+      setActiveMessages(refreshed);
+    }
+
+    if (activeView.type === "application") {
+      await sendApplicationChatMessage({
+        applicationChatId: activeView.applicationChatId,
+        content: trimmed,
+      });
+
+      const refreshed = await getApplicationChatMessages(
+        activeView.applicationChatId
+      );
+      setActiveMessages(refreshed);
+    }
+  } catch (sendError) {
+    console.warn("[useChatState] Failed to send message:", sendError);
+
+    setError(
+      sendError instanceof Error ? sendError.message : "Failed to send message."
+    );
   }
+}
 
   async function toggleMessageReaction(messageId: string, emoji: string) {
     try {

@@ -366,28 +366,32 @@
 }
 
 .aurosMessageInputWrap {
-  padding: 16px 18px;
+  padding: 14px 18px 18px;
   border-top: 1px solid rgba(212, 175, 55, 0.12);
+  background: linear-gradient(
+    180deg,
+    rgba(8, 8, 8, 0.72),
+    rgba(10, 10, 10, 0.96)
+  );
+}
+
+.aurosMessageInputBar {
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) 46px 90px;
+  grid-template-columns: 48px minmax(0, 1fr) 56px 92px;
   gap: 10px;
-  background: rgba(12, 12, 12, 0.98);
+  align-items: center;
 }
 
 .aurosMessageInput {
+  height: 48px;
   width: 100%;
-  min-width: 0;
-  height: 46px;
-  border-radius: 14px;
-  border: 1px solid rgba(212, 175, 55, 0.14);
-  background: rgba(27, 27, 27, 0.96);
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  background: rgba(20, 20, 18, 0.92);
   color: #f6f2e8;
-  padding: 0 14px;
+  padding: 0 16px;
   outline: none;
-}
-
-.aurosMessageInput::placeholder {
-  color: #7f7865;
+  font-weight: 700;
 }
 
 .aurosInputActionButton {
@@ -396,11 +400,45 @@
   font-weight: 900;
 }
 
-.aurosSendButton {
-  height: 46px;
-  font-weight: 800;
-  background: linear-gradient(180deg, rgba(212, 175, 55, 0.22), rgba(142, 105, 19, 0.2));
-  color: #fff2c0;
+.aurosMessageAttachButton,
+.aurosMessageEmojiButton {
+  height: 48px;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.24);
+  background: rgba(31, 31, 31, 0.92);
+  color: #f6f2e8;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.aurosMessageAttachButton {
+  background: linear-gradient(
+    180deg,
+    rgba(212, 175, 55, 0.32),
+    rgba(86, 64, 14, 0.88)
+  );
+}
+
+.aurosMessageSendButton {
+  height: 48px;
+  min-width: 110px;   /* 🔥 WICHTIG */
+  padding: 0 16px;   /* 🔥 sorgt für Platz */
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.24);
+
+  background: linear-gradient(
+    180deg,
+    rgba(212, 175, 55, 0.32),
+    rgba(86, 64, 14, 0.88)
+  );
+
+  color: #f6f2e8;
+  font-weight: 900;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .aurosRightPanel {
@@ -849,4 +887,58 @@
   .aurosAccessGrid {
     grid-template-columns: 1fr;
   }
+}
+
+.aurosMessageAttachment {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  max-width: 420px;
+}
+
+.aurosMessageAttachmentImage {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: 520px;
+  height: auto;
+  object-fit: contain;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.aurosAttachmentPreviewRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.aurosAttachmentPreview {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 260px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  background: rgba(31, 31, 31, 0.88);
+  color: #f6f2e8;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.aurosAttachmentPreview span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.aurosAttachmentPreview button {
+  border: none;
+  background: transparent;
+  color: #f7d45c;
+  cursor: pointer;
+  font-weight: 900;
 }

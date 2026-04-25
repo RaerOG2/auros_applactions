@@ -104,6 +104,7 @@ export type ChatMessage = {
   createdAt: string;
   author?: ChatUserProfile | null;
   reactions?: ChatMessageReaction[];
+  attachments?: ChatMessageAttachment[];
 };
 
 export type ChatCustomEmoji = {
@@ -154,3 +155,13 @@ export type ChatView =
   | { type: "server"; serverId: string; channelId: string }
   | { type: "dm"; dmId: string }
   | { type: "application"; applicationChatId: string };
+
+  export type ChatMessageAttachment = {
+  id: string;
+  messageId: string;
+  fileUrl: string;
+  fileName: string;
+  fileType: string | null;
+  fileSize: number | null;
+  createdAt: string;
+};

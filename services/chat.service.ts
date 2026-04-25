@@ -5,7 +5,8 @@ import { getCurrentAuthUser } from "./profile.service";
 
 const MESSAGE_SELECT = `
   *,
-  author:profiles (*)
+  author:profiles (*),
+  attachments:chat_message_attachments (*)
 `;
 
 export async function getChannelMessages(channelId: string): Promise<ChatMessage[]> {
@@ -62,6 +63,12 @@ export async function sendChannelMessage(input: {
   channelId: string;
   content: string;
   replyToId?: string | null;
+  attachments?: {
+    fileUrl: string;
+    fileName: string;
+    fileType: string | null;
+    fileSize: number | null;
+  }[];
 }): Promise<ChatMessage> {
   const user = await getCurrentAuthUser();
 
@@ -74,7 +81,7 @@ export async function sendChannelMessage(input: {
     channel_id: input.channelId,
     direct_conversation_id: null,
     application_chat_id: null,
-    content: input.content,
+    content: input.content || "",
     reply_to_id: input.replyToId ?? null,
     message_type: "text",
   };
@@ -102,11 +109,37 @@ export async function sendChannelMessage(input: {
     );
   }
 
-  return mapMessageRow({
-    ...data,
-    author: null,
-    reactions: [],
-  });
+  if (input.attachments?.length) {
+    const { error: attachmentError } = await supabase
+      .from("chat_message_attachments")
+      .insert(
+        input.attachments.map((attachment) => ({
+          message_id: data.id,
+          file_url: attachment.fileUrl,
+          file_name: attachment.fileName,
+          file_type: attachment.fileType,
+          file_size: attachment.fileSize,
+        }))
+      );
+
+    if (attachmentError) {
+      throw new Error(
+        attachmentError.message || "Failed to save message attachments."
+      );
+    }
+  }
+
+  const { data: fullMessage, error: fullError } = await supabase
+    .from("chat_messages")
+    .select(MESSAGE_SELECT)
+    .eq("id", data.id)
+    .single();
+
+  if (fullError) {
+    throw new Error(fullError.message || "Failed to load sent message.");
+  }
+
+  return mapMessageRow(fullMessage);
 }
 
 export async function sendDirectMessage(input: {

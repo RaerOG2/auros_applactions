@@ -34,6 +34,14 @@ function groupReactions(message: ChatMessage) {
   }));
 }
 
+function isImage(fileType?: string | null) {
+  return !!fileType && fileType.startsWith("image/");
+}
+
+function isPdf(fileType?: string | null, fileName?: string) {
+  return fileType === "application/pdf" || fileName?.toLowerCase().endsWith(".pdf");
+}
+
 export default function ChatMessageList({
   messages,
   currentUserId,
@@ -53,21 +61,13 @@ export default function ChatMessageList({
       {messages.map((message) => {
         const authorName = getAuthorName(message);
         const isOwnMessage = !!currentUserId && message.authorId === currentUserId;
+        const attachments = message.attachments ?? [];
 
         return (
           <article key={message.id} className="aurosMessageCard">
             <div className="aurosMessageAvatar">
               {message.author?.avatarUrl ? (
-                <img
-                  src={message.author.avatarUrl}
-                  alt={authorName}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    borderRadius: "inherit",
-                  }}
-                />
+                <img src={message.author.avatarUrl} alt={authorName} />
               ) : (
                 authorName.slice(0, 1).toUpperCase()
               )}
@@ -96,7 +96,38 @@ export default function ChatMessageList({
                 )}
               </div>
 
-              <p className="aurosMessageText">{message.content}</p>
+              {message.content.trim() && (
+                <p className="aurosMessageText">{message.content}</p>
+              )}
+
+              {attachments.length > 0 && (
+                <div className="aurosMessageAttachments">
+                  {attachments.map((file) => (
+                    <a
+                      key={file.id}
+                      className="aurosMessageAttachment"
+                      href={file.fileUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {isImage(file.fileType) ? (
+                        <img
+                          className="aurosMessageAttachmentImage"
+                          src={file.fileUrl}
+                          alt={file.fileName}
+                        />
+                      ) : (
+                        <div className="aurosMessageFileCard">
+                          <span className="aurosMessageFileIcon">
+                            {isPdf(file.fileType, file.fileName) ? "PDF" : "FILE"}
+                          </span>
+                          <span>{file.fileName}</span>
+                        </div>
+                      )}
+                    </a>
+                  ))}
+                </div>
+              )}
 
               <div className="aurosReactionRow">
                 {groupReactions(message).map((reaction) => (

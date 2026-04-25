@@ -65,3 +65,7 @@ export async function uploadUserBanner(file: File) {
 export async function uploadServerIcon(file: File) {
   return uploadToBucket("chat-server-icons", file, "icons");
 }
+
+export async function uploadChatAttachment(file: File) {
+  return uploadToBucket("chat-attachments", file, "attachments");
+}

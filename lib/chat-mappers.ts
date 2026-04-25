@@ -6,6 +6,7 @@ import type {
   ChatServer,
   ChatUserProfile,
   DirectConversation,
+  ChatMessageAttachment,
 } from "../types/chat";
 
 function safeString(value: unknown, fallback: string) {
@@ -90,6 +91,9 @@ export function mapMessageRow(row: any): ChatMessage {
     reactions: Array.isArray(row.reactions)
       ? row.reactions.map(mapReactionRow)
       : [],
+    attachments: Array.isArray(row.attachments)
+      ? row.attachments.map(mapAttachmentRow)
+      : [],
   };
 }
 
@@ -110,6 +114,18 @@ export function mapApplicationChatRow(row: any): ApplicationChat {
     status: row.status ?? "open",
     isActive: !!row.is_active,
     expiresAt: row.expires_at ?? null,
+    createdAt: row.created_at ?? new Date().toISOString(),
+  };
+}
+
+export function mapAttachmentRow(row: any): ChatMessageAttachment {
+  return {
+    id: row.id,
+    messageId: row.message_id,
+    fileUrl: row.file_url,
+    fileName: row.file_name,
+    fileType: row.file_type ?? null,
+    fileSize: row.file_size ?? null,
     createdAt: row.created_at ?? new Date().toISOString(),
   };
 }
