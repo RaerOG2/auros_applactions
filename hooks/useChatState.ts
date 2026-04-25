@@ -435,122 +435,116 @@ export function useChatState(): ChatStateReturn {
     };
   }, [activeDirectUser?.id, activeView]);
 
-  useEffect(() => {
-    let isMounted = true;
+useEffect(() => {
+  let isMounted = true;
 
-    async function loadMessagesForActiveView() {
-      if (activeView.type === "home") {
-        setActiveMessages([]);
-        setMessagesLoading(false);
-        return;
+  async function loadMessagesForActiveView() {
+    if (activeView.type === "home") {
+      setActiveMessages([]);
+      setMessagesLoading(false);
+      return;
+    }
+
+    setMessagesLoading(true);
+
+    try {
+      const messages = await refreshMessagesForView(activeView);
+
+      if (isMounted) {
+        setActiveMessages(messages);
       }
+    } catch (messageError) {
+      console.warn("[useChatState] Failed to load messages:", messageError);
 
-      setMessagesLoading(true);
+      if (isMounted) {
+        setError(
+          messageError instanceof Error
+            ? messageError.message
+            : "Failed to load messages."
+        );
+      }
+    } finally {
+      if (isMounted) {
+        setMessagesLoading(false);
+      }
+    }
+  }
 
-      try {
-        const messages = await refreshMessagesForView(activeView);
+  loadMessagesForActiveView();
 
+  // 🔥 FALLBACK (fix für dein Problem)
+  const liveFallbackInterval = window.setInterval(() => {
+    if (activeView.type === "home") return;
+
+    refreshMessagesForView(activeView)
+      .then((messages) => {
         if (isMounted) {
           setActiveMessages(messages);
         }
-      } catch (messageError) {
-        console.warn("[useChatState] Failed to load messages:", messageError);
-
-        if (isMounted) {
-          setError(
-            messageError instanceof Error
-              ? messageError.message
-              : "Failed to load messages."
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setMessagesLoading(false);
-        }
-      }
-    }
-
-    loadMessagesForActiveView();
-
-    if (activeView.type === "home") {
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    let subscription:
-      | ReturnType<typeof subscribeToChannelMessages>
-      | ReturnType<typeof subscribeToDirectMessages>
-      | ReturnType<typeof subscribeToApplicationChatMessages>
-      | null = null;
-
-    if (activeView.type === "server") {
-      const safeChannelId = activeView.channelId;
-
-      subscription = subscribeToChannelMessages(safeChannelId, async () => {
-        try {
-          const refreshed = await getChannelMessages(safeChannelId);
-
-          if (isMounted) {
-            setActiveMessages(refreshed);
-          }
-        } catch (refreshError) {
-          console.warn(
-            "[useChatState] Failed to refresh channel messages:",
-            refreshError
-          );
-        }
+      })
+      .catch((err) => {
+        console.warn("[useChatState] fallback refresh failed:", err);
       });
-    }
+  }, 2500);
 
-    if (activeView.type === "dm") {
-      const safeDmId = activeView.dmId;
-
-      subscription = subscribeToDirectMessages(safeDmId, async () => {
-        try {
-          const refreshed = await getDirectMessages(safeDmId);
-
-          if (isMounted) {
-            setActiveMessages(refreshed);
-          }
-        } catch (refreshError) {
-          console.warn("[useChatState] Failed to refresh DM messages:", refreshError);
-        }
-      });
-    }
-
-    if (activeView.type === "application") {
-      const safeApplicationChatId = activeView.applicationChatId;
-
-      subscription = subscribeToApplicationChatMessages(
-        safeApplicationChatId,
-        async () => {
-          try {
-            const refreshed = await getApplicationChatMessages(
-              safeApplicationChatId
-            );
-
-            if (isMounted) {
-              setActiveMessages(refreshed);
-            }
-          } catch (refreshError) {
-            console.warn(
-              "[useChatState] Failed to refresh application chat messages:",
-              refreshError
-            );
-          }
-        }
-      );
-    }
-
+  if (activeView.type === "home") {
     return () => {
       isMounted = false;
-
-      if (subscription) {
-        supabase.removeChannel(subscription);
-      }
+      window.clearInterval(liveFallbackInterval);
     };
-  }, [activeView]);
+  }
+
+  let subscription: any = null;
+
+  if (activeView.type === "server") {
+    const channelId = activeView.channelId;
+
+    subscription = subscribeToChannelMessages(channelId, async () => {
+      try {
+        const refreshed = await getChannelMessages(channelId);
+        if (isMounted) setActiveMessages(refreshed);
+      } catch (err) {
+        console.warn("[Realtime] channel refresh failed:", err);
+      }
+    });
+  }
+
+  if (activeView.type === "dm") {
+    const dmId = activeView.dmId;
+
+    subscription = subscribeToDirectMessages(dmId, async () => {
+      try {
+        const refreshed = await getDirectMessages(dmId);
+        if (isMounted) setActiveMessages(refreshed);
+      } catch (err) {
+        console.warn("[Realtime] DM refresh failed:", err);
+      }
+    });
+  }
+
+  if (activeView.type === "application") {
+    const appId = activeView.applicationChatId;
+
+    subscription = subscribeToApplicationChatMessages(appId, async () => {
+      try {
+        const refreshed = await getApplicationChatMessages(appId);
+        if (isMounted) setActiveMessages(refreshed);
+      } catch (err) {
+        console.warn("[Realtime] application refresh failed:", err);
+      }
+    });
+  }
+
+  return () => {
+    isMounted = false;
+
+    window.clearInterval(liveFallbackInterval);
+
+    if (subscription) {
+      supabase.removeChannel(subscription);
+    }
+  };
+}, [activeView]);
 
   async function selectServer(serverId: string) {
     try {

@@ -230,7 +230,7 @@ export function subscribeToChannelMessages(
   onChange: () => void
 ) {
   return supabase
-    .channel(`channel-messages:${channelId}`)
+    .channel(`live-channel-messages-${channelId}-${Date.now()}`)
     .on(
       "postgres_changes",
       {
@@ -239,12 +239,10 @@ export function subscribeToChannelMessages(
         table: "chat_messages",
         filter: `channel_id=eq.${channelId}`,
       },
-      () => {
-        onChange();
-      }
+      () => onChange()
     )
     .subscribe((status) => {
-      console.log("[Realtime] channel messages:", status);
+      console.log("[Realtime] channel messages status:", status, channelId);
     });
 }
 
