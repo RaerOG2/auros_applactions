@@ -14,14 +14,15 @@ export async function POST(request: Request) {
 
   const username = String(formData.get("username") || "");
   const password = String(formData.get("password") || "");
-
   const cookieSecret = process.env.BETA_COOKIE_SECRET;
 
   if (!cookieSecret || !isValidBetaUser(username, password)) {
     return NextResponse.redirect(new URL("/beta-login?error=1", request.url));
   }
 
-  const response = NextResponse.redirect(new URL("/", request.url));
+  const response = NextResponse.redirect(new URL("/", request.url), {
+    status: 303,
+  });
 
   response.cookies.set("beta-auth", cookieSecret, {
     httpOnly: true,
