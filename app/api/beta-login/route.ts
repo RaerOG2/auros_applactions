@@ -1,22 +1,23 @@
 import { NextResponse } from "next/server";
 
+function isValidBetaUser(username: string, password: string) {
+  const users = process.env.BETA_USERS || "";
+
+  return users.split(",").some((entry) => {
+    const [envUser, envPass] = entry.split(":");
+    return username === envUser && password === envPass;
+  });
+}
+
 export async function POST(request: Request) {
   const formData = await request.formData();
 
   const username = String(formData.get("username") || "");
   const password = String(formData.get("password") || "");
 
-  const validUsername = process.env.BETA_USERNAME;
-  const validPassword = process.env.BETA_PASSWORD;
   const cookieSecret = process.env.BETA_COOKIE_SECRET;
 
-  if (
-    !validUsername ||
-    !validPassword ||
-    !cookieSecret ||
-    username !== validUsername ||
-    password !== validPassword
-  ) {
+  if (!cookieSecret || !isValidBetaUser(username, password)) {
     return NextResponse.redirect(new URL("/beta-login?error=1", request.url));
   }
 

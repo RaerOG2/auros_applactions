@@ -30,28 +30,13 @@ export async function getMyServers(): Promise<ChatServer[]> {
 
   await ensureAurosCommunityServer();
 
-  const { data, error } = await supabase
-    .from("chat_server_members")
-    .select(`
-      server:chat_servers (*)
-    `)
-    .eq("user_id", user.id)
-    .order("joined_at", { ascending: true });
+  const { data, error } = await supabase.rpc("get_my_chat_servers");
 
   if (error) {
-    throw error;
+    throw new Error(error.message || "Failed to load servers.");
   }
 
-  return (data ?? [])
-    .map((row: any) => {
-      if (Array.isArray(row.server)) {
-        return row.server[0] ?? null;
-      }
-
-      return row.server ?? null;
-    })
-    .filter(Boolean)
-    .map(mapServerRow);
+  return (data ?? []).map(mapServerRow);
 }
 
 export async function getServerChannels(serverId: string): Promise<ChatChannel[]> {
