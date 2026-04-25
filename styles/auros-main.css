@@ -1,0 +1,164 @@
+.aurosMainAuthPage {
+  min-height: 78vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.aurosMainAuthCard {
+  width: min(100%, 820px);
+  border-radius: 30px;
+  padding: 36px;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(
+    circle at top left,
+    rgba(76, 201, 240, 0.16) 0%,
+    rgba(15, 27, 52, 0.86) 38%,
+    rgba(15, 27, 52, 0.76) 100%
+  );
+  border: 1px solid rgba(34, 48, 77, 0.95);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(12px);
+}
+
+.aurosMainAuthGlow {
+  position: absolute;
+  right: -80px;
+  top: -80px;
+  width: 260px;
+  height: 260px;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle,
+    rgba(76, 201, 240, 0.2),
+    rgba(123, 97, 255, 0.12),
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.aurosMainOverline {
+  color: #4cc9f0;
+  font-weight: 900;
+  margin: 0 0 10px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+}
+
+.aurosMainTitle {
+  margin: 0 0 12px;
+  font-size: 46px;
+  line-height: 1.02;
+  color: white;
+}
+
+.aurosMainText {
+  color: #9fb0d0;
+  line-height: 1.75;
+  margin: 0 0 22px;
+  max-width: 680px;
+}
+
+.aurosMainTabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.aurosMainTab {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid #22304d;
+  background: rgba(11, 21, 43, 0.84);
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.aurosMainTab.active {
+  border-color: rgba(76, 201, 240, 0.32);
+  background: linear-gradient(
+    90deg,
+    rgba(76, 201, 240, 0.18),
+    rgba(123, 97, 255, 0.18)
+  );
+}
+
+.aurosMainForm {
+  display: grid;
+  gap: 12px;
+  position: relative;
+  z-index: 2;
+}
+
+.aurosMainGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.aurosMainInput {
+  width: 100%;
+  min-height: 50px;
+  border-radius: 16px;
+  border: 1px solid #22304d;
+  background: rgba(11, 21, 43, 0.92);
+  color: white;
+  padding: 0 14px;
+  outline: none;
+  font-size: 15px;
+}
+
+.aurosMainInput:focus {
+  border-color: rgba(76, 201, 240, 0.44);
+  box-shadow: 0 0 0 3px rgba(76, 201, 240, 0.08);
+}
+
+.aurosMainPrimary {
+  min-height: 50px;
+  border-radius: 16px;
+  border: none;
+  background: linear-gradient(90deg, #4cc9f0 0%, #7b61ff 100%);
+  color: white;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 14px 30px rgba(76, 201, 240, 0.18);
+}
+
+.aurosMainNoticeError {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(239, 68, 68, 0.18);
+  background: rgba(239, 68, 68, 0.1);
+  color: #ffb0b0;
+  font-weight: 700;
+}
+
+.aurosMainNoticeSuccess {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(76, 201, 240, 0.22);
+  background: rgba(76, 201, 240, 0.1);
+  color: #8ee6ff;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .aurosMainAuthCard {
+    padding: 24px;
+  }
+
+  .aurosMainTitle {
+    font-size: 36px;
+  }
+
+  .aurosMainGrid {
+    grid-template-columns: 1fr;
+  }
+}

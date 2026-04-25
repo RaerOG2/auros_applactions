@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { ReactNode } from "react";
 import "./globals.css";
+import "../styles/auros-channel.css";
+import { Geist, Geist_Mono } from "next/font/google";
 import AurosSiteShell from "../components/AurosSiteShell";
 
 const geistSans = Geist({
@@ -14,20 +16,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Auros Royale Applications",
-  description: "Official application portal for Auros Royale",
+  title: "Auros Royale Website",
+  description: "Official Website for Auros Royale",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AurosSiteShell>{children}</AurosSiteShell>
       </body>
     </html>

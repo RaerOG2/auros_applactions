@@ -8,9 +8,9 @@ export function middleware(request: NextRequest) {
   if (url.hostname.includes("beta.auros-uefn.com")) {
     const authHeader = request.headers.get("authorization");
 
-    const username = "beta";
-    const password = "ChatAlpha123"; // kannst du ändern
-
+    const username = "alpha-Neo";
+    const password = "AlphaChatNeo"; // kannst du ändern
+    
     const basicAuth = authHeader?.split(" ")[1];
     const decoded = basicAuth ? atob(basicAuth) : "";
 

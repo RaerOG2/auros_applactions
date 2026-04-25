@@ -1,0 +1,852 @@
+.aurosChatShell {
+  display: grid;
+  grid-template-columns: 78px 280px minmax(0, 1fr) 320px;
+  gap: 16px;
+  min-height: calc(100vh - 180px);
+  margin-top: 18px;
+}
+
+.aurosChatServerRail,
+.aurosChatSidebar,
+.aurosChatCenter,
+.aurosRightPanel {
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  background:
+    linear-gradient(180deg, rgba(24, 24, 24, 0.98) 0%, rgba(12, 12, 12, 0.98) 100%);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(14px);
+}
+
+.aurosChatServerRail,
+.aurosChatSidebar,
+.aurosRightPanel {
+  border-radius: 24px;
+}
+
+.aurosChatCenter {
+  border-radius: 28px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.aurosChatServerRail {
+  padding: 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.aurosServerHomeButton,
+.aurosServerIconButton,
+.aurosServerAddButton {
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  background: rgba(35, 35, 35, 0.92);
+  color: #f6f2e8;
+  font-weight: 800;
+  cursor: pointer;
+  position: relative;
+  transition: 0.18s ease;
+}
+
+.aurosServerHomeButton:hover,
+.aurosServerIconButton:hover,
+.aurosServerAddButton:hover,
+.aurosSidebarActionButton:hover,
+.aurosHeaderButton:hover,
+.aurosInputActionButton:hover,
+.aurosSendButton:hover,
+.aurosModerationButton:hover {
+  transform: translateY(-1px);
+  border-color: rgba(212, 175, 55, 0.34);
+}
+
+.aurosServerHomeButton.isActive,
+.aurosServerIconButton.isActive {
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.25), rgba(142, 105, 19, 0.22));
+  border-color: rgba(212, 175, 55, 0.4);
+  color: #fff3c4;
+}
+
+.aurosRailDivider {
+  width: 36px;
+  height: 1px;
+  background: rgba(212, 175, 55, 0.16);
+}
+
+.aurosUnreadBadge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #d4af37;
+  color: #120f07;
+  font-size: 11px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+}
+
+.aurosChatSidebar {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.aurosSidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.aurosSidebarOverline,
+.aurosHeaderOverline,
+.aurosPanelOverline,
+.aurosWelcomeOverline {
+  margin: 0 0 6px 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #d4af37;
+  text-transform: uppercase;
+}
+
+.aurosSidebarTitle {
+  margin: 0;
+  color: #f6f2e8;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.aurosSidebarActionButton,
+.aurosHeaderButton,
+.aurosInputActionButton,
+.aurosSendButton,
+.aurosModerationButton {
+  border-radius: 14px;
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  background: rgba(31, 31, 31, 0.94);
+  color: #f6f2e8;
+  cursor: pointer;
+  transition: 0.18s ease;
+}
+
+.aurosSidebarActionButton {
+  width: 38px;
+  height: 38px;
+  font-size: 22px;
+}
+
+.aurosSidebarSection {
+  display: grid;
+  gap: 10px;
+}
+
+.aurosSidebarSectionLabel {
+  margin: 0;
+  color: #998f76;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.aurosSidebarList {
+  display: grid;
+  gap: 8px;
+}
+
+.aurosSidebarRow {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #eae4d4;
+  border-radius: 14px;
+  min-height: 44px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  transition: 0.18s ease;
+  text-align: left;
+}
+
+.aurosSidebarRow:hover {
+  background: rgba(212, 175, 55, 0.06);
+  border-color: rgba(212, 175, 55, 0.12);
+}
+
+.aurosSidebarRow.isActive {
+  background: rgba(212, 175, 55, 0.12);
+  border-color: rgba(212, 175, 55, 0.22);
+  color: #fff4cb;
+}
+
+.aurosSidebarRowLeft {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.aurosSidebarHash {
+  color: #d4af37;
+  font-weight: 900;
+}
+
+.aurosSidebarMiniBadge {
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.2);
+  color: #f6e3a6;
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+}
+
+.aurosAvatarDot,
+.aurosApplicationDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.aurosAvatarDot {
+  background: #4ade80;
+}
+
+.aurosApplicationDot {
+  background: #d4af37;
+}
+
+.aurosChatHeader {
+  padding: 20px 22px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  background: rgba(10, 10, 10, 0.95);
+}
+
+.aurosHeaderTitle {
+  margin: 0;
+  color: #f6f2e8;
+  font-size: 30px;
+  line-height: 1.04;
+}
+
+.aurosHeaderSubtitle {
+  margin: 6px 0 0 0;
+  color: #998f76;
+  font-size: 14px;
+}
+
+.aurosHeaderActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.aurosHeaderButton {
+  min-height: 40px;
+  padding: 0 14px;
+  font-weight: 700;
+}
+
+.aurosChatScrollArea {
+  flex: 1;
+  overflow: auto;
+  padding: 20px 22px;
+  background:
+    radial-gradient(circle at top right, rgba(212, 175, 55, 0.08), transparent 25%),
+    linear-gradient(180deg, rgba(19, 19, 19, 0.98), rgba(10, 10, 10, 0.98));
+}
+
+.aurosChatMessageList {
+  display: grid;
+  gap: 14px;
+}
+
+.aurosMessageCard {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(212, 175, 55, 0.08);
+  background: rgba(31, 31, 31, 0.55);
+}
+
+.aurosMessageAvatar,
+.aurosProfileAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.24), rgba(142, 105, 19, 0.22));
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  color: #fff2c0;
+  font-weight: 900;
+}
+
+.aurosMessageAvatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  font-size: 18px;
+}
+
+.aurosMessageContent {
+  min-width: 0;
+}
+
+.aurosMessageMeta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 6px;
+  color: #998f76;
+  font-size: 13px;
+}
+
+.aurosMessageMeta strong {
+  color: #f6f2e8;
+}
+
+.aurosMessageText {
+  margin: 0;
+  color: #dfd7c3;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.aurosDmAvatarMini {
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.24), rgba(142, 105, 19, 0.22));
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  color: #fff2c0;
+  font-weight: 800;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.aurosChatEmptyMessages {
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #998f76;
+}
+
+.aurosMessageInputWrap {
+  padding: 16px 18px;
+  border-top: 1px solid rgba(212, 175, 55, 0.12);
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 46px 90px;
+  gap: 10px;
+  background: rgba(12, 12, 12, 0.98);
+}
+
+.aurosMessageInput {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  background: rgba(27, 27, 27, 0.96);
+  color: #f6f2e8;
+  padding: 0 14px;
+  outline: none;
+}
+
+.aurosMessageInput::placeholder {
+  color: #7f7865;
+}
+
+.aurosInputActionButton {
+  height: 46px;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.aurosSendButton {
+  height: 46px;
+  font-weight: 800;
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.22), rgba(142, 105, 19, 0.2));
+  color: #fff2c0;
+}
+
+.aurosRightPanel {
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.aurosPanelCard {
+  border-radius: 22px;
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  background: rgba(29, 29, 29, 0.95);
+  padding: 18px;
+}
+
+.aurosProfileHero {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.aurosProfileAvatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  font-size: 22px;
+}
+
+.aurosProfileName {
+  margin: 0;
+  color: #f6f2e8;
+  font-size: 20px;
+}
+
+.aurosProfileTag {
+  margin: 4px 0 0 0;
+  color: #998f76;
+}
+
+.aurosProfileBio {
+  color: #d9cfb5;
+  line-height: 1.7;
+  margin: 0 0 14px 0;
+}
+
+.aurosRoleList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.aurosRoleBadge {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  color: #f1d67a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.aurosContextBlock {
+  display: grid;
+  gap: 8px;
+}
+
+.aurosContextBlock h4 {
+  margin: 0;
+  color: #f6f2e8;
+}
+
+.aurosContextBlock p {
+  margin: 0;
+  color: #bfb59b;
+  line-height: 1.6;
+}
+
+.aurosModerationList {
+  display: grid;
+  gap: 10px;
+}
+
+.aurosModerationButton {
+  min-height: 44px;
+  padding: 0 14px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.aurosWelcomeView {
+  flex: 1;
+  overflow: auto;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(212, 175, 55, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(19, 19, 19, 0.98), rgba(10, 10, 10, 0.98));
+}
+
+.aurosWelcomeCard {
+  border-radius: 26px;
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  background: rgba(26, 26, 26, 0.96);
+  padding: 28px;
+}
+
+.aurosWelcomeTitle {
+  margin: 0 0 12px 0;
+  color: #f6f2e8;
+  font-size: 34px;
+  line-height: 1.06;
+}
+
+.aurosWelcomeText {
+  margin: 0 0 22px 0;
+  max-width: 860px;
+  color: #cbbf9f;
+  line-height: 1.8;
+}
+
+.aurosWelcomeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.aurosWelcomeMiniCard {
+  border-radius: 20px;
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  background: rgba(34, 34, 34, 0.9);
+  padding: 18px;
+}
+
+.aurosWelcomeMiniCard h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #f6f2e8;
+}
+
+.aurosWelcomeMiniCard p {
+  margin: 0;
+  color: #c3b89e;
+  line-height: 1.7;
+}
+
+@media (max-width: 1380px) {
+  .aurosChatShell {
+    grid-template-columns: 78px 250px minmax(0, 1fr);
+  }
+
+  .aurosRightPanel {
+    display: none;
+  }
+}
+
+@media (max-width: 980px) {
+  .aurosChatShell {
+    grid-template-columns: 78px minmax(0, 1fr);
+  }
+
+  .aurosChatSidebar {
+    display: none;
+  }
+
+  .aurosWelcomeGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .aurosChatShell {
+    grid-template-columns: 1fr;
+  }
+
+  .aurosChatServerRail {
+    display: none;
+  }
+
+  .aurosMessageInputWrap {
+    grid-template-columns: 42px minmax(0, 1fr) 78px;
+  }
+
+  .aurosInputActionButton:nth-child(3) {
+    display: none;
+  }
+
+  .aurosHeaderTitle {
+    font-size: 24px;
+  }
+
+  .aurosWelcomeTitle {
+    font-size: 28px;
+  }
+}
+
+.aurosModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 120;
+  padding: 20px;
+}
+
+.aurosModalCard {
+  width: min(100%, 560px);
+  border-radius: 26px;
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  background: linear-gradient(180deg, rgba(23, 23, 23, 0.98), rgba(11, 11, 11, 0.98));
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  padding: 22px;
+}
+
+.aurosModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.aurosModalTitle {
+  margin: 0;
+  color: #f6f2e8;
+  font-size: 24px;
+  line-height: 1.05;
+}
+
+.aurosModalClose {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  background: rgba(31, 31, 31, 0.94);
+  color: #f6f2e8;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.aurosModalForm {
+  display: grid;
+  gap: 14px;
+}
+
+.aurosModalField {
+  display: grid;
+  gap: 8px;
+}
+
+.aurosModalField span {
+  color: #d8ccb0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.aurosModalInput,
+.aurosModalTextarea {
+  width: 100%;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  background: rgba(26, 26, 26, 0.96);
+  color: #f6f2e8;
+  padding: 12px 14px;
+  outline: none;
+}
+
+.aurosModalTextarea {
+  resize: vertical;
+  min-height: 110px;
+}
+
+.aurosModalCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #d6cba8;
+  font-size: 14px;
+}
+
+.aurosModalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.aurosModalPrimary,
+.aurosModalSecondary {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.aurosModalPrimary {
+  border: 1px solid rgba(212, 175, 55, 0.24);
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.22), rgba(142, 105, 19, 0.2));
+  color: #fff2c0;
+}
+
+.aurosModalSecondary {
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  background: rgba(31, 31, 31, 0.94);
+  color: #f6f2e8;
+}
+
+.aurosReactionRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.aurosReactionButton,
+.aurosReactionAddButton {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  background: rgba(31, 31, 31, 0.94);
+  color: #f6f2e8;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.aurosReactionButton:hover,
+.aurosReactionAddButton:hover {
+  border-color: rgba(212, 175, 55, 0.28);
+  transform: translateY(-1px);
+}
+
+.aurosAccessPage {
+  min-height: 78vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.aurosAccessCard {
+  width: min(100%, 820px);
+  border-radius: 28px;
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  background: linear-gradient(
+    180deg,
+    rgba(20, 20, 20, 0.96) 0%,
+    rgba(10, 10, 10, 0.97) 100%
+  );
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.38);
+  padding: 34px;
+}
+
+.aurosAccessTabs {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.aurosAccessButton {
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  background: rgba(28, 28, 28, 0.92);
+  color: #f7f1e6;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.aurosAccessButton.active {
+  border-color: rgba(212, 175, 55, 0.32);
+}
+
+.aurosAccessForm {
+  display: grid;
+  gap: 12px;
+}
+
+.aurosAccessGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.aurosAccessInput {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  background: rgba(22, 22, 22, 0.95);
+  color: #f6f2e8;
+  padding: 0 14px;
+  outline: none;
+}
+
+.aurosAccessPrimary {
+  min-height: 48px;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  background: linear-gradient(
+    180deg,
+    rgba(212, 175, 55, 0.24),
+    rgba(142, 105, 19, 0.2)
+  );
+  color: #fff2c0;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.aurosAccessError {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 107, 107, 0.25);
+  background: rgba(255, 107, 107, 0.1);
+  color: #ffb7b7;
+  font-weight: 700;
+}
+
+.aurosAccessSuccess {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(74, 222, 128, 0.22);
+  background: rgba(74, 222, 128, 0.1);
+  color: #bbf7d0;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .aurosAccessCard {
+    padding: 22px;
+  }
+
+  .aurosAccessGrid {
+    grid-template-columns: 1fr;
+  }
+}

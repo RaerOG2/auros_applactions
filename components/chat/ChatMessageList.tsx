@@ -1,77 +1,154 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import type { ChatMessageItem as ChatMessageItemType, MessageReactionItem } from "../../types/chat";
-import type { ProfileItem } from "../../types/profile";
-import ChatMessageItem from "./ChatMessageItem";
+import type { ChatMessage } from "../../types/chat";
 
 type ChatMessageListProps = {
-  messages: ChatMessageItemType[];
-  loading: boolean;
-  profile: ProfileItem | null;
-  reactionsMap: Record<string, MessageReactionItem[]>;
-  onToggleReaction: (messageId: string, emojiKey: string) => void;
-  customEmojiMap?: Record<string, string>;
-  isUserOnline?: (profileId?: string | null) => boolean;
+  messages: ChatMessage[];
+  onToggleReaction?: (messageId: string, emoji: string) => void | Promise<void>;
+  currentUserId?: string | null;
+  onDeleteMessage?: (messageId: string) => void | Promise<void>;
 };
 
-const glassCardStyle: React.CSSProperties = {
-  background: "rgba(15, 27, 52, 0.74)",
-  border: "1px solid rgba(34, 48, 77, 0.95)",
-  borderRadius: "24px",
-  padding: "20px",
-  backdropFilter: "blur(12px)",
-  boxShadow: "0 20px 50px rgba(0,0,0,0.22)",
-};
+function getAuthorName(message: ChatMessage) {
+  return message.author?.displayName ?? message.author?.username ?? "Unknown User";
+}
+
+function getMessageTime(message: ChatMessage) {
+  try {
+    return new Date(message.createdAt).toLocaleString();
+  } catch {
+    return message.createdAt;
+  }
+}
+
+function groupReactions(message: ChatMessage) {
+  const grouped = new Map<string, number>();
+
+  for (const reaction of message.reactions ?? []) {
+    grouped.set(reaction.emoji, (grouped.get(reaction.emoji) ?? 0) + 1);
+  }
+
+  return Array.from(grouped.entries()).map(([emoji, count]) => ({
+    emoji,
+    count,
+  }));
+}
 
 export default function ChatMessageList({
   messages,
-  loading,
-  profile,
-  reactionsMap,
+  currentUserId,
   onToggleReaction,
-  customEmojiMap = {},
-  isUserOnline,
+  onDeleteMessage,
 }: ChatMessageListProps) {
-  const bottomRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+  if (!messages.length) {
+    return (
+      <div className="aurosChatEmptyMessages">
+        <p>No messages yet.</p>
+      </div>
+    );
+  }
 
   return (
-    <section style={glassCardStyle}>
-      <h2 style={{ marginTop: 0, marginBottom: 14 }}>Messages</h2>
+    <div className="aurosChatMessageList">
+      {messages.map((message) => {
+        const authorName = getAuthorName(message);
+        const isOwnMessage = !!currentUserId && message.authorId === currentUserId;
 
-      {loading ? (
-        <div style={{ color: "#9fb0d0" }}>Loading messages...</div>
-      ) : messages.length === 0 ? (
-        <div style={{ color: "#9fb0d0" }}>No messages yet.</div>
-      ) : (
-        <div
-          style={{
-            display: "grid",
-            gap: 12,
-            maxHeight: 620,
-            overflowY: "auto",
-            paddingRight: 4,
-          }}
-        >
-          {messages.map((message) => (
-            <ChatMessageItem
-              key={message.id}
-              message={message}
-              isOwnMessage={!!profile && message.author_profile_id === profile.id}
-              reactions={reactionsMap[message.id] ?? []}
-              currentProfileId={profile?.id ?? null}
-              onToggleReaction={onToggleReaction}
-              customEmojiMap={customEmojiMap}
-              isAuthorOnline={isUserOnline?.(message.author_profile_id) ?? false}
-            />
-          ))}
-          <div ref={bottomRef} />
-        </div>
-      )}
-    </section>
+        return (
+          <article key={message.id} className="aurosMessageCard">
+            <div className="aurosMessageAvatar">
+              {message.author?.avatarUrl ? (
+                <img
+                  src={message.author.avatarUrl}
+                  alt={authorName}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    borderRadius: "inherit",
+                  }}
+                />
+              ) : (
+                authorName.slice(0, 1).toUpperCase()
+              )}
+            </div>
+
+            <div className="aurosMessageContent">
+              <div className="aurosMessageMeta">
+                <strong>{authorName}</strong>
+                <span>{getMessageTime(message)}</span>
+                {message.editedAt && <span>Edited</span>}
+                {message.author?.status && (
+                  <span
+                    style={{
+                      color:
+                        message.author.status === "online"
+                          ? "#4ade80"
+                          : message.author.status === "idle"
+                          ? "#facc15"
+                          : message.author.status === "dnd"
+                          ? "#f87171"
+                          : "#9ca3af",
+                    }}
+                  >
+                    {message.author.status}
+                  </span>
+                )}
+              </div>
+
+              <p className="aurosMessageText">{message.content}</p>
+
+              <div className="aurosReactionRow">
+                {groupReactions(message).map((reaction) => (
+                  <button
+                    key={`${message.id}-${reaction.emoji}`}
+                    type="button"
+                    className="aurosReactionButton"
+                    onClick={() => onToggleReaction?.(message.id, reaction.emoji)}
+                  >
+                    <span>{reaction.emoji}</span>
+                    <span>{reaction.count}</span>
+                  </button>
+                ))}
+
+                <button
+                  type="button"
+                  className="aurosReactionAddButton"
+                  onClick={() => onToggleReaction?.(message.id, "🔥")}
+                >
+                  🔥
+                </button>
+
+                <button
+                  type="button"
+                  className="aurosReactionAddButton"
+                  onClick={() => onToggleReaction?.(message.id, "❤️")}
+                >
+                  ❤️
+                </button>
+
+                <button
+                  type="button"
+                  className="aurosReactionAddButton"
+                  onClick={() => onToggleReaction?.(message.id, "😂")}
+                >
+                  😂
+                </button>
+
+                {isOwnMessage && (
+                  <button
+                    type="button"
+                    className="aurosReactionAddButton"
+                    onClick={() => onDeleteMessage?.(message.id)}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            </div>
+          </article>
+        );
+      })}
+    </div>
   );
 }

@@ -1,152 +1,156 @@
-export type ChatChannelItem = {
+export type UserStatus = "online" | "idle" | "dnd" | "offline";
+
+export type ChatUserProfile = {
   id: string;
-  slug: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  bannerUrl: string | null;
+  bio: string | null;
+  status: UserStatus;
+  isAdmin: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastSeen: string | null;
+};
+
+export type ChatServer = {
+  id: string;
+  ownerId: string;
   name: string;
+  slug: string | null;
   description: string | null;
-  is_public: boolean;
-  created_by: string | null;
-  created_at: string;
+  iconUrl: string | null;
+  bannerUrl: string | null;
+  isPublic: boolean;
+  createdAt: string;
 };
 
-export type ChatChannelMemberItem = {
+export type ChatServerMemberRole =
+  | "owner"
+  | "admin"
+  | "moderator"
+  | "member";
+
+export type ChatServerMember = {
   id: string;
-  channel_id: string;
-  profile_id: string;
-  role: string;
-  created_at: string;
-  profile?: {
-    id: string;
-    username: string;
-    display_name: string | null;
-    avatar_url: string | null;
-    role: string;
-  } | null;
+  serverId: string;
+  userId: string;
+  role: ChatServerMemberRole;
+  joinedAt: string;
 };
 
-export type ApplicantChatAccountItem = {
+export type ChatChannelType = "text" | "announcement" | "application";
+
+export type ChatChannel = {
   id: string;
-  application_id: string;
-  chat_identity_code: string;
-  display_name: string | null;
-  discord_name: string | null;
-  created_by_admin_id: string | null;
-  is_active: boolean;
-  created_at: string;
-};
-
-export type ChatMessageItem = {
-  id: string;
-  channel_id: string;
-  author_profile_id: string | null;
-  author_applicant_account_id: string | null;
-  content: string;
-  content_html: string | null;
-  edited_at: string | null;
-  deleted_at: string | null;
-  created_at: string;
-  author_profile?: {
-    id: string;
-    username: string;
-    display_name: string | null;
-    avatar_url: string | null;
-    role: string;
-  } | null;
-  author_applicant_account?: {
-    id: string;
-    display_name: string | null;
-    discord_name: string | null;
-  } | null;
-};
-
-export type DirectConversationItem = {
-  id: string;
-  is_applicant_thread: boolean;
-  application_id: string | null;
-  created_at: string;
-};
-
-export type DirectConversationMemberItem = {
-  id: string;
-  conversation_id: string;
-  profile_id: string | null;
-  applicant_chat_account_id: string | null;
-  joined_at: string;
-};
-
-export type DirectMessageItem = {
-  id: string;
-  conversation_id: string;
-  author_profile_id: string | null;
-  author_applicant_account_id: string | null;
-  content: string;
-  content_html: string | null;
-  edited_at: string | null;
-  deleted_at: string | null;
-  created_at: string;
-  author_profile?: {
-    id: string;
-    username: string;
-    display_name: string | null;
-    avatar_url: string | null;
-    role: string;
-  } | null;
-  author_applicant_account?: {
-    id: string;
-    display_name: string | null;
-    discord_name: string | null;
-  } | null;
-};
-
-export type MessageReactionItem = {
-  id: string;
-  message_id: string | null;
-  direct_message_id: string | null;
-  profile_id: string | null;
-  applicant_chat_account_id: string | null;
-  emoji_key: string;
-  created_at: string;
-};
-
-export type MessageMentionItem = {
-  id: string;
-  message_id: string | null;
-  direct_message_id: string | null;
-  mentioned_profile_id: string;
-  created_at: string;
-};
-
-export type CreateApplicantChatAccountInput = {
-  applicationId: string;
-  displayName?: string | null;
-  discordName?: string | null;
-  createdByAdminId?: string | null;
-};
-
-export type CreateChannelInput = {
-  slug: string;
+  serverId: string;
+  createdBy: string | null;
   name: string;
-  description?: string | null;
-  isPublic?: boolean;
-  createdBy?: string | null;
+  type: ChatChannelType;
+  topic: string | null;
+  position: number;
+  isPrivate: boolean;
+  createdAt: string;
 };
 
-export type SendChannelMessageInput = {
-  channelId: string;
-  content: string;
-  authorProfileId?: string | null;
-  authorApplicantAccountId?: string | null;
+export type DirectConversation = {
+  id: string;
+  createdAt: string;
 };
 
-export type SendDirectMessageInput = {
+export type DirectConversationMember = {
+  id: string;
   conversationId: string;
-  content: string;
-  authorProfileId?: string | null;
-  authorApplicantAccountId?: string | null;
+  userId: string;
+  joinedAt: string;
 };
 
-export type CreateDirectConversationInput = {
-  applicationId?: string | null;
-  isApplicantThread?: boolean;
-  memberProfileIds?: string[];
-  memberApplicantAccountIds?: string[];
+export type ApplicationChatStatus = "open" | "review" | "closed";
+
+export type ApplicationChat = {
+  id: string;
+  chatId: string;
+  applicantName: string;
+  applicantEmail: string | null;
+  createdByAdminId: string | null;
+  status: ApplicationChatStatus;
+  isActive: boolean;
+  expiresAt: string | null;
+  createdAt: string;
 };
+
+export type ChatMessageType = "text" | "system";
+
+export type ChatMessageReaction = {
+  id: string;
+  messageId: string;
+  userId: string;
+  emoji: string;
+  createdAt: string;
+};
+
+export type ChatMessage = {
+  id: string;
+  authorId: string | null;
+  channelId: string | null;
+  directConversationId: string | null;
+  applicationChatId: string | null;
+  content: string;
+  messageType: ChatMessageType;
+  replyToId: string | null;
+  editedAt: string | null;
+  deletedAt: string | null;
+  createdAt: string;
+  author?: ChatUserProfile | null;
+  reactions?: ChatMessageReaction[];
+};
+
+export type ChatCustomEmoji = {
+  id: string;
+  serverId: string;
+  name: string;
+  imageUrl: string;
+  createdBy: string | null;
+  createdAt: string;
+};
+
+export type ChatModerationActionType =
+  | "ban"
+  | "kick"
+  | "mute"
+  | "warn"
+  | "delete_message";
+
+export type ChatModerationAction = {
+  id: string;
+  targetUserId: string | null;
+  moderatorUserId: string | null;
+  serverId: string | null;
+  actionType: ChatModerationActionType;
+  reason: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type ChatAuthLog = {
+  id: string;
+  userId: string | null;
+  email: string | null;
+  eventType: string;
+  success: boolean;
+  details: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type DirectMessagePreview = {
+  id: string;
+  label: string;
+  user: ChatUserProfile | null;
+};
+
+export type ChatView =
+  | { type: "home" }
+  | { type: "server"; serverId: string; channelId: string }
+  | { type: "dm"; dmId: string }
+  | { type: "application"; applicationChatId: string };

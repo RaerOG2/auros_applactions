@@ -20,6 +20,8 @@ export default function AurosSiteShell({ children }: AurosSiteShellProps) {
     | "faq"
     | "contact"
     | "admin"
+    | "chat"
+    | "login"
     | undefined {
     if (pathname === "/") return "home";
     if (pathname === "/apply") return "apply";
@@ -28,6 +30,8 @@ export default function AurosSiteShell({ children }: AurosSiteShellProps) {
     if (pathname === "/faq") return "faq";
     if (pathname === "/contact") return "contact";
     if (pathname === "/admin") return "admin";
+    if (pathname === "/chat") return "chat";
+    if (pathname === "/login") return "login";
     return undefined;
   }
 
