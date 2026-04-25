@@ -14,6 +14,8 @@ type ChatProfileEditorModalProps = {
     bio?: string | null;
     avatarFile?: File | null;
     bannerFile?: File | null;
+    removeAvatar?: boolean;
+    removeBanner?: boolean;
   }) => Promise<void>;
 };
 
@@ -30,6 +32,8 @@ export default function ChatProfileEditorModal({
   const [bio, setBio] = useState(currentBio ?? "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [removeAvatar, setRemoveAvatar] = useState(false);
+  const [removeBanner, setRemoveBanner] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -40,6 +44,8 @@ export default function ChatProfileEditorModal({
     setBio(currentBio ?? "");
     setAvatarFile(null);
     setBannerFile(null);
+    setRemoveAvatar(false);
+    setRemoveBanner(false);
   }, [open, currentUsername, currentDisplayName, currentBio]);
 
   if (!open) return null;
@@ -54,8 +60,10 @@ export default function ChatProfileEditorModal({
         username: username.trim(),
         displayName: displayName.trim(),
         bio: bio.trim() || null,
-        avatarFile,
-        bannerFile,
+        avatarFile: removeAvatar ? null : avatarFile,
+        bannerFile: removeBanner ? null : bannerFile,
+        removeAvatar,
+        removeBanner,
       });
 
       onClose();
@@ -116,9 +124,24 @@ export default function ChatProfileEditorModal({
               className="aurosModalInput"
               type="file"
               accept="image/*"
-              onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
+              disabled={removeAvatar}
+              onChange={(e) => {
+                setAvatarFile(e.target.files?.[0] ?? null);
+                setRemoveAvatar(false);
+              }}
             />
           </label>
+
+          <button
+            type="button"
+            className="aurosModalSecondary"
+            onClick={() => {
+              setAvatarFile(null);
+              setRemoveAvatar(true);
+            }}
+          >
+            Delete Avatar
+          </button>
 
           <label className="aurosModalField">
             <span>Banner</span>
@@ -126,9 +149,24 @@ export default function ChatProfileEditorModal({
               className="aurosModalInput"
               type="file"
               accept="image/*"
-              onChange={(e) => setBannerFile(e.target.files?.[0] ?? null)}
+              disabled={removeBanner}
+              onChange={(e) => {
+                setBannerFile(e.target.files?.[0] ?? null);
+                setRemoveBanner(false);
+              }}
             />
           </label>
+
+          <button
+            type="button"
+            className="aurosModalSecondary"
+            onClick={() => {
+              setBannerFile(null);
+              setRemoveBanner(true);
+            }}
+          >
+            Delete Banner
+          </button>
 
           <div className="aurosModalActions">
             <button type="button" className="aurosModalSecondary" onClick={onClose}>

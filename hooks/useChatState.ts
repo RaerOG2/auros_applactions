@@ -109,6 +109,8 @@ type ChatStateReturn = {
     bio?: string | null;
     avatarFile?: File | null;
     bannerFile?: File | null;
+    removeAvatar?: boolean;
+    removeBanner?: boolean;
   }) => Promise<void>;
 
   updateActiveServer: (input: {
@@ -758,6 +760,8 @@ export function useChatState(): ChatStateReturn {
     bio?: string | null;
     avatarFile?: File | null;
     bannerFile?: File | null;
+    removeAvatar?: boolean;
+    removeBanner?: boolean;
   }) {
     try {
       setError(null);
@@ -765,11 +769,15 @@ export function useChatState(): ChatStateReturn {
       let avatarUrl: string | null | undefined = undefined;
       let bannerUrl: string | null | undefined = undefined;
 
-      if (input.avatarFile) {
+      if (input.removeAvatar) {
+        avatarUrl = null;
+      } else if (input.avatarFile) {
         avatarUrl = await uploadUserAvatar(input.avatarFile);
       }
 
-      if (input.bannerFile) {
+      if (input.removeBanner) {
+        bannerUrl = null;
+      } else if (input.bannerFile) {
         bannerUrl = await uploadUserBanner(input.bannerFile);
       }
 

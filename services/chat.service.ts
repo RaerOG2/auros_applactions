@@ -227,7 +227,7 @@ export async function getMessageReactions(
 
 export function subscribeToChannelMessages(
   channelId: string,
-  onInsert: () => void
+  onChange: () => void
 ) {
   return supabase
     .channel(`channel-messages:${channelId}`)
@@ -240,26 +240,17 @@ export function subscribeToChannelMessages(
         filter: `channel_id=eq.${channelId}`,
       },
       () => {
-        onInsert();
+        onChange();
       }
     )
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "chat_message_reactions",
-      },
-      () => {
-        onInsert();
-      }
-    )
-    .subscribe();
+    .subscribe((status) => {
+      console.log("[Realtime] channel messages:", status);
+    });
 }
 
 export function subscribeToDirectMessages(
   directConversationId: string,
-  onInsert: () => void
+  onChange: () => void
 ) {
   return supabase
     .channel(`direct-messages:${directConversationId}`)
@@ -272,26 +263,17 @@ export function subscribeToDirectMessages(
         filter: `direct_conversation_id=eq.${directConversationId}`,
       },
       () => {
-        onInsert();
+        onChange();
       }
     )
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "chat_message_reactions",
-      },
-      () => {
-        onInsert();
-      }
-    )
-    .subscribe();
+    .subscribe((status) => {
+      console.log("[Realtime] direct messages:", status);
+    });
 }
 
 export function subscribeToApplicationChatMessages(
   applicationChatId: string,
-  onInsert: () => void
+  onChange: () => void
 ) {
   return supabase
     .channel(`application-messages:${applicationChatId}`)
@@ -304,21 +286,12 @@ export function subscribeToApplicationChatMessages(
         filter: `application_chat_id=eq.${applicationChatId}`,
       },
       () => {
-        onInsert();
+        onChange();
       }
     )
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "chat_message_reactions",
-      },
-      () => {
-        onInsert();
-      }
-    )
-    .subscribe();
+    .subscribe((status) => {
+      console.log("[Realtime] application messages:", status);
+    });
 }
 
 export async function deleteOwnMessage(messageId: string): Promise<void> {
