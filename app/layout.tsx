@@ -15,9 +15,11 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Auros Royale Website",
-  description: "Official Website for Auros Royale",
+  icons: {
+    icon: "/auros_royale_pfp_draft_1.png",
+  },
 };
 
 export default function RootLayout({

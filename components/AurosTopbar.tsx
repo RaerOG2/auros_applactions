@@ -142,7 +142,7 @@ export default function AurosTopbar({ current }: AurosTopbarProps) {
           <Link href="/" style={brandStyle}>
             <div style={logoBoxStyle}>
               <img
-                src="/auros-logo.png"
+                src="/auros_royale_pfp_draft_1.png"
                 alt="Auros"
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />

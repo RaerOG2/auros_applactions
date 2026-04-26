@@ -6,13 +6,18 @@ import { getCurrentAuthUser } from "./profile.service";
 const MESSAGE_SELECT = `
   *,
   author:profiles (*),
-  attachments:chat_message_attachments (*)
+  attachments:chat_message_attachments (*),
+  reactions:chat_message_reactions (*)
 `;
 
 export async function getChannelMessages(channelId: string): Promise<ChatMessage[]> {
   const { data, error } = await supabase
     .from("chat_messages")
-    .select(MESSAGE_SELECT)
+    .select(`
+      *,
+      author:profiles (*),
+      attachments:chat_message_attachments (*)
+    `)
     .eq("channel_id", channelId)
     .is("deleted_at", null)
     .order("created_at", { ascending: true });
@@ -21,7 +26,8 @@ export async function getChannelMessages(channelId: string): Promise<ChatMessage
     throw error;
   }
 
-  return (data ?? []).map(mapMessageRow);
+  const messages = (data ?? []).map(mapMessageRow);
+  return attachReactionsToMessages(messages);
 }
 
 export async function getDirectMessages(
@@ -202,7 +208,10 @@ export async function toggleReaction(input: {
   emoji: string;
 }): Promise<void> {
   const user = await getCurrentAuthUser();
-  if (!user) throw new Error("Not authenticated");
+
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
 
   const { data: existing, error: existingError } = await supabase
     .from("chat_message_reactions")
@@ -213,7 +222,8 @@ export async function toggleReaction(input: {
     .maybeSingle();
 
   if (existingError) {
-    throw existingError;
+    console.warn("[chat.service] reaction check failed:", existingError);
+    throw new Error(existingError.message || "Failed to check reaction.");
   }
 
   if (existing) {
@@ -223,7 +233,8 @@ export async function toggleReaction(input: {
       .eq("id", existing.id);
 
     if (deleteError) {
-      throw deleteError;
+      console.warn("[chat.service] reaction delete failed:", deleteError);
+      throw new Error(deleteError.message || "Failed to remove reaction.");
     }
 
     return;
@@ -238,7 +249,8 @@ export async function toggleReaction(input: {
     });
 
   if (insertError) {
-    throw insertError;
+    console.warn("[chat.service] reaction insert failed:", insertError);
+    throw new Error(insertError.message || "Failed to add reaction.");
   }
 }
 
@@ -343,4 +355,50 @@ export async function deleteOwnMessage(messageId: string): Promise<void> {
   if (error) {
     throw new Error(error.message || "Failed to delete message.");
   }
+}
+
+export function subscribeToMessageReactions(onChange: () => void) {
+  return supabase
+    .channel(`message-reactions-${Date.now()}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "chat_message_reactions",
+      },
+      () => onChange()
+    )
+    .subscribe((status) => {
+      console.log("[Realtime] message reactions:", status);
+    });
+}
+
+async function attachReactionsToMessages(messages: ChatMessage[]) {
+  if (messages.length === 0) return messages;
+
+  const messageIds = messages.map((message) => message.id);
+
+  const { data, error } = await supabase
+    .from("chat_message_reactions")
+    .select("*")
+    .in("message_id", messageIds);
+
+  if (error) {
+    console.warn("[chat.service] Failed to load reactions:", error);
+    return messages;
+  }
+
+  const reactionsByMessageId = new Map<string, any[]>();
+
+  for (const reaction of data ?? []) {
+    const list = reactionsByMessageId.get(reaction.message_id) ?? [];
+    list.push(reaction);
+    reactionsByMessageId.set(reaction.message_id, list);
+  }
+
+  return messages.map((message) => ({
+    ...message,
+    reactions: (reactionsByMessageId.get(message.id) ?? []).map(mapReactionRow),
+  }));
 }

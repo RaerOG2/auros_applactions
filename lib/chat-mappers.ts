@@ -64,13 +64,13 @@ export function mapChannelRow(row: any): ChatChannel {
   };
 }
 
-export function mapReactionRow(row: any): ChatMessageReaction {
+export function mapReactionRow(row: any) {
   return {
     id: row.id,
     messageId: row.message_id,
     userId: row.user_id,
     emoji: row.emoji,
-    createdAt: row.created_at ?? new Date().toISOString(),
+    createdAt: row.created_at,
   };
 }
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import ChatConfirmModal from "./ChatConfirmModal";
 import ChatCreateChannelModal from "./ChatCreateChannelModal";
 import ChatCreateServerModal from "./ChatCreateServerModal";
+import ChatCustomEmojiModal from "./ChatCustomEmojiModal";
 import ChatHeader from "./ChatHeader";
 import ChatMessageInput from "./ChatMessageInput";
 import ChatMessageList from "./ChatMessageList";
@@ -13,6 +14,8 @@ import ChatServerRail from "./ChatServerRail";
 import ChatServerSettingsModal from "./ChatServerSettingsModal";
 import ChatSidebar from "./ChatSidebar";
 import ChatWelcomeView from "./ChatWelcomeView";
+import ChatMentionProfileModal from "./ChatMentionProfileModal";
+import type { ChatUserProfile } from "../../types/chat";
 import { useChatState } from "../../hooks/useChatState";
 
 type ConfirmAction = {
@@ -30,7 +33,10 @@ export default function ChatShell() {
   const [channelModalOpen, setChannelModalOpen] = useState(false);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [serverSettingsOpen, setServerSettingsOpen] = useState(false);
+  const [emojiModalOpen, setEmojiModalOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [mentionProfileUser, setMentionProfileUser] =
+    useState<ChatUserProfile | null>(null);
 
   const inputPlaceholder =
     chat.activeView.type === "dm"
@@ -121,8 +127,11 @@ export default function ChatShell() {
                 ) : (
                   <ChatMessageList
                     messages={chat.activeMessages}
+                    customEmojis={chat.customEmojis}
+                    mentionUsers={chat.serverMentionUsers}
                     currentUserId={chat.currentUser?.id}
                     onToggleReaction={chat.toggleMessageReaction}
+                    onOpenMentionProfile={(user) => setMentionProfileUser(user)}
                     onDeleteMessage={(messageId) =>
                       setConfirmAction({
                         title: "Delete message?",
@@ -142,6 +151,8 @@ export default function ChatShell() {
 
               <ChatMessageInput
                 onSendMessage={chat.sendMessage}
+                customEmojis={chat.customEmojis}
+                mentionUsers={chat.serverMentionUsers}
                 placeholder={inputPlaceholder}
               />
             </>
@@ -162,6 +173,7 @@ export default function ChatShell() {
           onJoinInvite={chat.joinServerWithInvite}
           onOpenProfileEditor={() => setProfileEditorOpen(true)}
           onOpenServerSettings={() => setServerSettingsOpen(true)}
+          onOpenCustomEmojiModal={() => setEmojiModalOpen(true)}
           onDeleteServer={() =>
             setConfirmAction({
               title: "Delete server?",
@@ -206,6 +218,17 @@ export default function ChatShell() {
         currentDescription={chat.activeServer?.description ?? null}
         onClose={() => setServerSettingsOpen(false)}
         onSave={chat.updateActiveServer}
+      />
+
+      <ChatCustomEmojiModal
+        open={emojiModalOpen}
+        onClose={() => setEmojiModalOpen(false)}
+        onCreate={chat.createNewCustomEmoji}
+      />
+
+      <ChatMentionProfileModal
+        user={mentionProfileUser}
+        onClose={() => setMentionProfileUser(null)}
       />
 
       <ChatConfirmModal

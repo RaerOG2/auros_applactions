@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabase";
-import { mapChannelRow, mapServerRow } from "../lib/chat-mappers";
-import type { ChatChannel, ChatServer } from "../types/chat";
+import { mapChannelRow, mapServerRow, mapProfileRow } from "../lib/chat-mappers";
+import type { ChatChannel, ChatServer, ChatUserProfile } from "../types/chat";
 import { getCurrentAuthUser } from "./profile.service";
 
 export async function ensureAurosCommunityServer(): Promise<string | null> {
@@ -199,4 +199,24 @@ export async function getMyServerRole(serverId: string) {
   }
 
   return data?.role ?? null;
+}
+
+export async function getServerMentionUsers(
+  serverId: string
+): Promise<ChatUserProfile[]> {
+  const { data, error } = await supabase
+    .from("chat_server_members")
+    .select(`
+      user:profiles (*)
+    `)
+    .eq("server_id", serverId);
+
+  if (error) {
+    throw new Error(error.message || "Failed to load server users.");
+  }
+
+  return (data ?? [])
+    .map((row: any) => row.user)
+    .filter(Boolean)
+    .map(mapProfileRow);
 }

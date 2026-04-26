@@ -1,12 +1,17 @@
 "use client";
 
-import type { ChatMessage } from "../../types/chat";
+import type { ChatMessage, ChatCustomEmoji, ChatUserProfile } from "../../types/chat";
+import ChatEmojiPicker from "./ChatEmojiPicker";
+import { useState } from "react";
 
 type ChatMessageListProps = {
   messages: ChatMessage[];
+  customEmojis: ChatCustomEmoji[];
+  mentionUsers: ChatUserProfile[];
   onToggleReaction?: (messageId: string, emoji: string) => void | Promise<void>;
   currentUserId?: string | null;
   onDeleteMessage?: (messageId: string) => void | Promise<void>;
+  onOpenMentionProfile?: (user: ChatUserProfile) => void;
 };
 
 function getAuthorName(message: ChatMessage) {
@@ -42,12 +47,140 @@ function isPdf(fileType?: string | null, fileName?: string) {
   return fileType === "application/pdf" || fileName?.toLowerCase().endsWith(".pdf");
 }
 
+function parseCustomEmoji(value: string, customEmojis: ChatCustomEmoji[]) {
+  if (!value.startsWith("custom:")) return null;
+
+  const parts = value.split(":");
+  const id = parts[1];
+
+  if (!id) return null;
+
+  return customEmojis.find((emoji) => emoji.id === id) ?? null;
+}
+
+function renderMessageText(content: string, customEmojis: ChatCustomEmoji[]) {
+  const parts = content.split(/(:[a-zA-Z0-9_]+:)/g);
+
+  return parts.map((part, index) => {
+    const match = part.match(/^:([a-zA-Z0-9_]+):$/);
+
+    if (!match) {
+      return <span key={index}>{part}</span>;
+    }
+
+    const emojiName = match[1];
+    const customEmoji = customEmojis.find((emoji) => emoji.name === emojiName);
+
+    if (!customEmoji) {
+      return <span key={index}>{part}</span>;
+    }
+
+    return (
+      <img
+        key={index}
+        src={customEmoji.imageUrl}
+        alt={customEmoji.name}
+        title={`:${customEmoji.name}:`}
+        className="aurosInlineCustomEmoji"
+      />
+    );
+  });
+}
+
+function renderMessageTextWithMentions(
+  content: string,
+  customEmojis: ChatCustomEmoji[],
+  mentionUsers: ChatUserProfile[],
+  currentUserId?: string | null,
+  onOpenMentionProfile?: (user: ChatUserProfile) => void
+) {
+  const parts = content.split(/(:[a-zA-Z0-9_]+:|@[a-zA-Z0-9_]+)/g);
+
+  return parts.map((part, index) => {
+    const emojiMatch = part.match(/^:([a-zA-Z0-9_]+):$/);
+
+    if (emojiMatch) {
+      const emojiName = emojiMatch[1];
+      const customEmoji = customEmojis.find((emoji) => emoji.name === emojiName);
+
+      if (customEmoji) {
+        return (
+          <img
+            key={index}
+            src={customEmoji.imageUrl}
+            alt={customEmoji.name}
+            title={`:${customEmoji.name}:`}
+            className="aurosInlineCustomEmoji"
+          />
+        );
+      }
+    }
+
+    const mentionMatch = part.match(/^@([a-zA-Z0-9_]+)$/);
+
+    if (mentionMatch) {
+      const username = mentionMatch[1].toLowerCase();
+
+      const mentionedUser = mentionUsers.find(
+        (user) => user.username?.toLowerCase() === username
+      );
+
+      if (mentionedUser) {
+        const isMe = mentionedUser.id === currentUserId;
+
+        return (
+          <button
+            key={index}
+            type="button"
+            className={`aurosMention ${isMe ? "isMe" : ""}`}
+            onClick={() => onOpenMentionProfile?.(mentionedUser)}
+          >
+            {part}
+          </button>
+        );
+      }
+    }
+
+    return <span key={index}>{part}</span>;
+  });
+}
+
+function ReactionContent({
+  emoji,
+  customEmojis,
+}: {
+  emoji: string;
+  customEmojis: ChatCustomEmoji[];
+}) {
+  const customEmoji = parseCustomEmoji(emoji, customEmojis);
+
+  if (customEmoji) {
+    return (
+      <img
+        className="aurosReactionCustomEmoji"
+        src={customEmoji.imageUrl}
+        alt={customEmoji.name}
+        title={`:${customEmoji.name}:`}
+      />
+    );
+  }
+
+  return <span>{emoji}</span>;
+}
+
 export default function ChatMessageList({
   messages,
+  customEmojis,
+  mentionUsers,
   currentUserId,
   onToggleReaction,
   onDeleteMessage,
+  onOpenMentionProfile,
 }: ChatMessageListProps) {
+  const [reactionPickerMessageId, setReactionPickerMessageId] = useState<
+    string | null
+  >(null);
+
   if (!messages.length) {
     return (
       <div className="aurosChatEmptyMessages">
@@ -97,7 +230,15 @@ export default function ChatMessageList({
               </div>
 
               {message.content.trim() && (
-                <p className="aurosMessageText">{message.content}</p>
+               <p className="aurosMessageText">
+                {renderMessageTextWithMentions(
+                  message.content,
+                  customEmojis,
+                  mentionUsers,
+                  currentUserId,
+                  onOpenMentionProfile
+                )}
+               </p>
               )}
 
               {attachments.length > 0 && (
@@ -137,34 +278,31 @@ export default function ChatMessageList({
                     className="aurosReactionButton"
                     onClick={() => onToggleReaction?.(message.id, reaction.emoji)}
                   >
-                    <span>{reaction.emoji}</span>
+                    <ReactionContent emoji={reaction.emoji} customEmojis={customEmojis} />
                     <span>{reaction.count}</span>
                   </button>
                 ))}
 
-                <button
-                  type="button"
-                  className="aurosReactionAddButton"
-                  onClick={() => onToggleReaction?.(message.id, "🔥")}
-                >
-                  🔥
-                </button>
+                <div className="aurosReactionPickerWrap">
+                  <button
+                    type="button"
+                    className="aurosReactionAddButton"
+                    onClick={() =>
+                      setReactionPickerMessageId((prev) =>
+                        prev === message.id ? null : message.id
+                      )
+                    }
+                  >
+                    +
+                  </button>
 
-                <button
-                  type="button"
-                  className="aurosReactionAddButton"
-                  onClick={() => onToggleReaction?.(message.id, "❤️")}
-                >
-                  ❤️
-                </button>
-
-                <button
-                  type="button"
-                  className="aurosReactionAddButton"
-                  onClick={() => onToggleReaction?.(message.id, "😂")}
-                >
-                  😂
-                </button>
+                  <ChatEmojiPicker
+                    open={reactionPickerMessageId === message.id}
+                    customEmojis={customEmojis}
+                    onSelectEmoji={(emoji) => onToggleReaction?.(message.id, emoji)}
+                    onClose={() => setReactionPickerMessageId(null)}
+                  />
+                </div>
 
                 {isOwnMessage && (
                   <button

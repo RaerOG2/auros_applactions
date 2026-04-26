@@ -22,6 +22,7 @@ type ChatRightPanelProps = {
   activeDM: DirectConversation | null;
   activeDirectUser?: ChatUserProfile | null;
   activeApplicationChat: ApplicationChat | null;
+  onOpenCustomEmojiModal: () => void;
   onOpenProfileEditor: () => void;
   onOpenServerSettings: () => void;
   onDeleteServer: () => void | Promise<void>;
@@ -73,9 +74,11 @@ export default function ChatRightPanel({
   onDeleteServer,
   onCreateInvite,
   onJoinInvite,
+  onOpenCustomEmojiModal,
 }: ChatRightPanelProps) {
   const [inviteInput, setInviteInput] = useState("");
   const isAurosCommunity = activeServer?.slug === "auros-community";
+
   const canDeleteServer =
     activeView.type === "server" &&
     activeServerRole === "owner" &&
@@ -83,6 +86,7 @@ export default function ChatRightPanel({
 
   return (
     <aside className="aurosRightPanel">
+      {/* PROFILE */}
       <section className="aurosPanelCard">
         <p className="aurosPanelOverline">PROFILE</p>
 
@@ -116,12 +120,6 @@ export default function ChatRightPanel({
                   <img
                     src={currentUser.avatarUrl}
                     alt={getProfileName(currentUser)}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      borderRadius: "inherit",
-                    }}
                   />
                 ) : (
                   getProfileInitial(currentUser)
@@ -129,8 +127,12 @@ export default function ChatRightPanel({
               </div>
 
               <div>
-                <h3 className="aurosProfileName">{getProfileName(currentUser)}</h3>
-                <p className="aurosProfileTag">@{currentUser.username || "user"}</p>
+                <h3 className="aurosProfileName">
+                  {getProfileName(currentUser)}
+                </h3>
+                <p className="aurosProfileTag">
+                  @{currentUser.username || "user"}
+                </p>
               </div>
             </div>
 
@@ -173,10 +175,13 @@ export default function ChatRightPanel({
             </div>
           </>
         ) : (
-          <p className="aurosProfileBio">No signed-in profile was found.</p>
+          <p className="aurosProfileBio">
+            No signed-in profile was found.
+          </p>
         )}
       </section>
 
+      {/* CONTEXT */}
       <section className="aurosPanelCard">
         <p className="aurosPanelOverline">CONTEXT</p>
 
@@ -195,82 +200,47 @@ export default function ChatRightPanel({
             <p>{activeChannel.topic ?? "No topic has been added yet."}</p>
           </div>
         )}
-
-        {activeView.type === "dm" && activeDM && (
-          <div className="aurosContextBlock">
-            <h4>{getProfileName(activeDirectUser)}</h4>
-            {activeDirectUser?.username && <p>@{activeDirectUser.username}</p>}
-            <p>Last seen: {formatLastSeen(activeDirectUser?.lastSeen ?? null)}</p>
-          </div>
-        )}
-
-        {activeView.type === "application" && activeApplicationChat && (
-          <div className="aurosContextBlock">
-            <h4>{activeApplicationChat.applicantName}</h4>
-            <p>Chat ID: {activeApplicationChat.chatId}</p>
-            <p>Status: {activeApplicationChat.status}</p>
-          </div>
-        )}
-
-        {activeView.type === "home" && (
-          <div className="aurosContextBlock">
-            <h4>Quick Access</h4>
-            <p>Use this panel for account, moderation, and chat information.</p>
-          </div>
-        )}
       </section>
 
+      {/* INVITES */}
       <section className="aurosPanelCard">
         <p className="aurosPanelOverline">SERVER INVITES</p>
 
         <div className="aurosModerationList">
-          {activeView.type === "server" && canCreateInvite(activeServerRole) && (
-            <button
-              className="aurosModerationButton"
-              type="button"
-              onClick={onCreateInvite}
-            >
-              Create Invite Link
-            </button>
-          )}
+          {activeView.type === "server" &&
+            canCreateInvite(activeServerRole) && (
+              <button
+                className="aurosModerationButton"
+                onClick={onCreateInvite}
+              >
+                Create Invite Link
+              </button>
+            )}
 
           {serverInviteLink && (
-            <div
-              style={{
-                padding: 12,
-                borderRadius: 14,
-                border: "1px solid rgba(212,175,55,0.16)",
-                background: "rgba(31,31,31,0.8)",
-                color: "#f6f2e8",
-                fontSize: 13,
-                lineHeight: 1.5,
-                wordBreak: "break-all",
-              }}
-            >
-              {serverInviteLink}
-            </div>
-          )}
+            <>
+              <div className="aurosInviteBox">{serverInviteLink}</div>
 
-          {serverInviteLink && (
-            <button
-              className="aurosModerationButton"
-              type="button"
-              onClick={() => navigator.clipboard.writeText(serverInviteLink)}
-            >
-              Copy Invite Link
-            </button>
+              <button
+                className="aurosModerationButton"
+                onClick={() =>
+                  navigator.clipboard.writeText(serverInviteLink)
+                }
+              >
+                Copy Invite
+              </button>
+            </>
           )}
 
           <input
             className="aurosModalInput"
             value={inviteInput}
             onChange={(e) => setInviteInput(e.target.value)}
-            placeholder="Paste invite link or token"
+            placeholder="Paste invite link"
           />
 
           <button
             className="aurosModerationButton"
-            type="button"
             onClick={() => {
               onJoinInvite(inviteInput);
               setInviteInput("");
@@ -281,27 +251,33 @@ export default function ChatRightPanel({
         </div>
       </section>
 
+      {/* SERVER TOOLS */}
       <section className="aurosPanelCard">
         <p className="aurosPanelOverline">SERVER TOOLS</p>
 
         <div className="aurosModerationList">
           {activeView.type === "server" &&
-            (activeServerRole === "owner" ||
-              activeServerRole === "admin" ||
-              activeServerRole === "moderator") && (
-              <button
-                className="aurosModerationButton"
-                type="button"
-                onClick={onOpenServerSettings}
-              >
-                Edit Server
-              </button>
+            canCreateInvite(activeServerRole) && (
+              <>
+                <button
+                  className="aurosModerationButton"
+                  onClick={onOpenServerSettings}
+                >
+                  Edit Server
+                </button>
+
+                <button
+                  className="aurosModerationButton"
+                  onClick={onOpenCustomEmojiModal}
+                >
+                  Add Custom Emoji
+                </button>
+              </>
             )}
 
           {canDeleteServer && (
             <button
               className="aurosModerationButton"
-              type="button"
               onClick={() => onDeleteServer()}
             >
               Delete Server
@@ -309,9 +285,9 @@ export default function ChatRightPanel({
           )}
 
           {isAurosCommunity && (
-            <div style={{ color: "#bfb59b", fontSize: 13, lineHeight: 1.5 }}>
-              The Auros Community server cannot be deleted.
-            </div>
+            <p style={{ fontSize: 13, color: "#999" }}>
+              Community server cannot be deleted
+            </p>
           )}
         </div>
       </section>

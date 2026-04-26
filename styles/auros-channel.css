@@ -1,9 +1,19 @@
 .aurosChatShell {
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: calc(100vw - 32px);
+  max-width: none;
+
+  margin: 0;
   display: grid;
-  grid-template-columns: 78px 280px minmax(0, 1fr) 320px;
-  gap: 16px;
-  min-height: calc(100vh - 180px);
-  margin-top: 18px;
+
+  /* 👇 HIER passiert alles */
+  grid-template-columns: 200px 460px minmax(520px, 0.8fr) 400px;
+
+  gap: 14px;
+  align-items: stretch;
 }
 
 .aurosChatServerRail,
@@ -377,9 +387,10 @@
 
 .aurosMessageInputBar {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr) 56px 92px;
+  grid-template-columns: 48px minmax(0, 1fr) 56px 96px;
   gap: 10px;
   align-items: center;
+  width: 100%;
 }
 
 .aurosMessageInput {
@@ -392,6 +403,7 @@
   padding: 0 16px;
   outline: none;
   font-weight: 700;
+  min-width: 0;
 }
 
 .aurosInputActionButton {
@@ -421,10 +433,11 @@
 
 .aurosMessageSendButton {
   height: 48px;
-  min-width: 110px;   /* 🔥 WICHTIG */
+  min-width: 96px;   /* 🔥 WICHTIG */
   padding: 0 16px;   /* 🔥 sorgt für Platz */
   border-radius: 16px;
   border: 1px solid rgba(212, 175, 55, 0.24);
+  white-space: nowrap;
 
   background: linear-gradient(
     180deg,
@@ -941,4 +954,560 @@
   color: #f7d45c;
   cursor: pointer;
   font-weight: 900;
+}
+
+.aurosMessageInputEmojiWrap {
+  min-width: 0;
+  width: 100%;
+}
+
+.aurosEmojiPicker {
+  position: absolute;
+  right: 0;
+  bottom: 58px;
+  width: 300px;
+  max-height: 360px;
+  overflow: auto;
+  z-index: 80;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  background: rgba(15, 15, 14, 0.98);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+}
+
+.aurosReactionPickerWrap .aurosEmojiPicker {
+  left: 0;
+  right: auto;
+  bottom: 38px;
+}
+
+.aurosEmojiPickerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #f6f2e8;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.aurosEmojiPickerHeader button {
+  border: none;
+  background: transparent;
+  color: #f7d45c;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.aurosEmojiPickerLabel {
+  margin: 10px 0 8px;
+  color: #d4af37;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.aurosEmojiGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.aurosEmojiButton {
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  background: rgba(31, 31, 31, 0.9);
+  color: #f6f2e8;
+  cursor: pointer;
+  font-size: 22px;
+  display: grid;
+  place-items: center;
+}
+
+.aurosEmojiButton:hover {
+  border-color: rgba(212, 175, 55, 0.36);
+  background: rgba(212, 175, 55, 0.12);
+}
+
+.aurosEmojiButton img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+
+.aurosEmojiEmpty {
+  color: #bfb59b;
+  font-size: 13px;
+}
+
+.aurosReactionCustomEmoji {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
+}
+
+.aurosInlineCustomEmoji {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  vertical-align: middle;
+  margin: 0 3px;
+  border-radius: 6px;
+}
+
+.aurosReactionCustomEmoji {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.aurosMessageAvatar,
+.aurosProfileAvatar,
+.aurosServerIcon,
+.aurosRailServerIcon {
+  overflow: hidden;
+  border-radius: 14px;
+}
+
+.aurosMessageAvatar img,
+.aurosProfileAvatar img,
+.aurosServerIcon img,
+.aurosRailServerIcon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+}
+
+.aurosChatShell {
+  width: min(1860px, calc(100vw - 32px));
+  max-width: 1860px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 82px 390px minmax(760px, 1fr) 270px;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.aurosServerRail,
+.aurosChatSidebar,
+.aurosChatCenter,
+.aurosRightPanel {
+  min-height: calc(100vh - 130px);
+}
+
+.aurosChatSidebar {
+  width: 100%;
+}
+
+.aurosChatCenter {
+  width: 100%;
+  min-width: 0;
+}
+
+.aurosRightPanel {
+  width: 100%;
+}
+
+.aurosChatScrollArea {
+  padding: 18px;
+}
+
+.aurosMessageCard {
+  width: 100%;
+  max-width: none;
+}
+
+.aurosMessageInputWrap {
+  padding: 14px 18px 18px;
+}
+
+.aurosMessageInputBar {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 54px 96px;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+}
+
+.aurosMessageInputEmojiWrap {
+  min-width: 0;
+  width: 100%;
+}
+
+.aurosMessageInput {
+  width: 100%;
+  min-width: 0;
+}
+
+.aurosMessageSendButton {
+  width: 96px;
+  min-width: 96px;
+  height: 48px;
+  white-space: nowrap;
+}
+
+.aurosMessageAvatar,
+.aurosProfileAvatar,
+.aurosServerIcon,
+.aurosRailServerIcon {
+  overflow: hidden;
+  border-radius: 15px;
+  flex-shrink: 0;
+}
+
+.aurosMessageAvatar img,
+.aurosProfileAvatar img,
+.aurosServerIcon img,
+.aurosRailServerIcon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  display: block;
+}
+
+.aurosChatPage,
+.aurosChatPageInner,
+.aurosAccessPage {
+  width: 100vw;
+  max-width: none;
+  margin: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.auros-site-shell,
+.aurosSiteShell,
+main {
+  max-width: none !important;
+}
+
+body:has(.aurosChatShell) main,
+body:has(.aurosChatShell) .auros-site-shell,
+body:has(.aurosChatShell) .aurosSiteShell,
+body:has(.aurosChatShell) .siteShell,
+body:has(.aurosChatShell) .pageWrap {
+  width: 100vw !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+body:has(.aurosChatShell) .aurosChatShell {
+  width: calc(100vw - 32px) !important;
+  max-width: none !important;
+  margin-left: 16px !important;
+  margin-right: 16px !important;
+  grid-template-columns: 82px 320px minmax(760px, 1fr) 300px !important;
+}
+
+body:has(.aurosChatShell) .aurosChatShell {
+  position: relative !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+
+  width: calc(100vw - 32px) !important;
+  max-width: none !important;
+
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+
+  grid-template-columns: 82px 320px minmax(760px, 1fr) 300px !important;
+}
+
+/* Fixed chat app viewport */
+body:has(.aurosChatShell) {
+  overflow: hidden;
+}
+
+.aurosChatShell {
+  height: 80vh;
+  padding: 0px 0; /* Abstand oben & unten */
+  box-sizing: border-box;
+}
+
+.aurosChatServerRail,
+.aurosChatSidebar,
+.aurosChatCenter,
+.aurosRightPanel {
+  height: 100%;
+  min-height: 0;
+}
+
+.aurosChatSidebar,
+.aurosRightPanel {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.aurosChatCenter {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.aurosChatHeader {
+  flex: 0 0 auto;
+}
+
+.aurosChatScrollArea {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.aurosMessageInputWrap {
+  flex: 0 0 auto;
+}
+
+.aurosMessageInputWrap {
+  position: relative;
+  flex-shrink: 0;
+  padding: 14px 18px 18px;
+  margin: 0 12px 12px;
+  border-radius: 22px;
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  background: rgba(14, 14, 13, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.aurosMessageInputWrap::before {
+  content: "";
+  position: absolute;
+  inset: -18px 0 auto 0;
+  height: 24px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(10, 10, 10, 0),
+    rgba(10, 10, 10, 0.72)
+  );
+}
+
+.aurosMessageInputBar {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 50px 86px;
+  gap: 8px;
+  align-items: center;
+}
+
+.aurosMessageInput,
+.aurosMessageAttachButton,
+.aurosMessageEmojiButton,
+.aurosMessageSendButton {
+  height: 44px;
+}
+
+.aurosMessageInputWrap {
+  position: relative;
+  margin: 0 12px 12px;
+  border-radius: 20px;
+
+  background: rgba(20, 20, 20, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+.aurosAccessPage {
+  min-height: calc(100vh - 120px);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  transform: translateY(-70px);
+}
+
+.aurosAccessCard {
+  margin: 0 auto;
+}
+
+.aurosMention {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  margin: 0 2px;
+  border-radius: 8px;
+  background: rgba(212, 175, 55, 0.16);
+  color: #f7d45c;
+  font-weight: 900;
+}
+
+.aurosMentionPicker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 54px;
+  z-index: 90;
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 18px;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  background: rgba(15, 15, 14, 0.98);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+}
+
+.aurosMentionPickerItem {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #f6f2e8;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.aurosMentionPickerItem:hover {
+  background: rgba(212, 175, 55, 0.1);
+  border-color: rgba(212, 175, 55, 0.18);
+}
+
+.aurosMentionPickerAvatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: rgba(212, 175, 55, 0.16);
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  color: #f7d45c;
+  font-weight: 900;
+  flex: 0 0 auto;
+}
+
+.aurosMentionPickerAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.aurosMentionPickerItem strong {
+  display: block;
+  font-size: 13px;
+}
+
+.aurosMentionPickerItem small {
+  display: block;
+  color: #bfb59b;
+  margin-top: 2px;
+}
+
+.aurosMention {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  margin: 0 2px;
+  border-radius: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  background: rgba(212, 175, 55, 0.16);
+  color: #f7d45c;
+  font-weight: 900;
+  cursor: pointer;
+  font: inherit;
+}
+
+.aurosMention:hover {
+  background: rgba(212, 175, 55, 0.26);
+}
+
+.aurosMention.isMe {
+  background: rgba(74, 222, 128, 0.16);
+  border-color: rgba(74, 222, 128, 0.28);
+  color: #86efac;
+}
+
+.aurosMentionProfileCard {
+  position: relative;
+  width: min(100%, 460px);
+  border-radius: 26px;
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  background: linear-gradient(
+    180deg,
+    rgba(23, 23, 23, 0.98),
+    rgba(10, 10, 10, 0.98)
+  );
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+  padding: 22px;
+  overflow: hidden;
+}
+
+.aurosMentionProfileBanner {
+  height: 120px;
+  margin: -22px -22px 18px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.14);
+  background: rgba(31, 31, 31, 0.9);
+}
+
+.aurosMentionProfileBanner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.aurosMentionProfileHero {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.aurosMentionProfileAvatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(
+    180deg,
+    rgba(212, 175, 55, 0.24),
+    rgba(142, 105, 19, 0.22)
+  );
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  color: #fff2c0;
+  font-size: 26px;
+  font-weight: 900;
+}
+
+.aurosMentionProfileAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.aurosMentionProfileName {
+  margin: 0;
+  color: #f6f2e8;
+  font-size: 26px;
+  line-height: 1.05;
+}
+
+.aurosMentionProfileMeta {
+  margin-top: 14px;
+  color: #bfb59b;
+  font-size: 13px;
 }

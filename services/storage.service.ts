@@ -69,3 +69,7 @@ export async function uploadServerIcon(file: File) {
 export async function uploadChatAttachment(file: File) {
   return uploadToBucket("chat-attachments", file, "attachments");
 }
+
+export async function uploadCustomEmoji(file: File) {
+  return uploadToBucket("chat-emojis", file, "emojis");
+}

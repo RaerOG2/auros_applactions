@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   ApplicationChat,
   ChatChannel,
+  ChatCustomEmoji,
   ChatMessage,
   ChatServer,
   ChatUserProfile,
@@ -20,6 +21,10 @@ import {
   updatePresence,
 } from "../services/profile.service";
 import {
+  createCustomEmoji,
+  getServerCustomEmojis,
+} from "../services/emoji.service";
+import {
   createChannel,
   createServer,
   createServerInvite,
@@ -29,6 +34,7 @@ import {
   getServerChannels,
   joinServerByInvite,
   updateServer,
+  getServerMentionUsers,
 } from "../services/server.service";
 import {
   getDirectConversationOtherUser,
@@ -46,6 +52,7 @@ import {
   subscribeToChannelMessages,
   subscribeToDirectMessages,
   toggleReaction,
+  subscribeToMessageReactions,
 } from "../services/chat.service";
 import { getMyApplicationChats } from "../services/application-chat.service";
 import {
@@ -80,6 +87,10 @@ type ChatStateReturn = {
 
   activeServerRole: ServerRole;
   serverInviteLink: string | null;
+  serverMentionUsers: ChatUserProfile[];
+
+  customEmojis: ChatCustomEmoji[];
+  createNewCustomEmoji: (input: { name: string; file: File }) => Promise<void>;
 
   selectHome: () => void;
   selectServer: (serverId: string) => Promise<void>;
@@ -147,6 +158,9 @@ export function useChatState(): ChatStateReturn {
 
   const [currentUser, setCurrentUser] = useState<ChatUserProfile | null>(null);
   const [servers, setServers] = useState<ChatServer[]>([]);
+  const [serverMentionUsers, setServerMentionUsers] = useState<ChatUserProfile[]>([]);
+  const lastMentionMessageIdRef = useRef<string | null>(null);
+
   const [channels, setChannels] = useState<ChatChannel[]>([]);
   const [directConversations, setDirectConversations] = useState<
     DirectConversation[]
@@ -160,6 +174,7 @@ export function useChatState(): ChatStateReturn {
   const [activeView, setActiveView] = useState<ChatView>({ type: "home" });
   const [activeServerRole, setActiveServerRole] = useState<ServerRole>(null);
   const [serverInviteLink, setServerInviteLink] = useState<string | null>(null);
+  const [customEmojis, setCustomEmojis] = useState<ChatCustomEmoji[]>([]);
 
   const dms = useMemo<DirectMessagePreview[]>(() => {
     return directConversations.map((conversation, index) => {
@@ -215,6 +230,36 @@ export function useChatState(): ChatStateReturn {
 
     setActiveServerRole(role);
   }
+
+
+function playMentionSound() {
+  try {
+    const audio = new Audio("/sounds/mention.mp3");
+    audio.volume = 0.45;
+    audio.play().catch(() => {});
+  } catch {
+    // ignore
+  }
+}
+
+function checkMentions(messages: ChatMessage[]) {
+  if (!currentUser?.username) return;
+
+  const username = currentUser.username.toLowerCase();
+
+  const mentionMessage = [...messages].reverse().find((message) => {
+    return message.content.toLowerCase().includes(`@${username}`);
+  });
+
+  if (!mentionMessage) return;
+
+  if (lastMentionMessageIdRef.current === mentionMessage.id) {
+    return;
+  }
+
+  lastMentionMessageIdRef.current = mentionMessage.id;
+  playMentionSound();
+}
 
   async function refreshMessagesForView(view: ChatView) {
     if (view.type === "server") {
@@ -308,6 +353,12 @@ export function useChatState(): ChatStateReturn {
 
           setChannels(serverChannels);
           await refreshActiveServerRole(firstServer.id);
+          //Emojis
+          const emojis = await getServerCustomEmojis(firstServer.id).catch(() => []);
+          setCustomEmojis(emojis);
+          //mention
+          const mentionUsers = await getServerMentionUsers(firstServer.id).catch(() => []);
+          setServerMentionUsers(mentionUsers);
 
           if (serverChannels.length > 0) {
             setActiveView({
@@ -453,6 +504,7 @@ useEffect(() => {
 
       if (isMounted) {
         setActiveMessages(messages);
+        checkMentions(messages);
       }
     } catch (messageError) {
       console.warn("[useChatState] Failed to load messages:", messageError);
@@ -473,7 +525,6 @@ useEffect(() => {
 
   loadMessagesForActiveView();
 
-  // 🔥 FALLBACK (fix für dein Problem)
   const liveFallbackInterval = window.setInterval(() => {
     if (activeView.type === "home") return;
 
@@ -481,69 +532,110 @@ useEffect(() => {
       .then((messages) => {
         if (isMounted) {
           setActiveMessages(messages);
+          checkMentions(messages);
         }
       })
-      .catch((err) => {
-        console.warn("[useChatState] fallback refresh failed:", err);
+      .catch((refreshError) => {
+        console.warn("[useChatState] Live fallback refresh failed:", refreshError);
       });
   }, 2500);
 
   if (activeView.type === "home") {
     return () => {
       isMounted = false;
-      window.clearInterval(liveFallbackInterval);
+        window.clearInterval(liveFallbackInterval);
     };
   }
 
-  let subscription: any = null;
+  let subscription:
+    | ReturnType<typeof subscribeToChannelMessages>
+    | ReturnType<typeof subscribeToDirectMessages>
+    | ReturnType<typeof subscribeToApplicationChatMessages>
+    | null = null;
 
   if (activeView.type === "server") {
-    const channelId = activeView.channelId;
+    const safeChannelId = activeView.channelId;
 
-    subscription = subscribeToChannelMessages(channelId, async () => {
+    subscription = subscribeToChannelMessages(safeChannelId, async () => {
       try {
-        const refreshed = await getChannelMessages(channelId);
-        if (isMounted) setActiveMessages(refreshed);
-      } catch (err) {
-        console.warn("[Realtime] channel refresh failed:", err);
+        const refreshed = await getChannelMessages(safeChannelId);
+
+        if (isMounted) {
+          setActiveMessages(refreshed);
+        }
+      } catch (refreshError) {
+        console.warn(
+          "[useChatState] Failed to refresh channel messages:",
+          refreshError
+        );
       }
     });
   }
 
   if (activeView.type === "dm") {
-    const dmId = activeView.dmId;
+    const safeDmId = activeView.dmId;
 
-    subscription = subscribeToDirectMessages(dmId, async () => {
+    subscription = subscribeToDirectMessages(safeDmId, async () => {
       try {
-        const refreshed = await getDirectMessages(dmId);
-        if (isMounted) setActiveMessages(refreshed);
-      } catch (err) {
-        console.warn("[Realtime] DM refresh failed:", err);
+        const refreshed = await getDirectMessages(safeDmId);
+
+        if (isMounted) {
+          setActiveMessages(refreshed);
+        }
+      } catch (refreshError) {
+        console.warn("[useChatState] Failed to refresh DM messages:", refreshError);
       }
     });
   }
 
   if (activeView.type === "application") {
-    const appId = activeView.applicationChatId;
+    const safeApplicationChatId = activeView.applicationChatId;
 
-    subscription = subscribeToApplicationChatMessages(appId, async () => {
-      try {
-        const refreshed = await getApplicationChatMessages(appId);
-        if (isMounted) setActiveMessages(refreshed);
-      } catch (err) {
-        console.warn("[Realtime] application refresh failed:", err);
+    subscription = subscribeToApplicationChatMessages(
+      safeApplicationChatId,
+      async () => {
+        try {
+          const refreshed = await getApplicationChatMessages(
+            safeApplicationChatId
+          );
+
+          if (isMounted) {
+            setActiveMessages(refreshed);
+          }
+        } catch (refreshError) {
+          console.warn(
+            "[useChatState] Failed to refresh application chat messages:",
+            refreshError
+          );
+        }
       }
-    });
+    );
   }
+
+  const reactionSubscription = subscribeToMessageReactions(async () => {
+    try {
+      const refreshed = await refreshMessagesForView(activeView);
+
+      if (isMounted) {
+        setActiveMessages(refreshed);
+      }
+    } catch (reactionRefreshError) {
+      console.warn(
+        "[useChatState] Failed to refresh message reactions:",
+        reactionRefreshError
+      );
+    }
+  });
 
   return () => {
     isMounted = false;
-
     window.clearInterval(liveFallbackInterval);
 
     if (subscription) {
       supabase.removeChannel(subscription);
     }
+
+    supabase.removeChannel(reactionSubscription);
   };
 }, [activeView]);
 
@@ -555,7 +647,13 @@ useEffect(() => {
       const serverChannels = await getServerChannels(serverId);
       setChannels(serverChannels);
 
-      await refreshActiveServerRole(serverId);
+      await refreshActiveServerRole(serverId);;
+      //Custom Emojis
+      const emojis = await getServerCustomEmojis(serverId).catch(() => []);
+      setCustomEmojis(emojis);
+      //Mentation
+      const mentionUsers = await getServerMentionUsers(serverId).catch(() => []);
+      setServerMentionUsers(mentionUsers);
 
       if (serverChannels.length > 0) {
         setActiveView({
@@ -575,6 +673,9 @@ useEffect(() => {
   function selectChannel(serverId: string, channelId: string) {
     setServerInviteLink(null);
     refreshActiveServerRole(serverId);
+    getServerMentionUsers(serverId)
+      .then(setServerMentionUsers)
+      .catch(() => setServerMentionUsers([]));
 
     setActiveView({
       type: "server",
@@ -586,6 +687,7 @@ useEffect(() => {
   function selectDM(dmId: string) {
     setActiveServerRole(null);
     setServerInviteLink(null);
+    setServerMentionUsers([]);
 
     setActiveView({
       type: "dm",
@@ -596,6 +698,7 @@ useEffect(() => {
   function selectApplicationChat(applicationChatId: string) {
     setActiveServerRole(null);
     setServerInviteLink(null);
+    setServerMentionUsers([]);
 
     setActiveView({
       type: "application",
@@ -606,6 +709,7 @@ useEffect(() => {
   function selectHome() {
     setActiveServerRole(null);
     setServerInviteLink(null);
+    setServerMentionUsers([]);
     setActiveView({ type: "home" });
   }
 
@@ -997,6 +1101,34 @@ async function sendMessage(content: string, files: File[] = []) {
     }
   }
 
+async function createNewCustomEmoji(input: { name: string; file: File }) {
+  if (activeView.type !== "server") {
+    setError("You need to be inside a server to create custom emojis.");
+    return;
+  }
+
+  try {
+    setError(null);
+
+    await createCustomEmoji({
+      serverId: activeView.serverId,
+      name: input.name,
+      file: input.file,
+    });
+
+    const emojis = await getServerCustomEmojis(activeView.serverId);
+    setCustomEmojis(emojis);
+  } catch (emojiError) {
+    console.warn("[useChatState] Failed to create custom emoji:", emojiError);
+
+    setError(
+      emojiError instanceof Error
+        ? emojiError.message
+        : "Failed to create custom emoji."
+    );
+  }
+}
+
   return {
     loading,
     messagesLoading,
@@ -1016,6 +1148,9 @@ async function sendMessage(content: string, files: File[] = []) {
     activeApplicationChat,
     activeServerRole,
     serverInviteLink,
+    customEmojis,
+    serverMentionUsers,
+    createNewCustomEmoji,
     selectHome,
     selectServer,
     selectChannel,
