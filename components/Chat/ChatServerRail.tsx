@@ -5,6 +5,7 @@ import type { ChatServer, ChatView } from "../../types/chat";
 type ChatServerRailProps = {
   servers: ChatServer[];
   activeView: ChatView;
+  mentionNotifications: Record<string, { count: number; channelIds: string[] }>;
   onSelectHome: () => void;
   onSelectServer: (serverId: string) => void | Promise<void>;
   onCreateServer: () => void;
@@ -13,6 +14,7 @@ type ChatServerRailProps = {
 export default function ChatServerRail({
   servers,
   activeView,
+  mentionNotifications,
   onSelectHome,
   onSelectServer,
   onCreateServer,
@@ -36,6 +38,8 @@ export default function ChatServerRail({
         const isActive =
           activeView.type === "server" && activeView.serverId === server.id;
 
+        const notification = mentionNotifications[server.id];
+
         return (
           <button
             key={server.id}
@@ -58,6 +62,10 @@ export default function ChatServerRail({
             ) : (
               <span>{server.name.slice(0, 1).toUpperCase()}</span>
             )}
+
+            {notification?.count ? (
+              <span className="aurosUnreadBadge">{notification.count}</span>
+            ) : null}
           </button>
         );
       })}

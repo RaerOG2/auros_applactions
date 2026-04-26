@@ -24,6 +24,7 @@ import {
   createCustomEmoji,
   deleteCustomEmoji,
   getServerCustomEmojis,
+  subscribeToServerCustomEmojis,
 } from "../services/emoji.service";
 import {
   createChannel,
@@ -54,6 +55,7 @@ import {
   subscribeToDirectMessages,
   toggleReaction,
   subscribeToMessageReactions,
+  editOwnMessage,
 } from "../services/chat.service";
 import { getMyApplicationChats } from "../services/application-chat.service";
 import {
@@ -77,6 +79,10 @@ type ChatStateReturn = {
   directConversations: DirectConversation[];
   dms: DirectMessagePreview[];
   applicationChats: ApplicationChat[];
+
+  editMessage: (messageId: string, content: string) => Promise<void>;
+  replyToMessage: ChatMessage | null;
+  setReplyToMessage: (message: ChatMessage | null) => void;
 
   activeView: ChatView;
   activeServer: ChatServer | null;
@@ -102,6 +108,8 @@ type ChatStateReturn = {
 
   sendMessage: (content: string, files?: File[]) => Promise<void>;
   toggleMessageReaction: (messageId: string, emoji: string) => Promise<void>;
+  mentionNotifications: Record<string, { count: number; channelIds: string[] }>;
+  clearServerNotifications: (serverId: string) => void;
 
   createNewServer: (input: {
     name: string;
@@ -160,16 +168,19 @@ export function useChatState(): ChatStateReturn {
 
   const [currentUser, setCurrentUser] = useState<ChatUserProfile | null>(null);
   const [servers, setServers] = useState<ChatServer[]>([]);
-  const [serverMentionUsers, setServerMentionUsers] = useState<ChatUserProfile[]>([]);
-  const lastMentionMessageIdRef = useRef<string | null>(null);
-
   const [channels, setChannels] = useState<ChatChannel[]>([]);
+  const [serverMentionUsers, setServerMentionUsers] = useState<ChatUserProfile[]>([]);
+
+  const [replyToMessage, setReplyToMessage] = useState<ChatMessage | null>(null);
+
   const [directConversations, setDirectConversations] = useState<
     DirectConversation[]
   >([]);
+
   const [dmUsers, setDmUsers] = useState<Record<string, ChatUserProfile | null>>(
     {}
   );
+
   const [applicationChats, setApplicationChats] = useState<ApplicationChat[]>([]);
   const [activeMessages, setActiveMessages] = useState<ChatMessage[]>([]);
 
@@ -177,6 +188,15 @@ export function useChatState(): ChatStateReturn {
   const [activeServerRole, setActiveServerRole] = useState<ServerRole>(null);
   const [serverInviteLink, setServerInviteLink] = useState<string | null>(null);
   const [customEmojis, setCustomEmojis] = useState<ChatCustomEmoji[]>([]);
+
+  const [mentionNotifications, setMentionNotifications] = useState<
+    Record<string, { count: number; channelIds: string[] }>
+  >({});
+
+  const lastMentionMessageIdRef = useRef<string | null>(null);
+  const seenMentionMessageIdsRef = useRef<Set<string>>(new Set());
+  const activeViewRef = useRef<ChatView>({ type: "home" });
+  const channelServerMapRef = useRef<Record<string, string>>({});
 
   const dms = useMemo<DirectMessagePreview[]>(() => {
     return directConversations.map((conversation, index) => {
@@ -244,23 +264,140 @@ function playMentionSound() {
   }
 }
 
-function checkMentions(messages: ChatMessage[]) {
-  if (!currentUser?.username) return;
+function playNotificationSound() {
+  try {
+    const audio = new Audio("/sounds/notification.mp3");
+    audio.volume = 0.45;
+    audio.play().catch(() => {});
+  } catch {
+    // ignore
+  }
+}
+
+function saveSeenMentions() {
+  try {
+    const ids = Array.from(seenMentionMessageIdsRef.current).slice(-500);
+    window.localStorage.setItem("auros_seen_mentions", JSON.stringify(ids));
+  } catch {
+    // ignore
+  }
+}
+
+function markMentionSeen(messageId: string) {
+  seenMentionMessageIdsRef.current.add(messageId);
+  saveSeenMentions();
+}
+
+function messageMentionsCurrentUser(message: Pick<ChatMessage, "content">) {
+  if (!currentUser?.username) return false;
 
   const username = currentUser.username.toLowerCase();
+  const content = message.content.toLowerCase();
 
+  return content.includes(`@${username}`);
+}
+
+function addMentionNotification(serverId: string, channelId: string) {
+  setMentionNotifications((prev) => {
+    const old = prev[serverId];
+
+    if (old?.channelIds.includes(channelId)) {
+      return {
+        ...prev,
+        [serverId]: {
+          count: old.count,
+          channelIds: old.channelIds,
+        },
+      };
+    }
+
+    return {
+      ...prev,
+      [serverId]: {
+        count: (old?.count ?? 0) + 1,
+        channelIds: [...(old?.channelIds ?? []), channelId],
+      },
+    };
+  });
+}
+
+function clearServerNotifications(serverId: string) {
+  setMentionNotifications((prev) => {
+    const next = { ...prev };
+    delete next[serverId];
+    return next;
+  });
+}
+
+function clearChannelNotification(serverId: string, channelId: string) {
+  setMentionNotifications((prev) => {
+    const old = prev[serverId];
+    if (!old) return prev;
+
+    const channelIds = old.channelIds.filter((id) => id !== channelId);
+
+    if (channelIds.length === 0) {
+      const next = { ...prev };
+      delete next[serverId];
+      return next;
+    }
+
+    return {
+      ...prev,
+      [serverId]: {
+        count: channelIds.length,
+        channelIds,
+      },
+    };
+  });
+}
+
+function checkMentions(messages: ChatMessage[]) {
   const mentionMessage = [...messages].reverse().find((message) => {
-    return message.content.toLowerCase().includes(`@${username}`);
+    if (!messageMentionsCurrentUser(message)) return false;
+    if (seenMentionMessageIdsRef.current.has(message.id)) return false;
+
+    // Für echte Notifications eigene Messages ignorieren.
+    // Zum Testen kannst du diese Zeile entfernen.
+    if (message.authorId === currentUser?.id) return false;
+
+    return true;
   });
 
   if (!mentionMessage) return;
 
-  if (lastMentionMessageIdRef.current === mentionMessage.id) {
+  markMentionSeen(mentionMessage.id);
+
+  const view = activeViewRef.current;
+  const channelId = mentionMessage.channelId;
+
+  if (!channelId) {
+    playMentionSound();
     return;
   }
 
-  lastMentionMessageIdRef.current = mentionMessage.id;
-  playMentionSound();
+  const serverId =
+    view.type === "server" && view.channelId === channelId
+      ? view.serverId
+      : channelServerMapRef.current[channelId];
+
+  if (!serverId) {
+    playMentionSound();
+    return;
+  }
+
+  const isCurrentOpenChannel =
+    view.type === "server" &&
+    view.serverId === serverId &&
+    view.channelId === channelId;
+
+  if (isCurrentOpenChannel) {
+    playMentionSound();
+    return;
+  }
+
+  addMentionNotification(serverId, channelId);
+  playNotificationSound();
 }
 
   async function refreshMessagesForView(view: ChatView) {
@@ -490,6 +627,131 @@ function checkMentions(messages: ChatMessage[]) {
   }, [activeDirectUser?.id, activeView]);
 
 useEffect(() => {
+  activeViewRef.current = activeView;
+}, [activeView]);
+
+useEffect(() => {
+  try {
+    const saved = window.localStorage.getItem("auros_seen_mentions");
+    if (saved) {
+      seenMentionMessageIdsRef.current = new Set(JSON.parse(saved));
+    }
+  } catch {
+    seenMentionMessageIdsRef.current = new Set();
+  }
+}, []);
+
+useEffect(() => {
+  if (!currentUser?.username || servers.length === 0) return;
+
+  let isMounted = true;
+
+  async function buildChannelServerMap() {
+    const nextMap: Record<string, string> = {};
+
+    await Promise.all(
+      servers.map(async (server) => {
+        const serverChannels = await getServerChannels(server.id).catch(() => []);
+
+        for (const channel of serverChannels) {
+          nextMap[channel.id] = server.id;
+        }
+      })
+    );
+
+    if (isMounted) {
+      channelServerMapRef.current = nextMap;
+    }
+  }
+
+  buildChannelServerMap();
+
+  const subscription = supabase
+    .channel("global-mention-notifications")
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "chat_messages",
+      },
+      (payload) => {
+        const row = payload.new as any;
+
+        const messageId = row.id as string | undefined;
+        const channelId = row.channel_id as string | null;
+        const authorId = row.author_id as string | null;
+        const content = row.content as string | null;
+
+        if (!messageId || !channelId || !content) return;
+        if (seenMentionMessageIdsRef.current.has(messageId)) return;
+
+        const username = currentUser.username?.toLowerCase();
+        if (!username) return;
+
+        if (!content.toLowerCase().includes(`@${username}`)) return;
+
+        // Eigene Messages ignorieren. Zum Testen diese Zeile entfernen.
+        if (authorId === currentUser.id) return;
+
+        markMentionSeen(messageId);
+
+        const serverId = channelServerMapRef.current[channelId];
+        const view = activeViewRef.current;
+
+        if (!serverId) return;
+
+        const isCurrentOpenChannel =
+          view.type === "server" &&
+          view.serverId === serverId &&
+          view.channelId === channelId;
+
+        if (isCurrentOpenChannel) {
+          playMentionSound();
+          return;
+        }
+
+        addMentionNotification(serverId, channelId);
+        playNotificationSound();
+      }
+    )
+    .subscribe();
+
+  return () => {
+    isMounted = false;
+    supabase.removeChannel(subscription);
+  };
+}, [currentUser?.id, currentUser?.username, servers]);
+
+useEffect(() => {
+  if (activeView.type !== "server") return;
+
+  const serverId = activeView.serverId;
+  let isMounted = true;
+
+  async function refreshEmojis() {
+    try {
+      const emojis = await getServerCustomEmojis(serverId);
+
+      if (isMounted) {
+        setCustomEmojis(emojis);
+      }
+    } catch (emojiError) {
+      console.warn("[useChatState] Failed to refresh custom emojis:", emojiError);
+    }
+  }
+
+  refreshEmojis();
+
+  const subscription = subscribeToServerCustomEmojis(serverId, refreshEmojis);
+
+  return () => {
+    isMounted = false;
+    supabase.removeChannel(subscription);
+  };
+}, [activeView]);
+
+useEffect(() => {
   let isMounted = true;
 
   async function loadMessagesForActiveView() {
@@ -641,10 +903,41 @@ useEffect(() => {
   };
 }, [activeView]);
 
+async function editMessage(messageId: string, content: string) {
+  const trimmed = content.trim();
+
+  if (!trimmed) {
+    setError("Message cannot be empty.");
+    return;
+  }
+
+  try {
+    setError(null);
+
+    await editOwnMessage({
+      messageId,
+      content: trimmed,
+    });
+
+    if (activeView.type !== "home") {
+      const refreshed = await refreshMessagesForView(activeView);
+      setActiveMessages(refreshed);
+    }
+  } catch (editError) {
+    console.warn("[useChatState] Failed to edit message:", editError);
+
+    setError(
+      editError instanceof Error ? editError.message : "Failed to edit message."
+    );
+  }
+}
+
   async function selectServer(serverId: string) {
     try {
       setError(null);
       setServerInviteLink(null);
+      //clear Server Noti
+      clearServerNotifications(serverId);
 
       const serverChannels = await getServerChannels(serverId);
       setChannels(serverChannels);
@@ -673,6 +966,20 @@ useEffect(() => {
   }
 
   function selectChannel(serverId: string, channelId: string) {
+    clearChannelNotification(serverId, channelId);
+
+    setServerInviteLink(null);
+    refreshActiveServerRole(serverId);
+
+    getServerMentionUsers(serverId)
+      .then(setServerMentionUsers)
+      .catch(() => setServerMentionUsers([]));
+
+    setActiveView({
+      type: "server",
+      serverId,
+      channelId,
+    });
     setServerInviteLink(null);
     refreshActiveServerRole(serverId);
     getServerMentionUsers(serverId)
@@ -741,6 +1048,7 @@ async function sendMessage(content: string, files: File[] = []) {
         channelId: activeView.channelId,
         content: trimmed,
         attachments: uploadedAttachments,
+        replyToId: replyToMessage?.id ?? null,
       });
 
       const refreshed = await getChannelMessages(activeView.channelId);
@@ -1103,7 +1411,10 @@ async function sendMessage(content: string, files: File[] = []) {
     }
   }
 
-async function createNewCustomEmoji(input: { name: string; file: File }) {
+async function createNewCustomEmoji(input: {
+  name: string;
+  file: File;
+}) {
   if (activeView.type !== "server") {
     setError("You need to be inside a server to create custom emojis.");
     return;
@@ -1118,6 +1429,7 @@ async function createNewCustomEmoji(input: { name: string; file: File }) {
       file: input.file,
     });
 
+    // 🔥 WICHTIG: DIREKT NEU LADEN
     const emojis = await getServerCustomEmojis(activeView.serverId);
     setCustomEmojis(emojis);
   } catch (emojiError) {
@@ -1175,6 +1487,11 @@ async function deleteCustomEmojiFromActiveServer(emojiId: string) {
     serverInviteLink,
     customEmojis,
     serverMentionUsers,
+    mentionNotifications,
+    replyToMessage,
+    editMessage,
+    setReplyToMessage,
+    clearServerNotifications,
     deleteCustomEmojiFromActiveServer,
     createNewCustomEmoji,
     selectHome,

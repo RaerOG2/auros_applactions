@@ -14,6 +14,7 @@ type ChatSidebarProps = {
   activeChannels: ChatChannel[];
   dms: DirectMessagePreview[];
   applicationChats: ApplicationChat[];
+  mentionNotifications: Record<string, { count: number; channelIds: string[] }>;
   onSelectDM: (dmId: string) => void;
   onSelectApplicationChat: (applicationChatId: string) => void;
   onSelectChannel: (serverId: string, channelId: string) => void;
@@ -30,12 +31,15 @@ export default function ChatSidebar({
   activeChannels,
   dms,
   applicationChats,
+  mentionNotifications,
   onSelectDM,
   onSelectApplicationChat,
   onSelectChannel,
   onCreateChannel,
 }: ChatSidebarProps) {
   if (activeView.type === "server" && activeServer) {
+    const activeServerNotifications = mentionNotifications[activeServer.id] ?? null;
+
     return (
       <aside className="aurosChatSidebar">
         <div className="aurosSidebarHeader">
@@ -61,10 +65,15 @@ export default function ChatSidebar({
               const isActive =
                 activeView.type === "server" && activeView.channelId === channel.id;
 
+              const hasChannelNotification =
+                activeServerNotifications?.channelIds.includes(channel.id) ?? false;
+
               return (
                 <button
                   key={channel.id}
-                  className={`aurosSidebarRow ${isActive ? "isActive" : ""}`}
+                  className={`aurosSidebarRow ${isActive ? "isActive" : ""} ${
+                    hasChannelNotification ? "hasMentionNotification" : ""
+                  }`}
                   onClick={() => onSelectChannel(activeServer.id, channel.id)}
                   type="button"
                 >
@@ -72,6 +81,10 @@ export default function ChatSidebar({
                     <span className="aurosSidebarHash">#</span>
                     <span>{channel.name}</span>
                   </span>
+
+                  {hasChannelNotification && (
+                    <span className="aurosSidebarMiniBadge">@</span>
+                  )}
                 </button>
               );
             })}
@@ -140,7 +153,9 @@ export default function ChatSidebar({
                   <span style={{ display: "grid", gap: 2 }}>
                     <span>{displayName}</span>
                     {username && (
-                      <span style={{ fontSize: 12, color: "#998f76" }}>{username}</span>
+                      <span style={{ fontSize: 12, color: "#998f76" }}>
+                        {username}
+                      </span>
                     )}
                   </span>
                 </span>

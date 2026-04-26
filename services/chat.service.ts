@@ -402,3 +402,27 @@ async function attachReactionsToMessages(messages: ChatMessage[]) {
     reactions: (reactionsByMessageId.get(message.id) ?? []).map(mapReactionRow),
   }));
 }
+
+export async function editOwnMessage(input: {
+  messageId: string;
+  content: string;
+}): Promise<void> {
+  const user = await getCurrentAuthUser();
+
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
+
+  const { error } = await supabase
+    .from("chat_messages")
+    .update({
+      content: input.content,
+      edited_at: new Date().toISOString(),
+    })
+    .eq("id", input.messageId)
+    .eq("author_id", user.id);
+
+  if (error) {
+    throw new Error(error.message || "Failed to edit message.");
+  }
+}

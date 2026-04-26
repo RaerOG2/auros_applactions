@@ -1,17 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import type { ChatMessage, ChatCustomEmoji, ChatUserProfile } from "../../types/chat";
 import ChatEmojiPicker from "./ChatEmojiPicker";
-import { useState } from "react";
 
 type ChatMessageListProps = {
   messages: ChatMessage[];
   customEmojis: ChatCustomEmoji[];
   mentionUsers: ChatUserProfile[];
-  onToggleReaction?: (messageId: string, emoji: string) => void | Promise<void>;
   currentUserId?: string | null;
+  onToggleReaction?: (messageId: string, emoji: string) => void | Promise<void>;
   onDeleteMessage?: (messageId: string) => void | Promise<void>;
   onOpenMentionProfile?: (user: ChatUserProfile) => void;
+  onEditMessage?: (messageId: string, content: string) => void | Promise<void>;
+  onReplyMessage?: (message: ChatMessage) => void;
 };
 
 function getAuthorName(message: ChatMessage) {
@@ -43,8 +45,28 @@ function isImage(fileType?: string | null) {
   return !!fileType && fileType.startsWith("image/");
 }
 
-function isPdf(fileType?: string | null, fileName?: string) {
-  return fileType === "application/pdf" || fileName?.toLowerCase().endsWith(".pdf");
+function isVideo(fileType?: string | null) {
+  return !!fileType && fileType.startsWith("video/");
+}
+
+function isAudio(fileType?: string | null) {
+  return !!fileType && fileType.startsWith("audio/");
+}
+
+function getFileLabel(fileType?: string | null, fileName = "") {
+  const name = fileName.toLowerCase();
+
+  if (fileType === "application/pdf" || name.endsWith(".pdf")) return "PDF";
+  if (name.endsWith(".zip")) return "ZIP";
+  if (name.endsWith(".rar")) return "RAR";
+  if (name.endsWith(".7z")) return "7Z";
+  if (name.endsWith(".doc") || name.endsWith(".docx")) return "DOC";
+  if (name.endsWith(".xls") || name.endsWith(".xlsx")) return "XLS";
+  if (name.endsWith(".ppt") || name.endsWith(".pptx")) return "PPT";
+  if (fileType?.startsWith("audio/")) return "AUD";
+  if (fileType?.startsWith("video/")) return "VID";
+
+  return "FILE";
 }
 
 function parseCustomEmoji(value: string, customEmojis: ChatCustomEmoji[]) {
@@ -58,35 +80,6 @@ function parseCustomEmoji(value: string, customEmojis: ChatCustomEmoji[]) {
   return customEmojis.find((emoji) => emoji.id === id) ?? null;
 }
 
-function renderMessageText(content: string, customEmojis: ChatCustomEmoji[]) {
-  const parts = content.split(/(:[a-zA-Z0-9_]+:)/g);
-
-  return parts.map((part, index) => {
-    const match = part.match(/^:([a-zA-Z0-9_]+):$/);
-
-    if (!match) {
-      return <span key={index}>{part}</span>;
-    }
-
-    const emojiName = match[1];
-    const customEmoji = customEmojis.find((emoji) => emoji.name === emojiName);
-
-    if (!customEmoji) {
-      return <span key={index}>{part}</span>;
-    }
-
-    return (
-      <img
-        key={index}
-        src={customEmoji.imageUrl}
-        alt={customEmoji.name}
-        title={`:${customEmoji.name}:`}
-        className="aurosInlineCustomEmoji"
-      />
-    );
-  });
-}
-
 function renderMessageTextWithMentions(
   content: string,
   customEmojis: ChatCustomEmoji[],
@@ -94,7 +87,7 @@ function renderMessageTextWithMentions(
   currentUserId?: string | null,
   onOpenMentionProfile?: (user: ChatUserProfile) => void
 ) {
-  const parts = content.split(/(:[a-zA-Z0-9_]+:|@[a-zA-Z0-9_]+)/g);
+  const parts = content.split(/(<@[a-zA-Z0-9-]+>|:[a-zA-Z0-9_]+:|@[a-zA-Z0-9_]+)/g);
 
   return parts.map((part, index) => {
     const emojiMatch = part.match(/^:([a-zA-Z0-9_]+):$/);
@@ -116,10 +109,35 @@ function renderMessageTextWithMentions(
       }
     }
 
-    const mentionMatch = part.match(/^@([a-zA-Z0-9_]+)$/);
+    const idMentionMatch = part.match(/^<@([a-zA-Z0-9-]+)>$/);
 
-    if (mentionMatch) {
-      const username = mentionMatch[1].toLowerCase();
+    if (idMentionMatch) {
+      const userId = idMentionMatch[1];
+      const mentionedUser = mentionUsers.find((user) => user.id === userId);
+
+      if (mentionedUser) {
+        const isMe = mentionedUser.id === currentUserId;
+        const username = mentionedUser.username || mentionedUser.displayName || "user";
+
+        return (
+          <button
+            key={index}
+            type="button"
+            className={`aurosMention ${isMe ? "isMe" : ""}`}
+            onClick={() => onOpenMentionProfile?.(mentionedUser)}
+          >
+            @{username}
+          </button>
+        );
+      }
+
+      return <span key={index}>@unknown</span>;
+    }
+
+    const oldMentionMatch = part.match(/^@([a-zA-Z0-9_]+)$/);
+
+    if (oldMentionMatch) {
+      const username = oldMentionMatch[1].toLowerCase();
 
       const mentionedUser = mentionUsers.find(
         (user) => user.username?.toLowerCase() === username
@@ -176,10 +194,14 @@ export default function ChatMessageList({
   onToggleReaction,
   onDeleteMessage,
   onOpenMentionProfile,
+  onEditMessage,
+  onReplyMessage,
 }: ChatMessageListProps) {
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState<
     string | null
   >(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
 
   if (!messages.length) {
     return (
@@ -197,7 +219,11 @@ export default function ChatMessageList({
         const attachments = message.attachments ?? [];
 
         return (
-          <article key={message.id} className="aurosMessageCard">
+          <article
+            id={`message-${message.id}`}
+            key={message.id}
+            className="aurosMessageCard"
+>
             <div className="aurosMessageAvatar">
               {message.author?.avatarUrl ? (
                 <img src={message.author.avatarUrl} alt={authorName} />
@@ -208,9 +234,19 @@ export default function ChatMessageList({
 
             <div className="aurosMessageContent">
               <div className="aurosMessageMeta">
-                <strong>{authorName}</strong>
+                <button
+                  type="button"
+                  className="aurosMessageAuthorButton"
+                  onClick={() => {
+                    if (message.author) onOpenMentionProfile?.(message.author);
+                  }}
+                >
+                  {authorName}
+                </button>
+
                 <span>{getMessageTime(message)}</span>
                 {message.editedAt && <span>Edited</span>}
+
                 {message.author?.status && (
                   <span
                     style={{
@@ -229,20 +265,101 @@ export default function ChatMessageList({
                 )}
               </div>
 
-              {message.content.trim() && (
-               <p className="aurosMessageText">
-                {renderMessageTextWithMentions(
-                  message.content,
-                  customEmojis,
-                  mentionUsers,
-                  currentUserId,
-                  onOpenMentionProfile
-                )}
-               </p>
+              {message.replyToId && (
+                <button
+                  type="button"
+                  className="aurosMessageReplyReference"
+                    onClick={() => {
+                      const target = document.getElementById(`message-${message.replyToId}`);
+                      const scrollArea = target?.closest(".aurosChatScrollArea") as HTMLElement | null;
+
+                      if (!target || !scrollArea) return;
+
+                      const targetTop = target.offsetTop - scrollArea.offsetTop;
+
+                      scrollArea.scrollTo({
+                        top: targetTop - scrollArea.clientHeight / 2 + target.clientHeight / 2,
+                        behavior: "smooth",
+                      });
+
+                      target.classList.add("isReplyHighlighted");
+
+                      window.setTimeout(() => {
+                        target.classList.remove("isReplyHighlighted");
+                      }, 12000);
+                    }}
+                >
+                  {(() => {
+                    const repliedMessage = messages.find(
+                      (item) => item.id === message.replyToId
+                    );
+
+                    if (!repliedMessage) {
+                      return "Reply to deleted or unavailable message";
+                    }
+
+                    const repliedAuthor =
+                      repliedMessage.author?.displayName ??
+                      repliedMessage.author?.username ??
+                      "User";
+
+                    const repliedText =
+                      repliedMessage.content?.trim() ||
+                      (repliedMessage.attachments?.length ? "Attachment" : "Message");
+
+                    return `Replying to ${repliedAuthor}: ${repliedText.slice(0, 80)}`;
+                  })()}
+                </button>
+              )}
+
+              {editingMessageId === message.id ? (
+                <form
+                  className="aurosEditMessageForm"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    await onEditMessage?.(message.id, editingContent);
+                    setEditingMessageId(null);
+                    setEditingContent("");
+                  }}
+                >
+                  <input
+                    className="aurosMessageInput"
+                    value={editingContent}
+                    onChange={(e) => setEditingContent(e.target.value)}
+                    autoFocus
+                  />
+
+                  <button type="submit" className="aurosReactionAddButton">
+                    Save
+                  </button>
+
+                  <button
+                    type="button"
+                    className="aurosReactionAddButton"
+                    onClick={() => {
+                      setEditingMessageId(null);
+                      setEditingContent("");
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </form>
+              ) : (
+                message.content.trim() && (
+                  <p className="aurosMessageText">
+                    {renderMessageTextWithMentions(
+                      message.content,
+                      customEmojis,
+                      mentionUsers,
+                      currentUserId,
+                      onOpenMentionProfile
+                    )}
+                  </p>
+                )
               )}
 
               {attachments.length > 0 && (
-                <div className="aurosMessageAttachments">
+                <div className="aurosMessageAttachmentList">
                   {attachments.map((file) => (
                     <a
                       key={file.id}
@@ -257,10 +374,22 @@ export default function ChatMessageList({
                           src={file.fileUrl}
                           alt={file.fileName}
                         />
+                      ) : isVideo(file.fileType) ? (
+                        <video
+                          className="aurosMessageAttachmentVideo"
+                          src={file.fileUrl}
+                          controls
+                        />
+                      ) : isAudio(file.fileType) ? (
+                        <audio
+                          className="aurosMessageAttachmentAudio"
+                          src={file.fileUrl}
+                          controls
+                        />
                       ) : (
                         <div className="aurosMessageFileCard">
                           <span className="aurosMessageFileIcon">
-                            {isPdf(file.fileType, file.fileName) ? "PDF" : "FILE"}
+                            {getFileLabel(file.fileType, file.fileName)}
                           </span>
                           <span>{file.fileName}</span>
                         </div>
@@ -303,6 +432,27 @@ export default function ChatMessageList({
                     onClose={() => setReactionPickerMessageId(null)}
                   />
                 </div>
+
+                <button
+                  type="button"
+                  className="aurosReactionAddButton"
+                  onClick={() => onReplyMessage?.(message)}
+                >
+                  Reply
+                </button>
+
+                {isOwnMessage && (
+                  <button
+                    type="button"
+                    className="aurosReactionAddButton"
+                    onClick={() => {
+                      setEditingMessageId(message.id);
+                      setEditingContent(message.content);
+                    }}
+                  >
+                    Edit
+                  </button>
+                )}
 
                 {isOwnMessage && (
                   <button

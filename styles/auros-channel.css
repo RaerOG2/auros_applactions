@@ -1565,3 +1565,139 @@ body:has(.aurosChatShell) {
   font-weight: 800;
   overflow-wrap: anywhere;
 }
+
+.aurosSidebarRow.hasMentionNotification {
+  border-color: rgba(74, 222, 128, 0.4);
+  background: rgba(74, 222, 128, 0.08);
+}
+
+.aurosSidebarRow.hasMentionNotification::after {
+  content: "@";
+  color: #86efac;
+  font-weight: 900;
+}
+
+.aurosMessageAuthorButton {
+  border: none;
+  background: transparent;
+  color: #f6f2e8;
+  font: inherit;
+  font-weight: 900;
+  padding: 0;
+  cursor: pointer;
+}
+
+.aurosMessageAuthorButton:hover {
+  color: #f7d45c;
+  text-decoration: underline;
+}
+
+.aurosMessageAttachmentVideo {
+  display: block;
+  width: 100%;
+  max-width: 520px;
+  max-height: 360px;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.aurosMessageAttachmentAudio {
+  width: min(100%, 420px);
+  margin-top: 6px;
+}
+
+.aurosMessageFileCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 420px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  background: rgba(31, 31, 31, 0.82);
+  color: #f6f2e8;
+  font-weight: 800;
+}
+
+.aurosMessageFileIcon {
+  min-width: 48px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(212, 175, 55, 0.14);
+  color: #f7d45c;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.aurosAttachmentPreviewIcon {
+  min-width: 38px;
+  height: 28px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(212, 175, 55, 0.14);
+  color: #f7d45c;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.aurosUploadProgress {
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  margin-bottom: 10px;
+}
+
+.aurosUploadProgress div {
+  width: 45%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #d4af37, #fff2a8);
+  animation: aurosUploadMove 1s infinite ease-in-out;
+}
+
+@keyframes aurosUploadMove {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+.aurosMessageReplyReference {
+  width: fit-content;
+  max-width: 100%;
+  margin: 4px 0 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  background: rgba(212, 175, 55, 0.08);
+  color: #d8ccb0;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.aurosMessageReplyReference:hover {
+  border-color: rgba(212, 175, 55, 0.36);
+  background: rgba(212, 175, 55, 0.14);
+  color: #f7d45c;
+}
+
+.aurosMessageCard.isReplyHighlighted {
+  border-color: rgba(247, 212, 92, 0.75);
+  background: rgba(212, 175, 55, 0.16);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.14),
+    0 0 34px rgba(212, 175, 55, 0.18);
+}

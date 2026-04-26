@@ -81,3 +81,24 @@ export async function deleteCustomEmoji(emojiId: string): Promise<void> {
     throw new Error(error.message || "Failed to delete custom emoji.");
   }
 }
+
+export function subscribeToServerCustomEmojis(
+  serverId: string,
+  onChange: () => void
+) {
+  return supabase
+    .channel(`custom-emojis:${serverId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "chat_custom_emojis",
+        filter: `server_id=eq.${serverId}`,
+      },
+      () => onChange()
+    )
+    .subscribe((status) => {
+      console.log("[Realtime] custom emojis:", status);
+    });
+}

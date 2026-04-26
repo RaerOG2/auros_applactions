@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ChatConfirmModal from "./ChatConfirmModal";
 import ChatCreateChannelModal from "./ChatCreateChannelModal";
 import ChatCreateServerModal from "./ChatCreateServerModal";
@@ -28,6 +28,18 @@ type ConfirmAction = {
 
 export default function ChatShell() {
   const chat = useChatState();
+
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
+
+useEffect(() => {
+  const scrollArea = chatScrollRef.current;
+  if (!scrollArea) return;
+
+  scrollArea.scrollTo({
+    top: scrollArea.scrollHeight,
+    behavior: "smooth",
+  });
+}, [chat.activeMessages.length, chat.activeView]);
 
   const [serverModalOpen, setServerModalOpen] = useState(false);
   const [channelModalOpen, setChannelModalOpen] = useState(false);
@@ -75,6 +87,7 @@ export default function ChatShell() {
           onSelectHome={chat.selectHome}
           onSelectServer={chat.selectServer}
           onCreateServer={() => setServerModalOpen(true)}
+          mentionNotifications={chat.mentionNotifications}
         />
 
         <ChatSidebar
@@ -87,6 +100,7 @@ export default function ChatShell() {
           onSelectApplicationChat={chat.selectApplicationChat}
           onSelectChannel={chat.selectChannel}
           onCreateChannel={() => setChannelModalOpen(true)}
+          mentionNotifications={chat.mentionNotifications}
         />
 
         <div className="aurosChatCenter">
@@ -119,13 +133,15 @@ export default function ChatShell() {
             <ChatWelcomeView />
           ) : (
             <>
-              <div className="aurosChatScrollArea">
+              <div className="aurosChatScrollArea" ref={chatScrollRef}>
                 {chat.messagesLoading ? (
                   <div className="aurosChatEmptyMessages">
                     <p>Loading messages...</p>
                   </div>
                 ) : (
                   <ChatMessageList
+                    onEditMessage={chat.editMessage}
+                    onReplyMessage={chat.setReplyToMessage}
                     messages={chat.activeMessages}
                     customEmojis={chat.customEmojis}
                     mentionUsers={chat.serverMentionUsers}
@@ -151,6 +167,8 @@ export default function ChatShell() {
 
               <ChatMessageInput
                 onSendMessage={chat.sendMessage}
+                replyToMessage={chat.replyToMessage}
+                onCancelReply={() => chat.setReplyToMessage(null)}
                 customEmojis={chat.customEmojis}
                 mentionUsers={chat.serverMentionUsers}
                 placeholder={inputPlaceholder}

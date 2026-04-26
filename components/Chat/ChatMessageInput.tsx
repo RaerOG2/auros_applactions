@@ -1,16 +1,24 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import type { ChatCustomEmoji, ChatUserProfile } from "../../types/chat";
+import type {
+  ChatCustomEmoji,
+  ChatMessage,
+  ChatUserProfile,
+} from "../../types/chat";
 import ChatEmojiPicker from "./ChatEmojiPicker";
 
 type ChatMessageInputProps = {
   placeholder: string;
   customEmojis: ChatCustomEmoji[];
   mentionUsers: ChatUserProfile[];
+  replyToMessage?: ChatMessage | null;
+  onCancelReply?: () => void;
   onSendMessage: (content: string, files?: File[]) => Promise<void>;
   onTyping?: () => void;
 };
+
+const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
 function getCurrentMentionQuery(value: string) {
   const match = value.match(/(^|\s)@([a-zA-Z0-9_]*)$/);
@@ -21,16 +29,36 @@ function isOnlineUser(user: ChatUserProfile) {
   return user.status === "online" || user.status === "idle" || user.status === "dnd";
 }
 
+function getFilePreviewLabel(file: File) {
+  const name = file.name.toLowerCase();
+
+  if (file.type.startsWith("image/")) return "IMG";
+  if (file.type.startsWith("video/")) return "VID";
+  if (file.type.startsWith("audio/")) return "AUD";
+  if (file.type === "application/pdf" || name.endsWith(".pdf")) return "PDF";
+  if (name.endsWith(".zip")) return "ZIP";
+  if (name.endsWith(".rar")) return "RAR";
+  if (name.endsWith(".7z")) return "7Z";
+  if (name.endsWith(".doc") || name.endsWith(".docx")) return "DOC";
+  if (name.endsWith(".xls") || name.endsWith(".xlsx")) return "XLS";
+  if (name.endsWith(".ppt") || name.endsWith(".pptx")) return "PPT";
+
+  return "FILE";
+}
+
 export default function ChatMessageInput({
   placeholder,
   customEmojis,
   mentionUsers,
+  replyToMessage,
+  onCancelReply,
   onSendMessage,
   onTyping,
 }: ChatMessageInputProps) {
   const [content, setContent] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -45,7 +73,6 @@ export default function ChatMessageInput({
       .filter((user) => {
         const username = user.username?.toLowerCase() ?? "";
         const displayName = user.displayName?.toLowerCase() ?? "";
-
         return username.includes(query) || displayName.includes(query);
       })
       .slice(0, 12);
@@ -56,6 +83,16 @@ export default function ChatMessageInput({
     (user) => !isOnlineUser(user)
   );
 
+  function addFiles(nextFiles: File[]) {
+    const validFiles = nextFiles.filter((file) => file.size <= MAX_FILE_SIZE);
+
+    if (validFiles.length !== nextFiles.length) {
+      alert("One or more files are larger than 100MB.");
+    }
+
+    setFiles((prev) => [...prev, ...validFiles]);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -63,6 +100,7 @@ export default function ChatMessageInput({
 
     try {
       setSending(true);
+      setUploading(files.length > 0);
 
       await onSendMessage(content, files);
 
@@ -75,27 +113,25 @@ export default function ChatMessageInput({
       }
     } finally {
       setSending(false);
+      setUploading(false);
     }
   }
 
-function handleSelectEmoji(emoji: string) {
-  if (emoji.startsWith("custom:")) {
-    const parts = emoji.split(":");
-    const name = parts[2] || "emoji";
+  function handleSelectEmoji(emoji: string) {
+    if (emoji.startsWith("custom:")) {
+      const parts = emoji.split(":");
+      const name = parts[2] || "emoji";
+      setContent((prev) => `${prev}:${name}:`);
+      return;
+    }
 
-    setContent((prev) => `${prev}:${name}:`);
-    return;
+    setContent((prev) => `${prev}${emoji}`);
   }
 
-  setContent((prev) => `${prev}${emoji}`);
-}
-
   function handleSelectMention(user: ChatUserProfile) {
-    const mentionName = user.username || user.displayName || "user";
-
-    setContent((prev) => {
-      return prev.replace(/(^|\s)@([a-zA-Z0-9_]*)$/, `$1@${mentionName} `);
-    });
+    setContent((prev) =>
+      prev.replace(/(^|\s)@([a-zA-Z0-9_]*)$/, `$1<@${user.id}> `)
+    );
   }
 
   function renderMentionUser(user: ChatUserProfile) {
@@ -125,12 +161,43 @@ function handleSelectEmoji(emoji: string) {
   }
 
   return (
-    <form className="aurosMessageInputWrap" onSubmit={handleSubmit}>
+    <form
+      className="aurosMessageInputWrap"
+      onSubmit={handleSubmit}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        addFiles(Array.from(e.dataTransfer.files ?? []));
+      }}
+    >
+      {replyToMessage && (
+        <div className="aurosReplyPreview">
+          <div>
+            <strong>
+              Replying to{" "}
+              {replyToMessage.author?.displayName ??
+                replyToMessage.author?.username ??
+                "User"}
+            </strong>
+            <p>{replyToMessage.content || "Attachment"}</p>
+          </div>
+
+          <button type="button" onClick={onCancelReply}>
+            ×
+          </button>
+        </div>
+      )}
+
       {files.length > 0 && (
         <div className="aurosAttachmentPreviewRow">
           {files.map((file, index) => (
             <div key={`${file.name}-${index}`} className="aurosAttachmentPreview">
+              <strong className="aurosAttachmentPreviewIcon">
+                {getFilePreviewLabel(file)}
+              </strong>
+
               <span>{file.name}</span>
+
               <button
                 type="button"
                 onClick={() =>
@@ -143,6 +210,12 @@ function handleSelectEmoji(emoji: string) {
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {uploading && (
+        <div className="aurosUploadProgress">
+          <div />
         </div>
       )}
 
@@ -159,12 +232,9 @@ function handleSelectEmoji(emoji: string) {
           ref={fileInputRef}
           type="file"
           multiple
-          accept="image/*,.pdf,.txt,.zip,.rar,.7z,.doc,.docx"
+          accept="image/*,video/*,audio/*,.pdf,.txt,.zip,.rar,.7z,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.json,.csv"
           style={{ display: "none" }}
-          onChange={(e) => {
-            const selectedFiles = Array.from(e.target.files ?? []);
-            setFiles(selectedFiles);
-          }}
+          onChange={(e) => addFiles(Array.from(e.target.files ?? []))}
         />
 
         <div className="aurosMessageInputEmojiWrap">
