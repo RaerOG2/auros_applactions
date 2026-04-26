@@ -17,6 +17,10 @@ function getCurrentMentionQuery(value: string) {
   return match?.[2] ?? null;
 }
 
+function isOnlineUser(user: ChatUserProfile) {
+  return user.status === "online" || user.status === "idle" || user.status === "dnd";
+}
+
 export default function ChatMessageInput({
   placeholder,
   customEmojis,
@@ -44,8 +48,13 @@ export default function ChatMessageInput({
 
         return username.includes(query) || displayName.includes(query);
       })
-      .slice(0, 8);
+      .slice(0, 12);
   }, [mentionQuery, mentionUsers]);
+
+  const onlineMentionUsers = filteredMentionUsers.filter(isOnlineUser);
+  const offlineMentionUsers = filteredMentionUsers.filter(
+    (user) => !isOnlineUser(user)
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,16 +78,17 @@ export default function ChatMessageInput({
     }
   }
 
-  function handleSelectEmoji(emoji: string) {
-    if (emoji.startsWith("custom:")) {
-      const parts = emoji.split(":");
-      const name = parts[2] ?? "emoji";
-      setContent((prev) => `${prev}:${name}:`);
-      return;
-    }
+function handleSelectEmoji(emoji: string) {
+  if (emoji.startsWith("custom:")) {
+    const parts = emoji.split(":");
+    const name = parts[2] || "emoji";
 
-    setContent((prev) => `${prev}${emoji}`);
+    setContent((prev) => `${prev}:${name}:`);
+    return;
   }
+
+  setContent((prev) => `${prev}${emoji}`);
+}
 
   function handleSelectMention(user: ChatUserProfile) {
     const mentionName = user.username || user.displayName || "user";
@@ -86,6 +96,32 @@ export default function ChatMessageInput({
     setContent((prev) => {
       return prev.replace(/(^|\s)@([a-zA-Z0-9_]*)$/, `$1@${mentionName} `);
     });
+  }
+
+  function renderMentionUser(user: ChatUserProfile) {
+    return (
+      <button
+        key={user.id}
+        type="button"
+        className="aurosMentionPickerItem"
+        onClick={() => handleSelectMention(user)}
+      >
+        <span className="aurosMentionPickerAvatar">
+          {user.avatarUrl ? (
+            <img src={user.avatarUrl} alt={user.displayName || user.username} />
+          ) : (
+            (user.displayName || user.username || "U").slice(0, 1).toUpperCase()
+          )}
+        </span>
+
+        <span>
+          <strong>{user.displayName || user.username}</strong>
+          <small>
+            @{user.username} · {user.status ?? "offline"}
+          </small>
+        </span>
+      </button>
+    );
   }
 
   return (
@@ -134,29 +170,19 @@ export default function ChatMessageInput({
         <div className="aurosMessageInputEmojiWrap">
           {filteredMentionUsers.length > 0 && (
             <div className="aurosMentionPicker">
-              {filteredMentionUsers.map((user) => (
-                <button
-                  key={user.id}
-                  type="button"
-                  className="aurosMentionPickerItem"
-                  onClick={() => handleSelectMention(user)}
-                >
-                  <span className="aurosMentionPickerAvatar">
-                    {user.avatarUrl ? (
-                      <img src={user.avatarUrl} alt={user.displayName} />
-                    ) : (
-                      (user.displayName || user.username || "U")
-                        .slice(0, 1)
-                        .toUpperCase()
-                    )}
-                  </span>
+              {onlineMentionUsers.length > 0 && (
+                <>
+                  <p className="aurosMentionPickerGroup">Online</p>
+                  {onlineMentionUsers.map(renderMentionUser)}
+                </>
+              )}
 
-                  <span>
-                    <strong>{user.displayName || user.username}</strong>
-                    <small>@{user.username}</small>
-                  </span>
-                </button>
-              ))}
+              {offlineMentionUsers.length > 0 && (
+                <>
+                  <p className="aurosMentionPickerGroup">Offline</p>
+                  {offlineMentionUsers.map(renderMentionUser)}
+                </>
+              )}
             </div>
           )}
 

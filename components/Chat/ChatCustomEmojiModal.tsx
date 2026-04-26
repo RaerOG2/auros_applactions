@@ -1,21 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ChatCustomEmoji } from "../../types/chat";
 
 type ChatCustomEmojiModalProps = {
   open: boolean;
+  customEmojis: ChatCustomEmoji[];
   onClose: () => void;
   onCreate: (input: { name: string; file: File }) => Promise<void>;
+  onDelete: (emojiId: string) => Promise<void>;
 };
 
 export default function ChatCustomEmojiModal({
   open,
+  customEmojis,
   onClose,
   onCreate,
+  onDelete,
 }: ChatCustomEmojiModalProps) {
   const [name, setName] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -23,6 +29,7 @@ export default function ChatCustomEmojiModal({
     setName("");
     setFile(null);
     setSubmitting(false);
+    setDeletingId(null);
   }, [open]);
 
   if (!open) return null;
@@ -40,9 +47,19 @@ export default function ChatCustomEmojiModal({
         file,
       });
 
-      onClose();
+      setName("");
+      setFile(null);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleDelete(emojiId: string) {
+    try {
+      setDeletingId(emojiId);
+      await onDelete(emojiId);
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -68,6 +85,7 @@ export default function ChatCustomEmojiModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="example: auros_fire"
+              maxLength={32}
             />
           </label>
 
@@ -95,6 +113,31 @@ export default function ChatCustomEmojiModal({
             </button>
           </div>
         </form>
+
+        <div className="aurosCustomEmojiList">
+          <p className="aurosPanelOverline">EXISTING EMOJIS</p>
+
+          {customEmojis.length === 0 ? (
+            <p className="aurosEmojiEmpty">No custom emojis yet.</p>
+          ) : (
+            customEmojis.map((emoji) => (
+              <div key={emoji.id} className="aurosCustomEmojiRow">
+                <img src={emoji.imageUrl} alt={emoji.name} />
+
+                <span>:{emoji.name}:</span>
+
+                <button
+                  type="button"
+                  className="aurosModalSecondary"
+                  onClick={() => handleDelete(emoji.id)}
+                  disabled={deletingId === emoji.id}
+                >
+                  {deletingId === emoji.id ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

@@ -222,8 +222,10 @@ export default function ChatShell() {
 
       <ChatCustomEmojiModal
         open={emojiModalOpen}
+        customEmojis={chat.customEmojis}
         onClose={() => setEmojiModalOpen(false)}
         onCreate={chat.createNewCustomEmoji}
+        onDelete={chat.deleteCustomEmojiFromActiveServer}
       />
 
       <ChatMentionProfileModal

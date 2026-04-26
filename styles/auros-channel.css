@@ -1511,3 +1511,57 @@ body:has(.aurosChatShell) {
   color: #bfb59b;
   font-size: 13px;
 }
+
+.aurosProfileName,
+.aurosProfileTag,
+.aurosProfileBio,
+.aurosContextBlock p,
+.aurosMentionProfileName {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.aurosProfileBio {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.aurosMentionPickerGroup {
+  margin: 6px 8px 4px;
+  color: #d4af37;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.aurosCustomEmojiList {
+  margin-top: 18px;
+  display: grid;
+  gap: 10px;
+}
+
+.aurosCustomEmojiRow {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  background: rgba(31, 31, 31, 0.72);
+}
+
+.aurosCustomEmojiRow img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.aurosCustomEmojiRow span {
+  color: #f6f2e8;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}

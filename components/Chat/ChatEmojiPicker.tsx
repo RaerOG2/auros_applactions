@@ -1,57 +1,7 @@
 "use client";
 
 import type { ChatCustomEmoji } from "../../types/chat";
-
-const STANDARD_EMOJIS = [
-  "😀",
-  "😃",
-  "😄",
-  "😁",
-  "😆",
-  "😅",
-  "😂",
-  "🤣",
-  "☺️",
-  "😊",
-  "😇",
-  "🙂",
-  "🙃",
-  "😉",
-  "😌",
-  "😍",
-  "😘",
-  "😗",
-  "😋",
-  "😜",
-  "😝",
-  "😛",
-  "🤑",
-  "🤗",
-  "🤓",
-  "😎",
-  "🤡",
-  "🤠",
-  "😏",
-  "😒",
-  "😞",
-  "😔",
-  "😟",
-  "😕",
-  "😭",
-  "😡",
-  "👍",
-  "👎",
-  "❤️",
-  "🔥",
-  "🎉",
-  "💀",
-  "👀",
-  "✅",
-  "❌",
-  "⭐",
-  "💎",
-  "🚀",
-];
+import { STANDARD_EMOJIS } from "./ChatStandardEmojis";
 
 type ChatEmojiPickerProps = {
   open: boolean;
@@ -108,9 +58,7 @@ export default function ChatEmojiPicker({
               className="aurosEmojiButton"
               title={`:${emoji.name}:`}
               onClick={() => {
-                onSelectEmoji(
-                  `custom:${emoji.id}`
-                );
+                onSelectEmoji(`custom:${emoji.id}:${emoji.name}:${emoji.imageUrl}`)
                 onClose();
               }}
             >

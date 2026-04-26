@@ -204,19 +204,13 @@ export async function getMyServerRole(serverId: string) {
 export async function getServerMentionUsers(
   serverId: string
 ): Promise<ChatUserProfile[]> {
-  const { data, error } = await supabase
-    .from("chat_server_members")
-    .select(`
-      user:profiles (*)
-    `)
-    .eq("server_id", serverId);
+  const { data, error } = await supabase.rpc("get_server_mention_users", {
+    input_server_id: serverId,
+  });
 
   if (error) {
     throw new Error(error.message || "Failed to load server users.");
   }
 
-  return (data ?? [])
-    .map((row: any) => row.user)
-    .filter(Boolean)
-    .map(mapProfileRow);
+  return (data ?? []).map(mapProfileRow);
 }

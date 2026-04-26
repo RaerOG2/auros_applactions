@@ -22,6 +22,7 @@ import {
 } from "../services/profile.service";
 import {
   createCustomEmoji,
+  deleteCustomEmoji,
   getServerCustomEmojis,
 } from "../services/emoji.service";
 import {
@@ -90,6 +91,7 @@ type ChatStateReturn = {
   serverMentionUsers: ChatUserProfile[];
 
   customEmojis: ChatCustomEmoji[];
+  deleteCustomEmojiFromActiveServer: (emojiId: string) => Promise<void>;
   createNewCustomEmoji: (input: { name: string; file: File }) => Promise<void>;
 
   selectHome: () => void;
@@ -1129,6 +1131,29 @@ async function createNewCustomEmoji(input: { name: string; file: File }) {
   }
 }
 
+async function deleteCustomEmojiFromActiveServer(emojiId: string) {
+  if (activeView.type !== "server") {
+    setError("You need to be inside a server to delete custom emojis.");
+    return;
+  }
+
+  try {
+    setError(null);
+
+    await deleteCustomEmoji(emojiId);
+
+    const emojis = await getServerCustomEmojis(activeView.serverId);
+    setCustomEmojis(emojis);
+  } catch (emojiError) {
+    console.warn("[useChatState] Failed to delete custom emoji:", emojiError);
+    setError(
+      emojiError instanceof Error
+        ? emojiError.message
+        : "Failed to delete custom emoji."
+    );
+  }
+}
+
   return {
     loading,
     messagesLoading,
@@ -1150,6 +1175,7 @@ async function createNewCustomEmoji(input: { name: string; file: File }) {
     serverInviteLink,
     customEmojis,
     serverMentionUsers,
+    deleteCustomEmojiFromActiveServer,
     createNewCustomEmoji,
     selectHome,
     selectServer,

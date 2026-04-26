@@ -94,6 +94,7 @@ export default function ChatProfileEditorModal({
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Your display name"
+              maxLength={32}
             />
           </label>
 
@@ -104,6 +105,7 @@ export default function ChatProfileEditorModal({
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="username"
+              maxLength={24}
             />
           </label>
 
@@ -115,6 +117,7 @@ export default function ChatProfileEditorModal({
               onChange={(e) => setBio(e.target.value)}
               placeholder="Tell people something about you"
               rows={4}
+              maxLength={180}
             />
           </label>
 
