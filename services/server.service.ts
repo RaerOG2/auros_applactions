@@ -201,16 +201,36 @@ export async function getMyServerRole(serverId: string) {
   return data?.role ?? null;
 }
 
-export async function getServerMentionUsers(
-  serverId: string
-): Promise<ChatUserProfile[]> {
-  const { data, error } = await supabase.rpc("get_server_mention_users", {
-    input_server_id: serverId,
+export async function getServerMentionUsers(serverId: string) {
+  const { data, error } = await supabase
+    .from("chat_server_members")
+    .select(`
+      user:profiles (*),
+      member_roles:chat_server_member_roles (
+        role:chat_server_roles (*)
+      )
+    `)
+    .eq("server_id", serverId);
+
+  if (error) throw error;
+
+  return (data ?? []).map((row: any) => {
+    const user = mapProfileRow(row.user);
+
+    return {
+      ...user,
+      serverRoles: (row.member_roles ?? [])
+        .map((entry: any) => entry.role)
+        .filter(Boolean)
+        .map((role: any) => ({
+          id: role.id,
+          name: role.name,
+          color: role.color,
+          icon: role.icon ?? null,
+          position: role.position ?? 0,
+          groupName: role.group_name ?? "Default",
+        }))
+        .sort((a: any, b: any) => a.position - b.position),
+    };
   });
-
-  if (error) {
-    throw new Error(error.message || "Failed to load server users.");
-  }
-
-  return (data ?? []).map(mapProfileRow);
 }

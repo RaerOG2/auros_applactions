@@ -4,36 +4,40 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
-type AurosTopbarProps = {
-  current?:
-    | "home"
-    | "apply"
-    | "status"
-    | "patchnotes"
-    | "faq"
-    | "contact"
-    | "admin"
-    | "chat"
-    | "login";
-};
+type PageKey =
+  | "home"
+  | "map"
+  | "news"
+  | "gallery"
+  | "patchnotes"
+  | "apply"
+  | "status"
+  | "faq"
+  | "contact"
+  | "admin"
+  | "login";
 
-export default function AurosTopbar({ current }: AurosTopbarProps) {
+export default function AurosTopbar({
+  current,
+}: {
+  current?: PageKey;
+}) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
+    let alive = true;
 
-    async function loadAuthState() {
+    async function load() {
       const { data } = await supabase.auth.getUser();
-      const user = data.user;
 
-      if (!mounted) return;
+      if (!alive) {
+        return;
+      }
 
-      setIsLoggedIn(!!user);
+      setIsLoggedIn(!!data.user);
 
-      if (!user) {
+      if (!data.user) {
         setIsAdmin(false);
         return;
       }
@@ -41,265 +45,188 @@ export default function AurosTopbar({ current }: AurosTopbarProps) {
       const { data: profile } = await supabase
         .from("profiles")
         .select("is_admin")
-        .eq("id", user.id)
+        .eq("id", data.user.id)
         .maybeSingle();
 
-      if (!mounted) return;
-
-      setIsAdmin(!!profile?.is_admin);
+      if (alive) {
+        setIsAdmin(!!profile?.is_admin);
+      }
     }
 
-    loadAuthState();
+    load();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(() => {
-      loadAuthState();
-    });
+    const { data: listener } =
+      supabase.auth.onAuthStateChange(load);
 
     return () => {
-      mounted = false;
+      alive = false;
       listener.subscription.unsubscribe();
     };
   }, []);
 
-  async function logout() {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
-  }
-
-  const wrapperStyle: React.CSSProperties = {
-    position: "sticky",
-    top: 16,
-    zIndex: 50,
-    marginBottom: 28,
-  };
-
-  const barStyle: React.CSSProperties = {
-    maxWidth: "1280px",
-    margin: "0 auto",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
-    padding: "14px 18px",
-    borderRadius: "24px",
-    background:
-      "linear-gradient(180deg, rgba(12, 22, 45, 0.88) 0%, rgba(8, 18, 37, 0.82) 100%)",
-    border: "1px solid rgba(76, 201, 240, 0.12)",
-    backdropFilter: "blur(18px)",
-    boxShadow:
-      "0 14px 40px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04)",
-    flexWrap: "wrap",
-  };
-
-  const brandStyle: React.CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    textDecoration: "none",
-  };
-
-  const logoBoxStyle: React.CSSProperties = {
-    width: 46,
-    height: 46,
-    borderRadius: 16,
-    background: "linear-gradient(135deg, #4cc9f0 0%, #7b61ff 100%)",
-    overflow: "hidden",
-    flexShrink: 0,
-  };
-
-  const navStyle: React.CSSProperties = {
-    display: "flex",
-    gap: 10,
-    flexWrap: "wrap",
-    alignItems: "center",
-  };
-
-  function linkStyle(active: boolean): React.CSSProperties {
-    return {
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "11px 15px",
-      borderRadius: "14px",
-      textDecoration: "none",
-      fontWeight: 800,
-      fontSize: 14,
-      color: "white",
-      border: active
-        ? "1px solid rgba(212, 175, 55, 0.38)"
-        : "1px solid rgba(56, 74, 108, 0.85)",
-      background: active
-        ? "linear-gradient(90deg, rgba(212,175,55,0.20), rgba(142,105,19,0.18))"
-        : "linear-gradient(180deg, rgba(14, 25, 48, 0.95) 0%, rgba(10, 20, 40, 0.92) 100%)",
-      cursor: "pointer",
-    };
-  }
+  const nav = [
+    ["Home", "/", "home"],
+    ["Map", "/map", "map"],
+    ["News", "/news", "news"],
+    ["Patchnotes", "/patchnotes", "patchnotes"],
+    ["Gallery", "/gallery", "gallery"],
+  ] as const;
 
   return (
-    <>
-      <div style={wrapperStyle}>
-        <div style={barStyle}>
-          <Link href="/" style={brandStyle}>
-            <div style={logoBoxStyle}>
-              <img
-                src="/auros_royale_pfp_draft_1.png"
-                alt="Auros"
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-            </div>
-
-            <div>
-              <p style={{ margin: 0, fontSize: 17, fontWeight: 900, color: "white" }}>
-                Auros
-              </p>
-              <p style={{ margin: "4px 0 0 0", fontSize: 12, color: "#9fb0d0" }}>
-                Applications System
-              </p>
-            </div>
-          </Link>
-
-          <nav style={navStyle}>
-            <Link href="/apply" style={linkStyle(current === "apply")}>
-              Apply
-            </Link>
-
-            <Link href="/status" style={linkStyle(current === "status")}>
-              Status
-            </Link>
-
-            <Link href="/patchnotes" style={linkStyle(current === "patchnotes")}>
-              Patchnotes
-            </Link>
-
-            <Link href="/chat" style={linkStyle(current === "chat")}>
-              Chat
-            </Link>
-
-            <Link href="/faq" style={linkStyle(current === "faq")}>
-              FAQ
-            </Link>
-
-            <Link href="/contact" style={linkStyle(current === "contact")}>
-              Contact
-            </Link>
-
-            {!isLoggedIn && (
-              <Link href="/login" style={linkStyle(current === "login")}>
-                Login
-              </Link>
-            )}
-
-            {isAdmin && (
-              <Link href="/admin" style={linkStyle(current === "admin")}>
-                Admin
-              </Link>
-            )}
-
-            {isLoggedIn && (
-              <button
-                type="button"
-                onClick={() => setShowLogoutConfirm(true)}
-                style={linkStyle(false)}
-              >
-                Logout
-              </button>
-            )}
-          </nav>
-        </div>
-      </div>
-
-      {showLogoutConfirm && (
-        <div
+    <header
+      style={{
+        position: "sticky",
+        top: 14,
+        zIndex: 50,
+        marginBottom: 32,
+      }}
+    >
+      <div
+        className="auros-card"
+        style={{
+          maxWidth: 1280,
+          margin: "0 auto",
+          padding: "12px 14px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
+        <Link
+          href="/"
           style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.68)",
-            backdropFilter: "blur(8px)",
             display: "flex",
+            gap: 11,
             alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-            padding: 20,
+            textDecoration: "none",
+            color: "white",
           }}
         >
-          <div
+          <img
+            src="/auros_royale_pfp_draft_1.png"
+            alt="Auros Royale"
+            width={44}
+            height={44}
             style={{
-              width: "min(100%, 430px)",
-              borderRadius: 24,
-              background:
-                "linear-gradient(180deg, rgba(22,22,22,0.98), rgba(10,10,10,0.98))",
-              border: "1px solid rgba(212,175,55,0.18)",
-              padding: 24,
-              boxShadow: "0 30px 90px rgba(0,0,0,0.55)",
+              borderRadius: 14,
+              objectFit: "cover",
             }}
-          >
-            <p
+          />
+
+          <div>
+            <strong
               style={{
-                margin: "0 0 8px",
-                color: "#d4af37",
-                fontSize: 12,
-                fontWeight: 900,
-                letterSpacing: "0.08em",
+                fontSize: 17,
               }}
             >
-              LOGOUT CONFIRMATION
-            </p>
-
-            <h3 style={{ margin: "0 0 10px", fontSize: 26, color: "white" }}>
-              Do you really want to log out?
-            </h3>
-
-            <p style={{ margin: 0, color: "#bfb59b", lineHeight: 1.6 }}>
-              You will need to sign in again to access protected areas like
-              AUROSCHANNEL and Admin tools.
-            </p>
+              AUROS ROYALE
+            </strong>
 
             <div
               style={{
-                display: "flex",
-                gap: 10,
-                marginTop: 22,
-                flexWrap: "wrap",
+                color: "#91a6c7",
+                fontSize: 11,
+                marginTop: 3,
+                letterSpacing: ".08em",
               }}
             >
-              <button
-                type="button"
-                onClick={() => setShowLogoutConfirm(false)}
-                style={{
-                  flex: 1,
-                  minHeight: 44,
-                  borderRadius: 14,
-                  border: "1px solid rgba(212,175,55,0.12)",
-                  background: "rgba(31,31,31,0.94)",
-                  color: "white",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                onClick={logout}
-                style={{
-                  flex: 1,
-                  minHeight: 44,
-                  borderRadius: 14,
-                  border: "1px solid rgba(212,175,55,0.24)",
-                  background:
-                    "linear-gradient(180deg, rgba(212,175,55,0.28), rgba(142,105,19,0.24))",
-                  color: "#fff2c0",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
-              >
-                Yes, Logout
-              </button>
+              OFFICIAL WEBSITE
             </div>
           </div>
-        </div>
-      )}
-    </>
+        </Link>
+
+        <nav
+          style={{
+            display: "flex",
+            gap: 7,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          {nav.map(([label, href, key]) => (
+            <NavLink
+              key={href}
+              label={label}
+              href={href}
+              active={current === key}
+            />
+          ))}
+
+          <NavLink
+            label="Apply"
+            href="/apply"
+            active={current === "apply"}
+            subtle
+          />
+
+          <NavLink
+            label="Status"
+            href="/status"
+            active={current === "status"}
+            subtle
+          />
+
+          {isAdmin && (
+            <NavLink
+              label="Admin"
+              href="/admin"
+              active={current === "admin"}
+            />
+          )}
+
+          {!isLoggedIn && (
+            <NavLink
+              label="Login"
+              href="/login"
+              active={current === "login"}
+              subtle
+            />
+          )}
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+function NavLink({
+  label,
+  href,
+  active,
+  subtle = false,
+}: {
+  label: string;
+  href: string;
+  active?: boolean;
+  subtle?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      style={{
+        padding: "10px 13px",
+        borderRadius: 12,
+        textDecoration: "none",
+        fontWeight: 750,
+        fontSize: 13,
+
+        color: active
+          ? "white"
+          : subtle
+          ? "#9fb0cc"
+          : "#dce8ff",
+
+        border: active
+          ? "1px solid rgba(99,221,255,.28)"
+          : "1px solid transparent",
+
+        background: active
+          ? "rgba(99,221,255,.1)"
+          : "transparent",
+      }}
+    >
+      {label}
+    </Link>
   );
 }

@@ -7,8 +7,7 @@ export default function ChatWelcomeView() {
         <p className="aurosWelcomeOverline">AUROSCHANNEL</p>
         <h2 className="aurosWelcomeTitle">Welcome to the live communication system</h2>
         <p className="aurosWelcomeText">
-          This interface is built to combine server chat, direct messages,
-          application communication, staff moderation, and future community tools
+          This interface is built to combine server chat, direct messages, staff moderation, and future community tools
           inside one unified page.
         </p>
 
@@ -21,11 +20,6 @@ export default function ChatWelcomeView() {
           <div className="aurosWelcomeMiniCard">
             <h3>Direct Messages</h3>
             <p>Message friends and team members privately inside the same interface.</p>
-          </div>
-
-          <div className="aurosWelcomeMiniCard">
-            <h3>Application Chats</h3>
-            <p>Let applicants chat through a generated Chat ID without a full account.</p>
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   ApplicationChat,
   ChatChannel,
@@ -9,6 +9,8 @@ import type {
   ChatView,
   DirectConversation,
 } from "../../types/chat";
+import type { ChatUserXp } from "../../services/chat-xp.service";
+import { getUserChatXp } from "../../services/chat-xp.service";
 
 type ServerRole = "owner" | "admin" | "moderator" | "member" | null;
 
@@ -59,6 +61,10 @@ function canCreateInvite(role: ServerRole) {
   return role === "owner" || role === "admin" || role === "moderator";
 }
 
+function getNextLevelXp(level: number) {
+  return Math.max(100, level * level * 100);
+}
+
 export default function ChatRightPanel({
   currentUser,
   activeView,
@@ -77,12 +83,34 @@ export default function ChatRightPanel({
   onOpenCustomEmojiModal,
 }: ChatRightPanelProps) {
   const [inviteInput, setInviteInput] = useState("");
+  const [xpData, setXpData] = useState<ChatUserXp | null>(null);
+
   const isAurosCommunity = activeServer?.slug === "auros-community";
 
   const canDeleteServer =
     activeView.type === "server" &&
     activeServerRole === "owner" &&
     !isAurosCommunity;
+
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setXpData(null);
+      return;
+    }
+
+    getUserChatXp(currentUser.id)
+      .then(setXpData)
+      .catch(() => setXpData(null));
+  }, [currentUser?.id]);
+
+  const level = xpData?.level ?? 1;
+  const xp = xpData?.xp ?? 0;
+  const nextLevelXp = getNextLevelXp(level);
+  const progress = Math.min(100, Math.round((xp / nextLevelXp) * 100));
+
+  function getHighestRole(user: ChatUserProfile | null | undefined) {
+  return user?.serverRoles?.[0] ?? null;
+  }
 
   return (
     <aside className="aurosRightPanel">
@@ -140,6 +168,19 @@ export default function ChatRightPanel({
               {currentUser.bio ?? "No bio has been added yet."}
             </p>
 
+            {getHighestRole(currentUser) && (
+              <span
+                className="aurosRoleBadge"
+                style={{
+                  borderColor: getHighestRole(currentUser)?.color,
+                  color: getHighestRole(currentUser)?.color,
+                }}
+              >
+                {getHighestRole(currentUser)?.icon ?? "⭐"}{" "}
+                {getHighestRole(currentUser)?.name}
+              </span>
+            )}
+
             <div className="aurosRoleList">
               <span className="aurosRoleBadge">
                 {currentUser.isAdmin ? "Admin" : "Member"}
@@ -158,6 +199,54 @@ export default function ChatRightPanel({
                 />
                 {currentUser.status ?? "offline"}
               </span>
+
+              <span className="aurosRoleBadge">Level {level}</span>
+            </div>
+
+            <div
+              style={{
+                marginTop: 14,
+                padding: 14,
+                borderRadius: 16,
+                border: "1px solid rgba(212, 175, 55, 0.16)",
+                background: "rgba(31, 31, 31, 0.72)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  marginBottom: 8,
+                  color: "#fff2c0",
+                  fontWeight: 900,
+                  fontSize: 13,
+                }}
+              >
+                <span>Chat XP</span>
+                <span>
+                  {xp} / {nextLevelXp} XP
+                </span>
+              </div>
+
+              <div
+                style={{
+                  height: 10,
+                  borderRadius: 999,
+                  background: "rgba(255,255,255,0.08)",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    width: `${progress}%`,
+                    height: "100%",
+                    borderRadius: 999,
+                    background:
+                      "linear-gradient(90deg, rgba(212,175,55,0.95), rgba(76,201,240,0.9))",
+                  }}
+                />
+              </div>
             </div>
 
             <div style={{ marginTop: 14, color: "#bfb59b", fontSize: 13 }}>
@@ -175,9 +264,7 @@ export default function ChatRightPanel({
             </div>
           </>
         ) : (
-          <p className="aurosProfileBio">
-            No signed-in profile was found.
-          </p>
+          <p className="aurosProfileBio">No signed-in profile was found.</p>
         )}
       </section>
 
@@ -207,15 +294,11 @@ export default function ChatRightPanel({
         <p className="aurosPanelOverline">SERVER INVITES</p>
 
         <div className="aurosModerationList">
-          {activeView.type === "server" &&
-            canCreateInvite(activeServerRole) && (
-              <button
-                className="aurosModerationButton"
-                onClick={onCreateInvite}
-              >
-                Create Invite Link
-              </button>
-            )}
+          {activeView.type === "server" && canCreateInvite(activeServerRole) && (
+            <button className="aurosModerationButton" onClick={onCreateInvite}>
+              Create Invite Link
+            </button>
+          )}
 
           {serverInviteLink && (
             <>
@@ -223,9 +306,7 @@ export default function ChatRightPanel({
 
               <button
                 className="aurosModerationButton"
-                onClick={() =>
-                  navigator.clipboard.writeText(serverInviteLink)
-                }
+                onClick={() => navigator.clipboard.writeText(serverInviteLink)}
               >
                 Copy Invite
               </button>
@@ -256,24 +337,23 @@ export default function ChatRightPanel({
         <p className="aurosPanelOverline">SERVER TOOLS</p>
 
         <div className="aurosModerationList">
-          {activeView.type === "server" &&
-            canCreateInvite(activeServerRole) && (
-              <>
-                <button
-                  className="aurosModerationButton"
-                  onClick={onOpenServerSettings}
-                >
-                  Edit Server
-                </button>
+          {activeView.type === "server" && canCreateInvite(activeServerRole) && (
+            <>
+              <button
+                className="aurosModerationButton"
+                onClick={onOpenServerSettings}
+              >
+                Edit Server
+              </button>
 
-                <button
-                  className="aurosModerationButton"
-                  onClick={onOpenCustomEmojiModal}
-                >
-                  Add Custom Emoji
-                </button>
-              </>
-            )}
+              <button
+                className="aurosModerationButton"
+                onClick={onOpenCustomEmojiModal}
+              >
+                Add Custom Emoji
+              </button>
+            </>
+          )}
 
           {canDeleteServer && (
             <button

@@ -17,6 +17,9 @@ import ChatWelcomeView from "./ChatWelcomeView";
 import ChatMentionProfileModal from "./ChatMentionProfileModal";
 import type { ChatUserProfile } from "../../types/chat";
 import { useChatState } from "../../hooks/useChatState";
+import ChatMembersModal from "./ChatMembersModal";
+import ChatSearchModal from "./ChatSearchModal";
+import ChatModerationModal from "./ChatModerationModal";
 
 type ConfirmAction = {
   title: string;
@@ -31,15 +34,48 @@ export default function ChatShell() {
 
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
 
+  const previousMessageCountRef = useRef(0);
+  const previousScrollHeightRef = useRef(0);
+  const wasLoadingOlderRef = useRef(false);
+  const loadingOlderRef = useRef(false);
+  const [membersOpen, setMembersOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [moderationOpen, setModerationOpen] = useState(false);
+
+useEffect(() => {
+  loadingOlderRef.current = chat.olderMessagesLoading;
+}, [chat.olderMessagesLoading]);
+
 useEffect(() => {
   const scrollArea = chatScrollRef.current;
   if (!scrollArea) return;
 
-  scrollArea.scrollTo({
-    top: scrollArea.scrollHeight,
-    behavior: "smooth",
-  });
-}, [chat.activeMessages.length, chat.activeView]);
+  if (chat.olderMessagesLoading) {
+    previousScrollHeightRef.current = scrollArea.scrollHeight;
+    wasLoadingOlderRef.current = true;
+    return;
+  }
+
+  if (wasLoadingOlderRef.current) {
+    const heightDiff = scrollArea.scrollHeight - previousScrollHeightRef.current;
+    scrollArea.scrollTop = scrollArea.scrollTop + heightDiff;
+    wasLoadingOlderRef.current = false;
+    previousMessageCountRef.current = chat.activeMessages.length;
+    return;
+  }
+
+  const previousCount = previousMessageCountRef.current;
+  const currentCount = chat.activeMessages.length;
+
+  previousMessageCountRef.current = currentCount;
+
+  if (currentCount > previousCount) {
+    scrollArea.scrollTo({
+      top: scrollArea.scrollHeight,
+      behavior: "smooth",
+    });
+  }
+}, [chat.activeMessages.length, chat.activeView, chat.olderMessagesLoading]);
 
   const [serverModalOpen, setServerModalOpen] = useState(false);
   const [channelModalOpen, setChannelModalOpen] = useState(false);
@@ -53,8 +89,6 @@ useEffect(() => {
   const inputPlaceholder =
     chat.activeView.type === "dm"
       ? "Write a direct message..."
-      : chat.activeView.type === "application"
-      ? "Reply to this application chat..."
       : chat.activeView.type === "server"
       ? "Write a message to this channel..."
       : "Select a conversation to start chatting...";
@@ -95,23 +129,30 @@ useEffect(() => {
           activeServer={chat.activeServer}
           activeChannels={chat.channels}
           dms={chat.dms}
-          applicationChats={chat.applicationChats}
           onSelectDM={chat.selectDM}
-          onSelectApplicationChat={chat.selectApplicationChat}
           onSelectChannel={chat.selectChannel}
-          onCreateChannel={() => setChannelModalOpen(true)}
+          onCreateChannel={() => {
+            if (chat.activeServerRole !== "owner" && chat.activeServerRole !== "admin") {
+              return;
+            }
+
+            setChannelModalOpen(true);
+          }}
           mentionNotifications={chat.mentionNotifications}
         />
 
         <div className="aurosChatCenter">
-          <ChatHeader
+          <ChatHeader 
             activeView={chat.activeView}
             activeServer={chat.activeServer}
             activeChannel={chat.activeChannel}
             activeDM={chat.activeDirectConversation}
             activeDirectUser={chat.activeDirectUser}
-            activeApplicationChat={chat.activeApplicationChat}
+            onOpenSearch={() => setSearchOpen(true)}
+            onOpenMembers={() => setMembersOpen(true)}
+            onOpenModeration={() => setModerationOpen(true)}
           />
+
 
           {chat.error && (
             <div
@@ -139,7 +180,21 @@ useEffect(() => {
                     <p>Loading messages...</p>
                   </div>
                 ) : (
-                  <ChatMessageList
+                  <>
+                    {chat.hasOlderMessages && (
+                      <div className="aurosLoadOlderWrap">
+                        <button
+                          type="button"
+                          className="aurosLoadOlderButton"
+                          disabled={chat.olderMessagesLoading}
+                          onClick={chat.loadOlderMessages}
+                        >
+                          {chat.olderMessagesLoading ? "Loading..." : "Load older messages"}
+                        </button>
+                      </div>
+                    )}
+
+    <ChatMessageList
                     onEditMessage={chat.editMessage}
                     onReplyMessage={chat.setReplyToMessage}
                     messages={chat.activeMessages}
@@ -162,6 +217,7 @@ useEffect(() => {
                       })
                     }
                   />
+                  </>
                 )}
               </div>
 
@@ -183,7 +239,6 @@ useEffect(() => {
           activeChannel={chat.activeChannel}
           activeDM={chat.activeDirectConversation}
           activeDirectUser={chat.activeDirectUser}
-          activeApplicationChat={chat.activeApplicationChat}
           activeServer={chat.activeServer}
           activeServerRole={chat.activeServerRole}
           serverInviteLink={chat.serverInviteLink}
@@ -232,6 +287,8 @@ useEffect(() => {
 
       <ChatServerSettingsModal
         open={serverSettingsOpen}
+        serverId={chat.activeServer?.id ?? null}
+        members={chat.serverMentionUsers}
         currentName={chat.activeServer?.name}
         currentDescription={chat.activeServer?.description ?? null}
         onClose={() => setServerSettingsOpen(false)}
@@ -251,6 +308,15 @@ useEffect(() => {
         onClose={() => setMentionProfileUser(null)}
       />
 
+      <ChatModerationModal
+        open={moderationOpen}
+        members={chat.serverMentionUsers}
+        onClose={() => setModerationOpen(false)}
+        onKickMember={chat.kickMember}
+        onBanMember={chat.banMember}
+        onMuteMember={chat.muteMember}
+      />
+
       <ChatConfirmModal
         open={!!confirmAction}
         title={confirmAction?.title ?? ""}
@@ -260,6 +326,39 @@ useEffect(() => {
         onCancel={() => setConfirmAction(null)}
         onConfirm={async () => {
           await confirmAction?.onConfirm();
+        }}
+      />
+
+      <ChatMembersModal
+        open={membersOpen}
+        members={chat.serverMentionUsers}
+        onClose={() => setMembersOpen(false)}
+        onOpenProfile={(user) => {
+          setMembersOpen(false);
+          setMentionProfileUser(user);
+        }}
+      />
+
+      <ChatSearchModal
+        open={searchOpen}
+        messages={chat.activeMessages}
+        onClose={() => setSearchOpen(false)}
+        onJumpToMessage={(messageId) => {
+          const target = document.getElementById(`message-${messageId}`);
+          const scrollArea = chatScrollRef.current;
+
+          if (!target || !scrollArea) return;
+
+          scrollArea.scrollTo({
+            top: target.offsetTop - scrollArea.offsetTop - 80,
+            behavior: "smooth",
+          });
+
+          target.classList.add("isReplyHighlighted");
+
+          window.setTimeout(() => {
+            target.classList.remove("isReplyHighlighted");
+          }, 10000);
         }}
       />
     </>

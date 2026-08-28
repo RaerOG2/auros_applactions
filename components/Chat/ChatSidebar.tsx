@@ -19,6 +19,7 @@ type ChatSidebarProps = {
   onSelectApplicationChat: (applicationChatId: string) => void;
   onSelectChannel: (serverId: string, channelId: string) => void;
   onCreateChannel: () => void;
+  onCreateDM: () => void;
 };
 
 function getInitial(label: string) {
@@ -36,6 +37,7 @@ export default function ChatSidebar({
   onSelectApplicationChat,
   onSelectChannel,
   onCreateChannel,
+  onCreateDM,
 }: ChatSidebarProps) {
   if (activeView.type === "server" && activeServer) {
     const activeServerNotifications = mentionNotifications[activeServer.id] ?? null;
@@ -102,7 +104,11 @@ export default function ChatSidebar({
           <h2 className="aurosSidebarTitle">Direct Messages</h2>
         </div>
 
-        <button className="aurosSidebarActionButton" type="button">
+        <button
+          className="aurosSidebarActionButton"
+          type="button"
+          onClick={onCreateDM}
+        >
           +
         </button>
       </div>
@@ -158,41 +164,6 @@ export default function ChatSidebar({
                       </span>
                     )}
                   </span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="aurosSidebarSection">
-        <p className="aurosSidebarSectionLabel">Application Chats</p>
-
-        <div className="aurosSidebarList">
-          {applicationChats.length === 0 && (
-            <div className="aurosSidebarRow" style={{ cursor: "default" }}>
-              <span className="aurosSidebarRowLeft">
-                <span className="aurosApplicationDot" />
-                <span>No application chats yet</span>
-              </span>
-            </div>
-          )}
-
-          {applicationChats.map((chat) => {
-            const isActive =
-              activeView.type === "application" &&
-              activeView.applicationChatId === chat.id;
-
-            return (
-              <button
-                key={chat.id}
-                className={`aurosSidebarRow ${isActive ? "isActive" : ""}`}
-                onClick={() => onSelectApplicationChat(chat.id)}
-                type="button"
-              >
-                <span className="aurosSidebarRowLeft">
-                  <span className="aurosApplicationDot" />
-                  <span>{chat.applicantName}</span>
                 </span>
               </button>
             );

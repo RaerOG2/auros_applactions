@@ -1,86 +1,141 @@
 "use client";
 
-import PatchnotesHero from "../../components/patchnotes/PatchnotesHero";
-import PatchnotesHeader from "../../components/patchnotes/PatchnotesHeader";
-import PatchnotesList from "../../components/patchnotes/PatchnotesList";
-import { usePatchnotes } from "../../hooks/usePatchnotes";
+import Link from "next/link";
+import {
+  useEffect,
+  useState,
+} from "react";
 
-const glassCardStyle: React.CSSProperties = {
-  background: "rgba(15, 27, 52, 0.74)",
-  border: "1px solid rgba(34, 48, 77, 0.95)",
-  borderRadius: "24px",
-  padding: "24px",
-  backdropFilter: "blur(12px)",
-  boxShadow: "0 20px 50px rgba(0,0,0,0.22)",
-};
-
-const pillStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "8px",
-  padding: "8px 12px",
-  borderRadius: "999px",
-  border: "1px solid rgba(76, 201, 240, 0.18)",
-  background: "rgba(76, 201, 240, 0.10)",
-  color: "#95ecff",
-  fontSize: "13px",
-  fontWeight: 700,
-};
-
-const entryCardStyle: React.CSSProperties = {
-  background: "rgba(11, 21, 43, 0.88)",
-  border: "1px solid #22304d",
-  borderRadius: "20px",
-  padding: "22px",
-  boxShadow: "0 10px 24px rgba(0,0,0,0.16)",
-};
+import { getPublishedPatchnotes } from "../../services/community.service";
+import type { CommunityPatchnote } from "../../types/community";
 
 export default function PatchnotesPage() {
-  const { patchnotes, loading } = usePatchnotes();
+  const [items, setItems] =
+    useState<CommunityPatchnote[]>([]);
+
+  useEffect(() => {
+    getPublishedPatchnotes()
+      .then(setItems)
+      .catch(console.error);
+  }, []);
 
   return (
-    <>
-      <style jsx>{`
-        .heroGrid {
-          display: grid;
-          grid-template-columns: 1.1fr 0.9fr;
-          gap: 24px;
-          align-items: center;
-        }
+    <div>
+      <header
+        style={{
+          padding: "36px 0 28px",
+        }}
+      >
+        <div
+          style={{
+            color: "#63ddff",
+            fontWeight: 900,
+            letterSpacing: ".14em",
+            fontSize: 12,
+          }}
+        >
+          AUROS UPDATES
+        </div>
 
-        @media (max-width: 980px) {
-          .heroGrid {
-            grid-template-columns: 1fr;
-          }
-        }
+        <h1
+          style={{
+            fontSize: "clamp(42px,7vw,72px)",
+            margin: "10px 0 12px",
+          }}
+        >
+          Patchnotes
+        </h1>
 
-        @media (max-width: 640px) {
-          .heroCard {
-            padding: 24px !important;
-          }
+        <p
+          style={{
+            color: "#9fb0cc",
+            maxWidth: 700,
+            lineHeight: 1.7,
+            fontSize: 17,
+          }}
+        >
+          Major changes, gameplay updates and everything new in Auros
+          Royale.
+        </p>
+      </header>
 
-          .heroTitle {
-            font-size: 36px !important;
-          }
-        }
-      `}</style>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit,minmax(300px,1fr))",
+          gap: 18,
+        }}
+      >
+        {items.map((note) => (
+          <Link
+            key={note.id}
+            href={`/patchnotes/${note.slug}`}
+            className="auros-card auros-card-hover"
+            style={{
+              overflow: "hidden",
+              textDecoration: "none",
+              color: "white",
+            }}
+          >
+            {note.cover_url ? (
+              <img
+                src={note.cover_url}
+                alt=""
+                style={{
+                  width: "100%",
+                  aspectRatio: "16/9",
+                  objectFit: "cover",
+                  display: "block",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  aspectRatio: "16/9",
+                  background:
+                    "linear-gradient(135deg,#102445,#181a42)",
+                }}
+              />
+            )}
 
-      <PatchnotesHero glassCardStyle={glassCardStyle} />
+            <div
+              style={{
+                padding: 22,
+              }}
+            >
+              <div
+                style={{
+                  color: "#63ddff",
+                  fontSize: 12,
+                  fontWeight: 900,
+                }}
+              >
+                VERSION {note.version}
+              </div>
 
-      <section style={glassCardStyle}>
-        <PatchnotesHeader
-          loading={loading}
-          count={patchnotes.length}
-          pillStyle={pillStyle}
-        />
+              <h2
+                style={{
+                  margin: "8px 0",
+                  fontSize: 25,
+                }}
+              >
+                {note.title}
+              </h2>
 
-        <PatchnotesList
-          patchnotes={patchnotes}
-          loading={loading}
-          entryCardStyle={entryCardStyle}
-          pillStyle={pillStyle}
-        />
-      </section>
-    </>
+              <p
+                style={{
+                  color: "#9fb0cc",
+                  lineHeight: 1.6,
+                }}
+              >
+                {note.summary ||
+                  note.content?.slice(0, 150)}
+              </p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }

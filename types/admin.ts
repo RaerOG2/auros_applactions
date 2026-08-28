@@ -73,12 +73,63 @@ export type JobItem = {
   created_at?: string | null;
 };
 
+export type PatchnoteHeadingBlock = {
+  id: string;
+  type: "heading";
+  text: string;
+};
+
+export type PatchnoteTextBlock = {
+  id: string;
+  type: "text";
+  text: string;
+};
+
+export type PatchnoteImageBlock = {
+  id: string;
+  type: "image";
+  url: string;
+  alt?: string;
+  caption?: string;
+};
+
+export type PatchnoteContentBlock =
+  | PatchnoteHeadingBlock
+  | PatchnoteTextBlock
+  | PatchnoteImageBlock;
+
 export type PatchnoteItem = {
   id: string;
+
   version: string | null;
+
   title: string | null;
+
+  slug: string | null;
+
+  summary: string | null;
+
   content: string | null;
+
+  cover_url: string | null;
+
+  content_blocks: PatchnoteContentBlock[] | null;
+
+  published: boolean;
+
   created_at: string | null;
+
+  updated_at?: string | null;
+};
+
+export type PatchnoteEditorForm = {
+  version: string;
+  title: string;
+  slug: string;
+  summary: string;
+  cover_url: string;
+  published: boolean;
+  blocks: PatchnoteContentBlock[];
 };
 
 export type JobFormState = {
@@ -99,4 +150,14 @@ export const emptyJobForm: JobFormState = {
   description: "",
   requirements: "",
   role_category: "Other",
+};
+
+export const emptyPatchnoteEditorForm: PatchnoteEditorForm = {
+  version: "",
+  title: "",
+  slug: "",
+  summary: "",
+  cover_url: "",
+  published: false,
+  blocks: [],
 };

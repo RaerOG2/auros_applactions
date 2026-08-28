@@ -82,6 +82,13 @@ export default function ChatMessageInput({
   const offlineMentionUsers = filteredMentionUsers.filter(
     (user) => !isOnlineUser(user)
   );
+  const specialMentions =
+  mentionQuery !== null
+    ? ["everyone", "here"].filter((item) =>
+        item.includes(mentionQuery.toLowerCase())
+      )
+    : [];
+
 
   function addFiles(nextFiles: File[]) {
     const validFiles = nextFiles.filter((file) => file.size <= MAX_FILE_SIZE);
@@ -129,9 +136,11 @@ export default function ChatMessageInput({
   }
 
   function handleSelectMention(user: ChatUserProfile) {
-    setContent((prev) =>
-      prev.replace(/(^|\s)@([a-zA-Z0-9_]*)$/, `$1<@${user.id}> `)
-    );
+    const username = user.username || user.displayName || "user";
+
+    setContent((prev) => {
+      return prev.replace(/(^|\s)@([a-zA-Z0-9_]*)$/, `$1@${username} `);
+    });
   }
 
   function renderMentionUser(user: ChatUserProfile) {
@@ -238,8 +247,38 @@ export default function ChatMessageInput({
         />
 
         <div className="aurosMessageInputEmojiWrap">
-          {filteredMentionUsers.length > 0 && (
+          {(specialMentions.length > 0 || filteredMentionUsers.length > 0) && (
             <div className="aurosMentionPicker">
+              {specialMentions.length > 0 && (
+                <>
+                  <p className="aurosMentionPickerGroup">Special</p>
+
+                  {specialMentions.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      className="aurosMentionPickerItem"
+                      onClick={() => {
+                        setContent((prev) =>
+                          prev.replace(/(^|\s)@([a-zA-Z0-9_]*)$/, `$1@${item} `)
+                        );
+                      }}
+                    >
+                      <span className="aurosMentionPickerAvatar">@</span>
+
+                      <span>
+                        <strong>@{item}</strong>
+                        <small>
+                          {item === "everyone"
+                            ? "Notify everyone in this server"
+                            : "Notify people currently here"}
+                        </small>
+                      </span>
+                    </button>
+                  ))}
+                </>
+              )}
+
               {onlineMentionUsers.length > 0 && (
                 <>
                   <p className="aurosMentionPickerGroup">Online</p>
@@ -254,7 +293,7 @@ export default function ChatMessageInput({
                 </>
               )}
             </div>
-          )}
+)}
 
           <input
             className="aurosMessageInput"

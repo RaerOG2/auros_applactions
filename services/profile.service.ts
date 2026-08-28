@@ -191,3 +191,18 @@ export function subscribeToProfile(profileId: string, onChange: () => void) {
     )
     .subscribe();
 }
+
+export async function markStaleProfilesOffline(minutes = 2) {
+  const cutoff = new Date(Date.now() - minutes * 60 * 1000).toISOString();
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      status: "offline",
+      updated_at: new Date().toISOString(),
+    })
+    .neq("status", "offline")
+    .lt("last_seen", cutoff);
+
+  if (error) throw error;
+}

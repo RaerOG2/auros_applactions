@@ -20,13 +20,14 @@ export async function getChannelMessages(channelId: string): Promise<ChatMessage
     `)
     .eq("channel_id", channelId)
     .is("deleted_at", null)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false })
+    .limit(50);
 
   if (error) {
     throw error;
   }
 
-  const messages = (data ?? []).map(mapMessageRow);
+  const messages = (data ?? []).reverse().map(mapMessageRow);
   return attachReactionsToMessages(messages);
 }
 
@@ -38,14 +39,15 @@ export async function getDirectMessages(
     .select(MESSAGE_SELECT)
     .eq("direct_conversation_id", directConversationId)
     .is("deleted_at", null)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false })
+    .limit(50);
 
   if (error) {
     console.warn("[chat.service] getDirectMessages failed:", error.message, error);
     throw new Error(error.message || "Failed to load direct messages.");
   }
 
-  return (data ?? []).map(mapMessageRow);
+  return (data ?? []).reverse().map(mapMessageRow);
 }
 
 export async function getApplicationChatMessages(
@@ -56,13 +58,73 @@ export async function getApplicationChatMessages(
     .select(MESSAGE_SELECT)
     .eq("application_chat_id", applicationChatId)
     .is("deleted_at", null)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false })
+    .limit(50);
 
   if (error) {
     throw error;
   }
 
-  return (data ?? []).map(mapMessageRow);
+  return (data ?? []).reverse().map(mapMessageRow);
+}
+
+export async function getChannelMessagesBefore(
+  channelId: string,
+  beforeCreatedAt: string
+): Promise<ChatMessage[]> {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select(`
+      *,
+      author:profiles (*),
+      attachments:chat_message_attachments (*)
+    `)
+    .eq("channel_id", channelId)
+    .is("deleted_at", null)
+    .lt("created_at", beforeCreatedAt)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) throw error;
+
+  const messages = (data ?? []).reverse().map(mapMessageRow);
+  return attachReactionsToMessages(messages);
+}
+
+export async function getDirectMessagesBefore(
+  directConversationId: string,
+  beforeCreatedAt: string
+): Promise<ChatMessage[]> {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select(MESSAGE_SELECT)
+    .eq("direct_conversation_id", directConversationId)
+    .is("deleted_at", null)
+    .lt("created_at", beforeCreatedAt)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) throw error;
+
+  return (data ?? []).reverse().map(mapMessageRow);
+}
+
+export async function getApplicationChatMessagesBefore(
+  applicationChatId: string,
+  beforeCreatedAt: string
+): Promise<ChatMessage[]> {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select(MESSAGE_SELECT)
+    .eq("application_chat_id", applicationChatId)
+    .is("deleted_at", null)
+    .lt("created_at", beforeCreatedAt)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) throw error;
+
+  return (data ?? []).reverse().map(mapMessageRow);
 }
 
 export async function sendChannelMessage(input: {
@@ -272,10 +334,10 @@ export async function getMessageReactions(
 
 export function subscribeToChannelMessages(
   channelId: string,
-  onChange: () => void
+  onChange: (payload: any) => void
 ) {
   return supabase
-    .channel(`live-channel-messages-${channelId}-${Date.now()}`)
+    .channel(`live-channel-messages-${channelId}`)
     .on(
       "postgres_changes",
       {
@@ -284,16 +346,14 @@ export function subscribeToChannelMessages(
         table: "chat_messages",
         filter: `channel_id=eq.${channelId}`,
       },
-      () => onChange()
+      onChange
     )
-    .subscribe((status) => {
-      console.log("[Realtime] channel messages status:", status, channelId);
-    });
+    .subscribe();
 }
 
 export function subscribeToDirectMessages(
   directConversationId: string,
-  onChange: () => void
+  onChange: (payload: any) => void
 ) {
   return supabase
     .channel(`direct-messages:${directConversationId}`)
@@ -305,18 +365,14 @@ export function subscribeToDirectMessages(
         table: "chat_messages",
         filter: `direct_conversation_id=eq.${directConversationId}`,
       },
-      () => {
-        onChange();
-      }
+      onChange
     )
-    .subscribe((status) => {
-      console.log("[Realtime] direct messages:", status);
-    });
+    .subscribe();
 }
 
 export function subscribeToApplicationChatMessages(
   applicationChatId: string,
-  onChange: () => void
+  onChange: (payload: any) => void
 ) {
   return supabase
     .channel(`application-messages:${applicationChatId}`)
@@ -328,13 +384,9 @@ export function subscribeToApplicationChatMessages(
         table: "chat_messages",
         filter: `application_chat_id=eq.${applicationChatId}`,
       },
-      () => {
-        onChange();
-      }
+      onChange
     )
-    .subscribe((status) => {
-      console.log("[Realtime] application messages:", status);
-    });
+    .subscribe();
 }
 
 export async function deleteOwnMessage(messageId: string): Promise<void> {

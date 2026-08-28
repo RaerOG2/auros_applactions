@@ -12,6 +12,14 @@ export type ChatUserProfile = {
   createdAt: string;
   updatedAt: string;
   lastSeen: string | null;
+  serverRoles?: {
+  id: string;
+  name: string;
+  color: string;
+  icon: string | null;
+  position: number;
+  groupName: string;
+  }[];
 };
 
 export type ChatServer = {

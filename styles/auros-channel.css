@@ -1701,3 +1701,94 @@ body:has(.aurosChatShell) {
   box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.14),
     0 0 34px rgba(212, 175, 55, 0.18);
 }
+
+.aurosLoadOlderWrap {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 16px;
+}
+
+.aurosLoadOlderButton {
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  background: rgba(31, 31, 31, 0.86);
+  color: #f7d45c;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.aurosLoadOlderButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.aurosMembersList,
+.aurosSearchResults {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.aurosMemberRow,
+.aurosSearchResult {
+  width: 100%;
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  background: rgba(31, 31, 31, 0.82);
+  color: #f6f2e8;
+  border-radius: 14px;
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.aurosMemberRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.aurosMemberRow:hover,
+.aurosSearchResult:hover {
+  border-color: rgba(212, 175, 55, 0.32);
+  background: rgba(212, 175, 55, 0.1);
+}
+
+.aurosMemberAvatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(212, 175, 55, 0.16);
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.aurosMemberAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.aurosMemberRow small {
+  display: block;
+  margin-top: 3px;
+  color: #998f76;
+}
+
+.aurosSearchResult {
+  display: grid;
+  gap: 5px;
+}
+
+.aurosSearchResult span {
+  color: #bfb59b;
+  overflow-wrap: anywhere;
+}

@@ -87,7 +87,9 @@ function renderMessageTextWithMentions(
   currentUserId?: string | null,
   onOpenMentionProfile?: (user: ChatUserProfile) => void
 ) {
-  const parts = content.split(/(<@[a-zA-Z0-9-]+>|:[a-zA-Z0-9_]+:|@[a-zA-Z0-9_]+)/g);
+    const parts = content.split(
+      /(<@[a-zA-Z0-9-]+>|@everyone|@here|:[a-zA-Z0-9_]+:|@[a-zA-Z0-9_]+)/g
+    );
 
   return parts.map((part, index) => {
     const emojiMatch = part.match(/^:([a-zA-Z0-9_]+):$/);
@@ -135,6 +137,14 @@ function renderMessageTextWithMentions(
     }
 
     const oldMentionMatch = part.match(/^@([a-zA-Z0-9_]+)$/);
+
+        if (part === "@everyone" || part === "@here") {
+      return (
+        <span key={index} className="aurosMention isMe">
+          {part}
+        </span>
+      );
+    }
 
     if (oldMentionMatch) {
       const username = oldMentionMatch[1].toLowerCase();

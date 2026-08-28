@@ -1,36 +1,383 @@
-@import "tailwindcss";
-
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --background: #050914;
+  --foreground: #f6f8ff;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --auros-bg: #050914;
+  --auros-panel: rgba(11, 20, 39, 0.92);
+  --auros-panel-2: #0d1830;
+  --auros-border: rgba(118, 153, 214, 0.17);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --auros-text: #f6f8ff;
+  --auros-muted: #9eb0cf;
+
+  --auros-cyan: #63ddff;
+  --auros-purple: #8b72ff;
 }
 
 html,
 body {
-  background: var(--background);
-  color: var(--foreground);
   margin: 0;
   padding: 0;
+
+  min-height: 100%;
+
+  background: var(--auros-bg);
+  color: var(--auros-text);
+}
+
+html {
+  background: var(--auros-bg);
 }
 
 body {
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  background: transparent;
+
+  color: var(--auros-text);
+
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  overflow-x: hidden;
 }
 
 * {
   box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+/* =========================================================
+   AUROS BACKGROUND
+   1.2.0 PERFORMANCE OPTIMIZED
+   ========================================================= */
+
+.auros-background {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 0;
+
+  overflow: hidden;
+
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      circle at 50% -15%,
+      rgba(76, 201, 240, 0.12),
+      transparent 32%
+    ),
+    linear-gradient(
+      180deg,
+      #070d1c 0%,
+      #050914 55%,
+      #040711 100%
+    );
+}
+
+/* =========================================================
+   GRID
+   ========================================================= */
+
+.auros-bg-grid {
+  position: absolute;
+
+  inset: 0;
+
+  opacity: 0.16;
+
+  background-image:
+    linear-gradient(
+      rgba(120, 160, 220, 0.08) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(120, 160, 220, 0.08) 1px,
+      transparent 1px
+    );
+
+  background-size: 52px 52px;
+
+  -webkit-mask-image:
+    linear-gradient(
+      to bottom,
+      black,
+      transparent 80%
+    );
+
+  mask-image:
+    linear-gradient(
+      to bottom,
+      black,
+      transparent 80%
+    );
+}
+
+/* =========================================================
+   BACKGROUND GLOW ORBS
+
+   Important:
+   Only transform is animated.
+   This is significantly lighter than the previous
+   SVG + blur + rotation background.
+   ========================================================= */
+
+.auros-bg-orb {
+  position: absolute;
+
+  width: 460px;
+  height: 460px;
+
+  border-radius: 50%;
+
+  opacity: 0.18;
+
+  filter: blur(70px);
+
+  will-change: transform;
+
+  animation:
+    aurosFloat
+    18s
+    ease-in-out
+    infinite
+    alternate;
+}
+
+.auros-bg-orb-a {
+  left: -180px;
+
+  top: 8%;
+
+  background: #2bc5ff;
+}
+
+.auros-bg-orb-b {
+  right: -220px;
+
+  top: 34%;
+
+  background: #7b61ff;
+
+  animation-duration: 24s;
+}
+
+/* =========================================================
+   STATIC STAR FIELD
+   ========================================================= */
+
+.auros-bg-stars {
+  position: absolute;
+
+  inset: 0;
+
+  opacity: 0.32;
+
+  background-image:
+    radial-gradient(
+      circle,
+      rgba(255, 255, 255, 0.65) 1px,
+      transparent 1.5px
+    );
+
+  background-size: 90px 90px;
+}
+
+/* =========================================================
+   BACKGROUND ANIMATION
+   ========================================================= */
+
+@keyframes aurosFloat {
+  from {
+    transform:
+      translate3d(
+        0,
+        0,
+        0
+      );
+  }
+
+  to {
+    transform:
+      translate3d(
+        34px,
+        24px,
+        0
+      );
+  }
+}
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .auros-bg-orb {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =========================================================
+   AUROS CARDS
+   ========================================================= */
+
+.auros-card {
+  background:
+    var(--auros-panel);
+
+  border:
+    1px solid
+    var(--auros-border);
+
+  border-radius:
+    24px;
+
+  box-shadow:
+    0 18px 55px
+    rgba(
+      0,
+      0,
+      0,
+      0.22
+    );
+}
+
+/* =========================================================
+   CARD HOVER
+   ========================================================= */
+
+.auros-card-hover {
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.auros-card-hover:hover {
+  transform:
+    translateY(-3px);
+
+  border-color:
+    rgba(
+      99,
+      221,
+      255,
+      0.32
+    );
+
+  box-shadow:
+    0 24px 65px
+    rgba(
+      0,
+      0,
+      0,
+      0.28
+    );
+}
+
+/* =========================================================
+   TEXT SELECTION
+   ========================================================= */
+
+::selection {
+  background:
+    rgba(
+      99,
+      221,
+      255,
+      0.28
+    );
+
+  color:
+    white;
+}
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background:
+    #050914;
+}
+
+::-webkit-scrollbar-thumb {
+  background:
+    #1b2d4e;
+
+  border-radius:
+    999px;
+
+  border:
+    2px solid
+    #050914;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background:
+    #294369;
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 720px) {
+  .auros-bg-orb {
+    width: 330px;
+    height: 330px;
+
+    filter: blur(60px);
+  }
+
+  .auros-card {
+    border-radius: 19px;
+  }
+}
+
+/* =========================================================
+   LOW PERFORMANCE / TOUCH DEVICES
+
+   On devices without a precise mouse, background movement
+   is disabled completely.
+   ========================================================= */
+
+@media (hover: none) {
+  .auros-bg-orb {
+    animation: none;
+  }
+
+  .auros-card-hover:hover {
+    transform: none;
+  }
+}
+
+.adminDashboardLayout {
+  display: grid;
+  grid-template-columns: 245px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
 }

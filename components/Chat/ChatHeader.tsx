@@ -16,6 +16,9 @@ type ChatHeaderProps = {
   activeDM: DirectConversation | null;
   activeDirectUser?: ChatUserProfile | null;
   activeApplicationChat: ApplicationChat | null;
+  onOpenSearch?: () => void;
+  onOpenMembers?: () => void;
+  onOpenModeration?: () => void;
 };
 
 export default function ChatHeader({
@@ -25,9 +28,14 @@ export default function ChatHeader({
   activeDM,
   activeDirectUser,
   activeApplicationChat,
+  onOpenSearch,
+  onOpenMembers,
+  onOpenModeration,
 }: ChatHeaderProps) {
   let title = "AUROSCHANNEL";
   let subtitle = "Unified communication platform";
+
+  const isServerView = activeView.type === "server";
 
   if (activeView.type === "server" && activeServer && activeChannel) {
     title = `# ${activeChannel.name}`;
@@ -60,15 +68,27 @@ export default function ChatHeader({
       </div>
 
       <div className="aurosHeaderActions">
-        <button className="aurosHeaderButton" type="button">
-          Search
-        </button>
-        <button className="aurosHeaderButton" type="button">
-          Members
-        </button>
-        <button className="aurosHeaderButton" type="button">
-          Moderation
-        </button>
+        {activeView.type !== "home" && (
+          <button className="aurosHeaderButton" type="button" onClick={onOpenSearch}>
+            Search
+          </button>
+        )}
+
+        {isServerView && (
+          <button className="aurosHeaderButton" type="button" onClick={onOpenMembers}>
+            Members
+          </button>
+        )}
+
+        {isServerView && (
+          <button
+            className="aurosHeaderButton"
+            type="button"
+            onClick={onOpenModeration}
+          >
+            Moderation
+          </button>
+        )}
       </div>
     </header>
   );

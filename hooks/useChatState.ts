@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type {
-  ApplicationChat,
   ChatChannel,
   ChatCustomEmoji,
   ChatMessage,
@@ -19,6 +18,7 @@ import {
   subscribeToProfile,
   updateCurrentProfile,
   updatePresence,
+  markStaleProfilesOffline,
 } from "../services/profile.service";
 import {
   createCustomEmoji,
@@ -41,29 +41,35 @@ import {
 import {
   getDirectConversationOtherUser,
   getMyDirectConversations,
+  getOrCreateDirectConversationWithUser,
 } from "../services/dm.service";
 import {
   deleteOwnMessage,
-  getApplicationChatMessages,
   getChannelMessages,
   getDirectMessages,
-  sendApplicationChatMessage,
   sendChannelMessage,
   sendDirectMessage,
-  subscribeToApplicationChatMessages,
   subscribeToChannelMessages,
   subscribeToDirectMessages,
   toggleReaction,
   subscribeToMessageReactions,
   editOwnMessage,
+  getChannelMessagesBefore,
+  getDirectMessagesBefore,
 } from "../services/chat.service";
-import { getMyApplicationChats } from "../services/application-chat.service";
+import {
+  kickServerMember,
+  banServerMember as banServerMemberService,
+  muteServerMember,
+} from "../services/server-admin.service";
 import {
   uploadServerIcon,
   uploadUserAvatar,
   uploadUserBanner,
   uploadChatAttachment,
 } from "../services/storage.service";
+import { useMentionNotifications } from "./useMentionNotifications";
+import { usePresence } from "./usePresence";
 import { supabase } from "../lib/supabase";
 
 type ServerRole = "owner" | "admin" | "moderator" | "member" | null;
@@ -73,16 +79,24 @@ type ChatStateReturn = {
   messagesLoading: boolean;
   error: string | null;
 
+  olderMessagesLoading: boolean;
+  hasOlderMessages: boolean;
+  loadOlderMessages: () => Promise<void>;
+
   currentUser: ChatUserProfile | null;
   servers: ChatServer[];
   channels: ChatChannel[];
   directConversations: DirectConversation[];
   dms: DirectMessagePreview[];
-  applicationChats: ApplicationChat[];
+  createOrOpenDM: (userId: string) => Promise<void>;
 
   editMessage: (messageId: string, content: string) => Promise<void>;
   replyToMessage: ChatMessage | null;
   setReplyToMessage: (message: ChatMessage | null) => void;
+
+  kickMember: (userId: string) => Promise<void>;
+  banMember: (userId: string, reason?: string | null) => Promise<void>;
+  muteMember: (userId: string, reason?: string | null) => Promise<void>;
 
   activeView: ChatView;
   activeServer: ChatServer | null;
@@ -90,7 +104,6 @@ type ChatStateReturn = {
   activeMessages: ChatMessage[];
   activeDirectConversation: DirectConversation | null;
   activeDirectUser: ChatUserProfile | null;
-  activeApplicationChat: ApplicationChat | null;
 
   activeServerRole: ServerRole;
   serverInviteLink: string | null;
@@ -104,7 +117,6 @@ type ChatStateReturn = {
   selectServer: (serverId: string) => Promise<void>;
   selectChannel: (serverId: string, channelId: string) => void;
   selectDM: (dmId: string) => void;
-  selectApplicationChat: (applicationChatId: string) => void;
 
   sendMessage: (content: string, files?: File[]) => Promise<void>;
   toggleMessageReaction: (messageId: string, emoji: string) => Promise<void>;
@@ -120,7 +132,7 @@ type ChatStateReturn = {
 
   createNewChannel: (input: {
     name: string;
-    type?: "text" | "announcement" | "application";
+    type?: "text" | "announcement";
     topic?: string | null;
     isPrivate?: boolean;
   }) => Promise<void>;
@@ -164,6 +176,8 @@ function extractInviteToken(tokenOrLink: string) {
 export function useChatState(): ChatStateReturn {
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
+  const [olderMessagesLoading, setOlderMessagesLoading] = useState(false);
+  const [hasOlderMessages, setHasOlderMessages] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [currentUser, setCurrentUser] = useState<ChatUserProfile | null>(null);
@@ -173,6 +187,8 @@ export function useChatState(): ChatStateReturn {
 
   const [replyToMessage, setReplyToMessage] = useState<ChatMessage | null>(null);
 
+  const [messagesByView, setMessagesByView] = useState<Record<string, ChatMessage[]>>({});
+
   const [directConversations, setDirectConversations] = useState<
     DirectConversation[]
   >([]);
@@ -181,22 +197,27 @@ export function useChatState(): ChatStateReturn {
     {}
   );
 
-  const [applicationChats, setApplicationChats] = useState<ApplicationChat[]>([]);
   const [activeMessages, setActiveMessages] = useState<ChatMessage[]>([]);
+  const messagesCacheRef = useRef<Record<string, ChatMessage[]>>({});
 
   const [activeView, setActiveView] = useState<ChatView>({ type: "home" });
   const [activeServerRole, setActiveServerRole] = useState<ServerRole>(null);
   const [serverInviteLink, setServerInviteLink] = useState<string | null>(null);
   const [customEmojis, setCustomEmojis] = useState<ChatCustomEmoji[]>([]);
 
-  const [mentionNotifications, setMentionNotifications] = useState<
-    Record<string, { count: number; channelIds: string[] }>
-  >({});
+  const {
+    mentionNotifications,
+    clearChannelNotification,
+    clearServerNotifications,
+  } = useMentionNotifications({
+    currentUser,
+    servers,
+    activeView,
 
-  const lastMentionMessageIdRef = useRef<string | null>(null);
-  const seenMentionMessageIdsRef = useRef<Set<string>>(new Set());
-  const activeViewRef = useRef<ChatView>({ type: "home" });
-  const channelServerMapRef = useRef<Record<string, string>>({});
+  });
+
+  usePresence(currentUser?.id);
+
 
   const dms = useMemo<DirectMessagePreview[]>(() => {
     return directConversations.map((conversation, index) => {
@@ -234,15 +255,41 @@ export function useChatState(): ChatStateReturn {
     return dmUsers[activeView.dmId] ?? null;
   }, [activeView, dmUsers]);
 
-  const activeApplicationChat = useMemo(() => {
-    if (activeView.type !== "application") return null;
-    return (
-      applicationChats.find(
-        (applicationChat) =>
-          applicationChat.id === activeView.applicationChatId
-      ) ?? null
-    );
-  }, [activeView, applicationChats]);
+  function getViewCacheKey(view: ChatView) {
+    if (view.type === "server") return `server:${view.channelId}`;
+    if (view.type === "dm") return `dm:${view.dmId}`;
+    return "home";
+  }
+
+  function setCachedMessages(view: ChatView, messages: ChatMessage[]) {
+    messagesCacheRef.current[getViewCacheKey(view)] = messages;
+    setActiveMessages(messages);
+  }
+
+  function patchCachedMessages(
+  view: ChatView,
+  updater: (messages: ChatMessage[]) => ChatMessage[]
+) {
+  const key = getViewCacheKey(view);
+  const current = messagesCacheRef.current[key] ?? [];
+
+  const updated = updater(current);
+
+  messagesCacheRef.current[key] = updated;
+
+  if (getViewCacheKey(activeView) === key) {
+    setActiveMessages(updated);
+  }
+}
+
+  function cacheMessagesForView(view: ChatView, messages: ChatMessage[]) {
+    const key = getViewCacheKey(view);
+
+    setMessagesByView((prev) => ({
+      ...prev,
+      [key]: messages,
+    }));
+  }
 
   async function refreshActiveServerRole(serverId: string) {
     const role = await getMyServerRole(serverId).catch((roleError) => {
@@ -253,153 +300,6 @@ export function useChatState(): ChatStateReturn {
     setActiveServerRole(role);
   }
 
-
-function playMentionSound() {
-  try {
-    const audio = new Audio("/sounds/mention.mp3");
-    audio.volume = 0.45;
-    audio.play().catch(() => {});
-  } catch {
-    // ignore
-  }
-}
-
-function playNotificationSound() {
-  try {
-    const audio = new Audio("/sounds/notification.mp3");
-    audio.volume = 0.45;
-    audio.play().catch(() => {});
-  } catch {
-    // ignore
-  }
-}
-
-function saveSeenMentions() {
-  try {
-    const ids = Array.from(seenMentionMessageIdsRef.current).slice(-500);
-    window.localStorage.setItem("auros_seen_mentions", JSON.stringify(ids));
-  } catch {
-    // ignore
-  }
-}
-
-function markMentionSeen(messageId: string) {
-  seenMentionMessageIdsRef.current.add(messageId);
-  saveSeenMentions();
-}
-
-function messageMentionsCurrentUser(message: Pick<ChatMessage, "content">) {
-  if (!currentUser?.username) return false;
-
-  const username = currentUser.username.toLowerCase();
-  const content = message.content.toLowerCase();
-
-  return content.includes(`@${username}`);
-}
-
-function addMentionNotification(serverId: string, channelId: string) {
-  setMentionNotifications((prev) => {
-    const old = prev[serverId];
-
-    if (old?.channelIds.includes(channelId)) {
-      return {
-        ...prev,
-        [serverId]: {
-          count: old.count,
-          channelIds: old.channelIds,
-        },
-      };
-    }
-
-    return {
-      ...prev,
-      [serverId]: {
-        count: (old?.count ?? 0) + 1,
-        channelIds: [...(old?.channelIds ?? []), channelId],
-      },
-    };
-  });
-}
-
-function clearServerNotifications(serverId: string) {
-  setMentionNotifications((prev) => {
-    const next = { ...prev };
-    delete next[serverId];
-    return next;
-  });
-}
-
-function clearChannelNotification(serverId: string, channelId: string) {
-  setMentionNotifications((prev) => {
-    const old = prev[serverId];
-    if (!old) return prev;
-
-    const channelIds = old.channelIds.filter((id) => id !== channelId);
-
-    if (channelIds.length === 0) {
-      const next = { ...prev };
-      delete next[serverId];
-      return next;
-    }
-
-    return {
-      ...prev,
-      [serverId]: {
-        count: channelIds.length,
-        channelIds,
-      },
-    };
-  });
-}
-
-function checkMentions(messages: ChatMessage[]) {
-  const mentionMessage = [...messages].reverse().find((message) => {
-    if (!messageMentionsCurrentUser(message)) return false;
-    if (seenMentionMessageIdsRef.current.has(message.id)) return false;
-
-    // Für echte Notifications eigene Messages ignorieren.
-    // Zum Testen kannst du diese Zeile entfernen.
-    if (message.authorId === currentUser?.id) return false;
-
-    return true;
-  });
-
-  if (!mentionMessage) return;
-
-  markMentionSeen(mentionMessage.id);
-
-  const view = activeViewRef.current;
-  const channelId = mentionMessage.channelId;
-
-  if (!channelId) {
-    playMentionSound();
-    return;
-  }
-
-  const serverId =
-    view.type === "server" && view.channelId === channelId
-      ? view.serverId
-      : channelServerMapRef.current[channelId];
-
-  if (!serverId) {
-    playMentionSound();
-    return;
-  }
-
-  const isCurrentOpenChannel =
-    view.type === "server" &&
-    view.serverId === serverId &&
-    view.channelId === channelId;
-
-  if (isCurrentOpenChannel) {
-    playMentionSound();
-    return;
-  }
-
-  addMentionNotification(serverId, channelId);
-  playNotificationSound();
-}
-
   async function refreshMessagesForView(view: ChatView) {
     if (view.type === "server") {
       return getChannelMessages(view.channelId);
@@ -409,12 +309,134 @@ function checkMentions(messages: ChatMessage[]) {
       return getDirectMessages(view.dmId);
     }
 
-    if (view.type === "application") {
-      return getApplicationChatMessages(view.applicationChatId);
+    return [];
+  }
+
+  async function loadMessagesBefore(view: ChatView, beforeCreatedAt: string) {
+    if (view.type === "server") {
+      return getChannelMessagesBefore(view.channelId, beforeCreatedAt);
+    }
+
+    if (view.type === "dm") {
+      return getDirectMessagesBefore(view.dmId, beforeCreatedAt);
     }
 
     return [];
   }
+
+  async function refreshServerMembers(serverId: string) {
+  const mentionUsers = await getServerMentionUsers(serverId).catch(() => []);
+  setServerMentionUsers(mentionUsers);
+}
+
+async function kickMember(userId: string) {
+  if (activeView.type !== "server") return;
+
+  try {
+    setError(null);
+
+    await kickServerMember({
+      serverId: activeView.serverId,
+      userId,
+    });
+
+    await refreshServerMembers(activeView.serverId);
+  } catch (kickError) {
+    console.warn("[useChatState] Failed to kick member:", kickError);
+
+    setError(
+      kickError instanceof Error
+        ? kickError.message
+        : JSON.stringify(kickError)
+    );
+  }
+}
+
+async function banMember(userId: string, reason?: string | null) {
+  if (activeView.type !== "server") return;
+
+  try {
+    setError(null);
+
+    await banServerMemberService({
+      serverId: activeView.serverId,
+      userId,
+      reason,
+    });
+
+    await refreshServerMembers(activeView.serverId);
+  } catch (banError) {
+    console.warn("[useChatState] Failed to ban member:", banError);
+
+    setError(
+      banError instanceof Error
+        ? banError.message
+        : JSON.stringify(banError)
+    );
+  }
+}
+
+async function muteMember(userId: string, reason?: string | null) {
+  if (activeView.type !== "server") return;
+
+  try {
+    setError(null);
+
+    await muteServerMember({
+      serverId: activeView.serverId,
+      userId,
+      reason,
+    });
+
+    await refreshServerMembers(activeView.serverId);
+  } catch (muteError) {
+    console.warn("[useChatState] Failed to mute member:", muteError);
+
+    setError(
+      muteError instanceof Error
+        ? muteError.message
+        : JSON.stringify(muteError)
+    );
+  }
+}
+
+  useEffect(() => {
+    markStaleProfilesOffline().catch(() => {});
+
+    const interval = window.setInterval(() => {
+      markStaleProfilesOffline().catch(() => {});
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (activeView.type !== "server") return;
+
+    const serverId = activeView.serverId;
+
+    const subscription = supabase
+      .channel(`server-member-status-${serverId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+        },
+        async () => {
+          const users = await getServerMentionUsers(serverId).catch(() => []);
+          setServerMentionUsers(users);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [activeView]);
 
   useEffect(() => {
     let isMounted = true;
@@ -442,21 +464,11 @@ function checkMentions(messages: ChatMessage[]) {
           }
         );
 
-        const myApplicationChats = await getMyApplicationChats().catch(
-          (applicationError) => {
-            console.warn(
-              "[useChatState] Failed to load application chats:",
-              applicationError
-            );
-            return [];
-          }
-        );
 
         if (!isMounted) return;
 
         setServers(myServers);
         setDirectConversations(myDirectConversations);
-        setApplicationChats(myApplicationChats);
 
         const dmUserEntries = await Promise.all(
           myDirectConversations.map(async (conversation) => {
@@ -537,50 +549,6 @@ function checkMentions(messages: ChatMessage[]) {
     if (!currentUser?.id) return;
 
     const userId = currentUser.id;
-    let cancelled = false;
-
-    async function startPresence() {
-      try {
-        await updatePresence("online");
-
-        const freshProfile = await getProfileById(userId);
-
-        if (!cancelled) {
-          setCurrentUser(freshProfile);
-        }
-      } catch (presenceError) {
-        if (!cancelled) {
-          console.error("[useChatState] Failed to update presence:", presenceError);
-        }
-      }
-    }
-
-    startPresence();
-
-    const interval = window.setInterval(() => {
-      updatePresence("online").catch((presenceError) => {
-        console.error("[useChatState] Failed to refresh presence:", presenceError);
-      });
-    }, 15000);
-
-    const handleBeforeUnload = () => {
-      setOfflinePresence().catch(() => {});
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      setOfflinePresence().catch(() => {});
-    };
-  }, [currentUser?.id]);
-
-  useEffect(() => {
-    if (!currentUser?.id) return;
-
-    const userId = currentUser.id;
 
     const subscription = subscribeToProfile(userId, async () => {
       try {
@@ -626,103 +594,7 @@ function checkMentions(messages: ChatMessage[]) {
     };
   }, [activeDirectUser?.id, activeView]);
 
-useEffect(() => {
-  activeViewRef.current = activeView;
-}, [activeView]);
-
-useEffect(() => {
-  try {
-    const saved = window.localStorage.getItem("auros_seen_mentions");
-    if (saved) {
-      seenMentionMessageIdsRef.current = new Set(JSON.parse(saved));
-    }
-  } catch {
-    seenMentionMessageIdsRef.current = new Set();
-  }
-}, []);
-
-useEffect(() => {
-  if (!currentUser?.username || servers.length === 0) return;
-
-  let isMounted = true;
-
-  async function buildChannelServerMap() {
-    const nextMap: Record<string, string> = {};
-
-    await Promise.all(
-      servers.map(async (server) => {
-        const serverChannels = await getServerChannels(server.id).catch(() => []);
-
-        for (const channel of serverChannels) {
-          nextMap[channel.id] = server.id;
-        }
-      })
-    );
-
-    if (isMounted) {
-      channelServerMapRef.current = nextMap;
-    }
-  }
-
-  buildChannelServerMap();
-
-  const subscription = supabase
-    .channel("global-mention-notifications")
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "chat_messages",
-      },
-      (payload) => {
-        const row = payload.new as any;
-
-        const messageId = row.id as string | undefined;
-        const channelId = row.channel_id as string | null;
-        const authorId = row.author_id as string | null;
-        const content = row.content as string | null;
-
-        if (!messageId || !channelId || !content) return;
-        if (seenMentionMessageIdsRef.current.has(messageId)) return;
-
-        const username = currentUser.username?.toLowerCase();
-        if (!username) return;
-
-        if (!content.toLowerCase().includes(`@${username}`)) return;
-
-        // Eigene Messages ignorieren. Zum Testen diese Zeile entfernen.
-        if (authorId === currentUser.id) return;
-
-        markMentionSeen(messageId);
-
-        const serverId = channelServerMapRef.current[channelId];
-        const view = activeViewRef.current;
-
-        if (!serverId) return;
-
-        const isCurrentOpenChannel =
-          view.type === "server" &&
-          view.serverId === serverId &&
-          view.channelId === channelId;
-
-        if (isCurrentOpenChannel) {
-          playMentionSound();
-          return;
-        }
-
-        addMentionNotification(serverId, channelId);
-        playNotificationSound();
-      }
-    )
-    .subscribe();
-
-  return () => {
-    isMounted = false;
-    supabase.removeChannel(subscription);
-  };
-}, [currentUser?.id, currentUser?.username, servers]);
-
+;
 useEffect(() => {
   if (activeView.type !== "server") return;
 
@@ -751,149 +623,126 @@ useEffect(() => {
   };
 }, [activeView]);
 
-useEffect(() => {
+
+  useEffect(() => {
   let isMounted = true;
 
-  async function loadMessagesForActiveView() {
-    if (activeView.type === "home") {
-      setActiveMessages([]);
-      setMessagesLoading(false);
-      return;
-    }
+  setHasOlderMessages(true);
 
-    setMessagesLoading(true);
+  if (activeView.type === "home") {
+    setActiveMessages([]);
+    setMessagesLoading(false);
 
-    try {
-      const messages = await refreshMessagesForView(activeView);
-
-      if (isMounted) {
-        setActiveMessages(messages);
-        checkMentions(messages);
-      }
-    } catch (messageError) {
-      console.warn("[useChatState] Failed to load messages:", messageError);
-
-      if (isMounted) {
-        setError(
-          messageError instanceof Error
-            ? messageError.message
-            : "Failed to load messages."
-        );
-      }
-    } finally {
-      if (isMounted) {
-        setMessagesLoading(false);
-      }
-    }
+    return () => {
+      isMounted = false;
+    };
   }
 
-  loadMessagesForActiveView();
+  const cacheKey = getViewCacheKey(activeView);
+  const cachedMessages = messagesCacheRef.current[cacheKey];
 
-  const liveFallbackInterval = window.setInterval(() => {
-    if (activeView.type === "home") return;
+  if (cachedMessages) {
+    setActiveMessages(cachedMessages);
+    setMessagesLoading(false);
+  } else {
+    setMessagesLoading(true);
 
     refreshMessagesForView(activeView)
       .then((messages) => {
+        if (!isMounted) return;
+        setCachedMessages(activeView, messages);
+      })
+      .catch((messageError) => {
+        console.warn("[useChatState] Failed to load messages:", messageError);
+
         if (isMounted) {
-          setActiveMessages(messages);
-          checkMentions(messages);
+          setError(
+            messageError instanceof Error
+              ? messageError.message
+              : "Failed to load messages."
+          );
         }
       })
-      .catch((refreshError) => {
-        console.warn("[useChatState] Live fallback refresh failed:", refreshError);
+      .finally(() => {
+        if (isMounted) {
+          setMessagesLoading(false);
+        }
       });
-  }, 2500);
+  }
 
-  if (activeView.type === "home") {
-    return () => {
-      isMounted = false;
-        window.clearInterval(liveFallbackInterval);
-    };
+  async function handleMessageRealtime(payload: any) {
+    if (!isMounted) return;
+
+    const eventType = payload.eventType as "INSERT" | "UPDATE" | "DELETE";
+    const row = payload.new as any;
+    const oldRow = payload.old as any;
+
+    if (eventType === "INSERT") {
+      const refreshed = await refreshMessagesForView(activeView);
+      if (!isMounted) return;
+
+      setCachedMessages(activeView, refreshed);
+      return;
+    }
+
+    if (eventType === "UPDATE") {
+      const messageId = row?.id;
+      if (!messageId) return;
+
+      patchCachedMessages(activeView, (messages) =>
+        messages
+          .map((message) => {
+            if (message.id !== messageId) return message;
+
+            if (row.deleted_at) return null;
+
+            return {
+              ...message,
+              content: row.content ?? message.content,
+              editedAt: row.edited_at ?? message.editedAt,
+            };
+          })
+          .filter(Boolean) as ChatMessage[]
+      );
+
+      return;
+    }
+
+    if (eventType === "DELETE") {
+      const messageId = oldRow?.id;
+      if (!messageId) return;
+
+      patchCachedMessages(activeView, (messages) =>
+        messages.filter((message) => message.id !== messageId)
+      );
+    }
   }
 
   let subscription:
     | ReturnType<typeof subscribeToChannelMessages>
     | ReturnType<typeof subscribeToDirectMessages>
-    | ReturnType<typeof subscribeToApplicationChatMessages>
     | null = null;
 
   if (activeView.type === "server") {
-    const safeChannelId = activeView.channelId;
-
-    subscription = subscribeToChannelMessages(safeChannelId, async () => {
-      try {
-        const refreshed = await getChannelMessages(safeChannelId);
-
-        if (isMounted) {
-          setActiveMessages(refreshed);
-        }
-      } catch (refreshError) {
-        console.warn(
-          "[useChatState] Failed to refresh channel messages:",
-          refreshError
-        );
-      }
-    });
-  }
-
-  if (activeView.type === "dm") {
-    const safeDmId = activeView.dmId;
-
-    subscription = subscribeToDirectMessages(safeDmId, async () => {
-      try {
-        const refreshed = await getDirectMessages(safeDmId);
-
-        if (isMounted) {
-          setActiveMessages(refreshed);
-        }
-      } catch (refreshError) {
-        console.warn("[useChatState] Failed to refresh DM messages:", refreshError);
-      }
-    });
-  }
-
-  if (activeView.type === "application") {
-    const safeApplicationChatId = activeView.applicationChatId;
-
-    subscription = subscribeToApplicationChatMessages(
-      safeApplicationChatId,
-      async () => {
-        try {
-          const refreshed = await getApplicationChatMessages(
-            safeApplicationChatId
-          );
-
-          if (isMounted) {
-            setActiveMessages(refreshed);
-          }
-        } catch (refreshError) {
-          console.warn(
-            "[useChatState] Failed to refresh application chat messages:",
-            refreshError
-          );
-        }
-      }
+    subscription = subscribeToChannelMessages(
+      activeView.channelId,
+      handleMessageRealtime
     );
   }
 
-  const reactionSubscription = subscribeToMessageReactions(async () => {
-    try {
-      const refreshed = await refreshMessagesForView(activeView);
+  if (activeView.type === "dm") {
+    subscription = subscribeToDirectMessages(activeView.dmId, handleMessageRealtime);
+  }
 
-      if (isMounted) {
-        setActiveMessages(refreshed);
-      }
-    } catch (reactionRefreshError) {
-      console.warn(
-        "[useChatState] Failed to refresh message reactions:",
-        reactionRefreshError
-      );
-    }
+  const reactionSubscription = subscribeToMessageReactions(async () => {
+    const refreshed = await refreshMessagesForView(activeView);
+    if (!isMounted) return;
+
+    setCachedMessages(activeView, refreshed);
   });
 
   return () => {
     isMounted = false;
-    window.clearInterval(liveFallbackInterval);
 
     if (subscription) {
       supabase.removeChannel(subscription);
@@ -902,6 +751,95 @@ useEffect(() => {
     supabase.removeChannel(reactionSubscription);
   };
 }, [activeView]);
+
+async function loadOlderMessages() {
+  if (activeView.type === "home") return;
+  if (olderMessagesLoading) return;
+
+  const currentMessages =
+    messagesCacheRef.current[getViewCacheKey(activeView)] ?? activeMessages;
+
+  const oldestMessage = currentMessages[0];
+
+  if (!oldestMessage) return;
+
+  try {
+    setOlderMessagesLoading(true);
+    setError(null);
+
+    const olderMessages = await loadMessagesBefore(
+      activeView,
+      oldestMessage.createdAt
+    );
+
+    if (olderMessages.length === 0) {
+      setHasOlderMessages(false);
+      return;
+    }
+
+    const existingIds = new Set(currentMessages.map((message) => message.id));
+
+    const mergedMessages = [
+      ...olderMessages.filter((message) => !existingIds.has(message.id)),
+      ...currentMessages,
+    ];
+
+    const limitedMessages = mergedMessages.slice(0, 150);
+
+    setCachedMessages(activeView, limitedMessages);
+    setHasOlderMessages(olderMessages.length === 50);
+  } catch (loadError) {
+    console.warn("[useChatState] Failed to load older messages:", loadError);
+    setError("Failed to load older messages.");
+  } finally {
+    setOlderMessagesLoading(false);
+  }
+}
+
+async function refreshDirectConversations() {
+  const conversations = await getMyDirectConversations().catch(() => []);
+
+  setDirectConversations(conversations);
+
+  const dmUserEntries = await Promise.all(
+    conversations.map(async (conversation) => {
+      const otherUser = await getDirectConversationOtherUser(conversation.id).catch(
+        () => null
+      );
+
+      return [conversation.id, otherUser] as const;
+    })
+  );
+
+  setDmUsers(Object.fromEntries(dmUserEntries));
+
+  return conversations;
+}
+
+async function createOrOpenDM(userId: string) {
+  try {
+    setError(null);
+
+    const conversation = await getOrCreateDirectConversationWithUser(userId);
+
+    await refreshDirectConversations();
+
+    setActiveServerRole(null);
+    setServerInviteLink(null);
+    setServerMentionUsers([]);
+
+    setActiveView({
+      type: "dm",
+      dmId: conversation.id,
+    });
+  } catch (dmError) {
+    console.warn("[useChatState] Failed to create/open DM:", dmError);
+
+    setError(
+      dmError instanceof Error ? dmError.message : "Failed to open direct message."
+    );
+  }
+}
 
 async function editMessage(messageId: string, content: string) {
   const trimmed = content.trim();
@@ -933,65 +871,52 @@ async function editMessage(messageId: string, content: string) {
 }
 
   async function selectServer(serverId: string) {
-    try {
-      setError(null);
-      setServerInviteLink(null);
-      //clear Server Noti
-      clearServerNotifications(serverId);
+  try {
+    setError(null);
+    setServerInviteLink(null);
 
-      const serverChannels = await getServerChannels(serverId);
-      setChannels(serverChannels);
+    const serverChannels = await getServerChannels(serverId);
+    setChannels(serverChannels);
 
-      await refreshActiveServerRole(serverId);;
-      //Custom Emojis
-      const emojis = await getServerCustomEmojis(serverId).catch(() => []);
-      setCustomEmojis(emojis);
-      //Mentation
-      const mentionUsers = await getServerMentionUsers(serverId).catch(() => []);
-      setServerMentionUsers(mentionUsers);
+    await refreshActiveServerRole(serverId);
 
-      if (serverChannels.length > 0) {
-        setActiveView({
-          type: "server",
-          serverId,
-          channelId: serverChannels[0].id,
-        });
-      } else {
-        setActiveView({ type: "home" });
-      }
-    } catch (selectError) {
-      console.warn("[useChatState] Failed to select server:", selectError);
-      setError("Failed to load the selected server.");
+    const emojis = await getServerCustomEmojis(serverId).catch(() => []);
+    setCustomEmojis(emojis);
+
+    const mentionUsers = await getServerMentionUsers(serverId).catch(() => []);
+    setServerMentionUsers(mentionUsers);
+
+    if (serverChannels.length > 0) {
+      setActiveView({
+        type: "server",
+        serverId,
+        channelId: serverChannels[0].id,
+      });
+    } else {
+      setActiveView({ type: "home" });
     }
+  } catch (selectError) {
+    console.warn("[useChatState] Failed to select server:", selectError);
+    setError("Failed to load the selected server.");
   }
+}
 
   function selectChannel(serverId: string, channelId: string) {
-    clearChannelNotification(serverId, channelId);
+  clearChannelNotification(serverId, channelId);
 
-    setServerInviteLink(null);
-    refreshActiveServerRole(serverId);
+  setServerInviteLink(null);
+  refreshActiveServerRole(serverId);
 
-    getServerMentionUsers(serverId)
-      .then(setServerMentionUsers)
-      .catch(() => setServerMentionUsers([]));
+  getServerMentionUsers(serverId)
+    .then(setServerMentionUsers)
+    .catch(() => setServerMentionUsers([]));
 
-    setActiveView({
-      type: "server",
-      serverId,
-      channelId,
-    });
-    setServerInviteLink(null);
-    refreshActiveServerRole(serverId);
-    getServerMentionUsers(serverId)
-      .then(setServerMentionUsers)
-      .catch(() => setServerMentionUsers([]));
-
-    setActiveView({
-      type: "server",
-      serverId,
-      channelId,
-    });
-  }
+  setActiveView({
+    type: "server",
+    serverId,
+    channelId,
+  });
+}
 
   function selectDM(dmId: string) {
     setActiveServerRole(null);
@@ -1004,17 +929,6 @@ async function editMessage(messageId: string, content: string) {
     });
   }
 
-  function selectApplicationChat(applicationChatId: string) {
-    setActiveServerRole(null);
-    setServerInviteLink(null);
-    setServerMentionUsers([]);
-
-    setActiveView({
-      type: "application",
-      applicationChatId,
-    });
-  }
-
   function selectHome() {
     setActiveServerRole(null);
     setServerInviteLink(null);
@@ -1022,8 +936,25 @@ async function editMessage(messageId: string, content: string) {
     setActiveView({ type: "home" });
   }
 
+  function encodeMentionsForStorage(content: string) {
+  let encoded = content;
+
+  for (const user of serverMentionUsers) {
+    if (!user.username) continue;
+
+    const escapedUsername = user.username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    encoded = encoded.replace(
+      new RegExp(`@${escapedUsername}\\b`, "g"),
+      `<@${user.id}>`
+    );
+  }
+
+  return encoded;
+}
+
 async function sendMessage(content: string, files: File[] = []) {
-  const trimmed = content.trim();
+  const trimmed = encodeMentionsForStorage(content.trim());
 
   if (!trimmed && files.length === 0) return;
 
@@ -1065,17 +996,6 @@ async function sendMessage(content: string, files: File[] = []) {
       setActiveMessages(refreshed);
     }
 
-    if (activeView.type === "application") {
-      await sendApplicationChatMessage({
-        applicationChatId: activeView.applicationChatId,
-        content: trimmed,
-      });
-
-      const refreshed = await getApplicationChatMessages(
-        activeView.applicationChatId
-      );
-      setActiveMessages(refreshed);
-    }
   } catch (sendError) {
     console.warn("[useChatState] Failed to send message:", sendError);
 
@@ -1141,12 +1061,17 @@ async function sendMessage(content: string, files: File[] = []) {
 
   async function createNewChannel(input: {
     name: string;
-    type?: "text" | "announcement" | "application";
+    type?: "text" | "announcement";
     topic?: string | null;
     isPrivate?: boolean;
   }) {
     if (activeView.type !== "server") {
       setError("You need to be inside a server to create a channel.");
+      return;
+    }
+
+    if (activeServerRole !== "owner" && activeServerRole !== "admin") {
+      setError("Only server owners or admins can create channels.");
       return;
     }
 
@@ -1475,20 +1400,24 @@ async function deleteCustomEmojiFromActiveServer(emojiId: string) {
     channels,
     directConversations,
     dms,
-    applicationChats,
     activeView,
     activeServer,
     activeChannel,
     activeMessages,
     activeDirectConversation,
     activeDirectUser,
-    activeApplicationChat,
     activeServerRole,
     serverInviteLink,
     customEmojis,
     serverMentionUsers,
     mentionNotifications,
     replyToMessage,
+    olderMessagesLoading,
+    hasOlderMessages,
+    kickMember,
+    banMember,
+    muteMember,
+    loadOlderMessages,
     editMessage,
     setReplyToMessage,
     clearServerNotifications,
@@ -1498,16 +1427,15 @@ async function deleteCustomEmojiFromActiveServer(emojiId: string) {
     selectServer,
     selectChannel,
     selectDM,
-    selectApplicationChat,
     sendMessage,
     toggleMessageReaction,
     createNewServer,
-    createNewChannel,
     updateMyProfile,
     updateActiveServer,
     deleteActiveServer,
     deleteMessage,
     createInviteForActiveServer,
     joinServerWithInvite,
+    createOrOpenDM,
   };
 }
