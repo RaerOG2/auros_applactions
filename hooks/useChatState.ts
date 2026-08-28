@@ -1437,5 +1437,6 @@ async function deleteCustomEmojiFromActiveServer(emojiId: string) {
     createInviteForActiveServer,
     joinServerWithInvite,
     createOrOpenDM,
+    createNewChannel,
   };
 }
