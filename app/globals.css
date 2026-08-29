@@ -12,6 +12,18 @@
 
   --auros-cyan: #63ddff;
   --auros-purple: #8b72ff;
+
+  --auros-motion-fast: 120ms;
+  --auros-motion-normal: 180ms;
+  --auros-motion-slow: 240ms;
+
+  --auros-ease:
+    cubic-bezier(
+      0.2,
+      0.8,
+      0.2,
+      1
+    );
 }
 
 html,
@@ -55,6 +67,12 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color:
+    transparent;
 }
 
 /* =========================================================
@@ -128,11 +146,6 @@ select {
 
 /* =========================================================
    BACKGROUND GLOW ORBS
-
-   Important:
-   Only transform is animated.
-   This is significantly lighter than the previous
-   SVG + blur + rotation background.
    ========================================================= */
 
 .auros-bg-orb {
@@ -221,22 +234,6 @@ select {
 }
 
 /* =========================================================
-   REDUCED MOTION
-   ========================================================= */
-
-@media (prefers-reduced-motion: reduce) {
-  .auros-bg-orb {
-    animation: none;
-  }
-
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-  }
-}
-
-/* =========================================================
    AUROS CARDS
    ========================================================= */
 
@@ -262,36 +259,259 @@ select {
 }
 
 /* =========================================================
-   CARD HOVER
+   CARD HOVER / INTERACTION
    ========================================================= */
 
 .auros-card-hover {
+  position: relative;
+
   transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease;
+    transform
+      var(--auros-motion-normal)
+      var(--auros-ease),
+    border-color
+      var(--auros-motion-normal)
+      var(--auros-ease),
+    box-shadow
+      var(--auros-motion-normal)
+      var(--auros-ease),
+    background-color
+      var(--auros-motion-normal)
+      var(--auros-ease);
 }
 
-.auros-card-hover:hover {
-  transform:
-    translateY(-3px);
+/*
+ * Hover only for real mouse / trackpad devices.
+ *
+ * Prevents sticky hover states on touch devices.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .auros-card-hover:hover {
+    transform:
+      translate3d(
+        0,
+        -3px,
+        0
+      );
 
-  border-color:
+    border-color:
+      rgba(
+        99,
+        221,
+        255,
+        0.34
+      );
+
+    box-shadow:
+      0 26px 68px
+        rgba(
+          0,
+          0,
+          0,
+          0.3
+        ),
+      0 0 0 1px
+        rgba(
+          99,
+          221,
+          255,
+          0.03
+        );
+  }
+}
+
+/*
+ * Press feedback.
+ *
+ * Works for cards that are directly clickable
+ * or contain interactive elements.
+ */
+.auros-card-hover:active {
+  transform:
+    translate3d(
+      0,
+      -1px,
+      0
+    )
+    scale(
+      0.995
+    );
+}
+
+/* =========================================================
+   GENERIC INTERACTIVE ELEMENTS
+   ========================================================= */
+
+/*
+ * Add this class to buttons, links or controls
+ * that should use the standard Auros press feel.
+ */
+.auros-interactive {
+  transition:
+    transform
+      var(--auros-motion-fast)
+      var(--auros-ease),
+    border-color
+      var(--auros-motion-fast)
+      var(--auros-ease),
+    background-color
+      var(--auros-motion-fast)
+      var(--auros-ease),
+    color
+      var(--auros-motion-fast)
+      var(--auros-ease),
+    box-shadow
+      var(--auros-motion-fast)
+      var(--auros-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .auros-interactive:hover {
+    transform:
+      translate3d(
+        0,
+        -1px,
+        0
+      );
+  }
+}
+
+.auros-interactive:active {
+  transform:
+    scale(
+      0.975
+    );
+}
+
+/* =========================================================
+   BUTTON FEEDBACK
+   ========================================================= */
+
+/*
+ * Safe default feedback for real buttons.
+ *
+ * No color/style changes are forced here,
+ * so existing button designs stay untouched.
+ */
+button {
+  transition:
+    transform
+      var(--auros-motion-fast)
+      var(--auros-ease);
+}
+
+button:active:not(:disabled) {
+  transform:
+    scale(
+      0.97
+    );
+}
+
+/* =========================================================
+   IMAGE MICRO INTERACTION
+   ========================================================= */
+
+/*
+ * Usage:
+ *
+ * <div className="auros-image-hover">
+ *   <img ... />
+ * </div>
+ *
+ * Great for gallery/news/patchnote cards.
+ */
+.auros-image-hover {
+  overflow: hidden;
+}
+
+.auros-image-hover img {
+  transition:
+    transform
+      var(--auros-motion-slow)
+      var(--auros-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .auros-image-hover:hover img {
+    transform:
+      scale(
+        1.025
+      );
+  }
+}
+
+/* =========================================================
+   SOFT GLOW INTERACTION
+   ========================================================= */
+
+/*
+ * Optional class for special buttons/cards.
+ *
+ * Gives a subtle cyan border/glow on hover.
+ */
+.auros-glow-hover {
+  transition:
+    border-color
+      var(--auros-motion-normal)
+      var(--auros-ease),
+    box-shadow
+      var(--auros-motion-normal)
+      var(--auros-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .auros-glow-hover:hover {
+    border-color:
+      rgba(
+        99,
+        221,
+        255,
+        0.36
+      );
+
+    box-shadow:
+      0 0 0 1px
+        rgba(
+          99,
+          221,
+          255,
+          0.04
+        ),
+      0 14px 45px
+        rgba(
+          0,
+          0,
+          0,
+          0.2
+        );
+  }
+}
+
+/* =========================================================
+   KEYBOARD FOCUS
+   ========================================================= */
+
+/*
+ * Only visible for keyboard navigation.
+ *
+ * Mouse clicks do not get a permanent focus ring.
+ */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline:
+    2px solid
     rgba(
       99,
       221,
       255,
-      0.32
+      0.88
     );
 
-  box-shadow:
-    0 24px 65px
-    rgba(
-      0,
-      0,
-      0,
-      0.28
-    );
+  outline-offset:
+    3px;
 }
 
 /* =========================================================
@@ -334,6 +554,11 @@ select {
   border:
     2px solid
     #050914;
+
+  transition:
+    background-color
+      var(--auros-motion-fast)
+      ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -359,25 +584,83 @@ select {
 }
 
 /* =========================================================
-   LOW PERFORMANCE / TOUCH DEVICES
-
-   On devices without a precise mouse, background movement
-   is disabled completely.
+   TOUCH DEVICES
    ========================================================= */
 
-@media (hover: none) {
+/*
+ * Background motion is disabled on touch hardware.
+ *
+ * Hover effects are also not forced here because all
+ * desktop hover rules already require hover:hover
+ * and pointer:fine.
+ */
+@media (hover: none), (pointer: coarse) {
   .auros-bg-orb {
     animation: none;
   }
 
-  .auros-card-hover:hover {
-    transform: none;
+  .auros-card-hover:active {
+    transform:
+      scale(
+        0.99
+      );
+  }
+
+  .auros-interactive:active {
+    transform:
+      scale(
+        0.97
+      );
   }
 }
 
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .auros-bg-orb {
+    animation: none;
+  }
+
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  .auros-card-hover,
+  .auros-interactive,
+  .auros-image-hover img,
+  .auros-glow-hover,
+  button,
+  ::-webkit-scrollbar-thumb {
+    transition: none !important;
+  }
+
+  .auros-card-hover:hover,
+  .auros-card-hover:active,
+  .auros-interactive:hover,
+  .auros-interactive:active,
+  .auros-image-hover:hover img,
+  button:active:not(:disabled) {
+    transform: none !important;
+  }
+}
+
+/* =========================================================
+   ADMIN
+   ========================================================= */
+
 .adminDashboardLayout {
   display: grid;
-  grid-template-columns: 245px minmax(0, 1fr);
+
+  grid-template-columns:
+    245px
+    minmax(
+      0,
+      1fr
+    );
+
   gap: 20px;
+
   align-items: start;
 }

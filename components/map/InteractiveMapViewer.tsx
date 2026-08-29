@@ -2,7 +2,6 @@
 
 import {
   PointerEvent as ReactPointerEvent,
-  WheelEvent as ReactWheelEvent,
   useEffect,
   useMemo,
   useRef,
@@ -29,6 +28,16 @@ interface InteractiveMapViewerProps {
 interface Position {
   x: number;
   y: number;
+}
+
+interface PinchState {
+  distance: number;
+
+  scale: number;
+
+  center: Position;
+
+  position: Position;
 }
 
 const MIN_SCALE = 1;
@@ -87,8 +96,17 @@ export default function InteractiveMapViewer({
   const [scale, setScale] =
     useState(1);
 
+  const scaleRef =
+    useRef(1);
+
   const [position, setPosition] =
     useState<Position>({
+      x: 0,
+      y: 0,
+    });
+
+  const positionRef =
+    useRef<Position>({
       x: 0,
       y: 0,
     });
@@ -107,6 +125,23 @@ export default function InteractiveMapViewer({
       x: 0,
       y: 0,
     });
+
+  /*
+   * All currently active pointers.
+   *
+   * Usually:
+   * 1 pointer = drag
+   * 2 pointers = pinch zoom
+   */
+  const activePointersRef =
+    useRef<Map<number, Position>>(
+      new Map()
+    );
+
+  const pinchRef =
+    useRef<PinchState | null>(
+      null
+    );
 
   const [fullscreen, setFullscreen] =
     useState(false);
@@ -132,6 +167,34 @@ export default function InteractiveMapViewer({
   );
 
   /* =========================================================
+     INTERNAL VIEW HELPERS
+  ========================================================= */
+
+  function applyScale(
+    value: number
+  ) {
+    const next =
+      clampScale(value);
+
+    scaleRef.current =
+      next;
+
+    setScale(next);
+  }
+
+  function applyPosition(
+    value: Position
+  ) {
+    positionRef.current = {
+      ...value,
+    };
+
+    setPosition({
+      ...value,
+    });
+  }
+
+  /* =========================================================
      LOAD MAP MARKERS
   ========================================================= */
 
@@ -155,6 +218,77 @@ export default function InteractiveMapViewer({
         setMarkers([]);
       });
   }, [map.id]);
+
+  /* =========================================================
+     DESKTOP WHEEL ZOOM
+
+     Native listener with passive:false is used here.
+
+     This is important because otherwise Safari / Chrome
+     may continue scrolling the entire website while the
+     map itself is zooming.
+  ========================================================= */
+
+  useEffect(() => {
+    const viewport =
+      viewportRef.current;
+
+    if (!viewport) {
+      return;
+    }
+
+    function handleWheel(
+      event: WheelEvent
+    ) {
+      /*
+       * Cursor is over the map.
+       *
+       * The wheel belongs to the map now,
+       * not to the page.
+       */
+      event.preventDefault();
+
+      event.stopPropagation();
+
+      const direction =
+        event.deltaY > 0
+          ? -ZOOM_STEP
+          : ZOOM_STEP;
+
+      const next =
+        clampScale(
+          scaleRef.current +
+            direction
+        );
+
+      applyScale(next);
+
+      if (
+        next ===
+        MIN_SCALE
+      ) {
+        applyPosition({
+          x: 0,
+          y: 0,
+        });
+      }
+    }
+
+    viewport.addEventListener(
+      "wheel",
+      handleWheel,
+      {
+        passive: false,
+      }
+    );
+
+    return () => {
+      viewport.removeEventListener(
+        "wheel",
+        handleWheel
+      );
+    };
+  }, []);
 
   /* =========================================================
      FULLSCREEN STATE
@@ -194,7 +328,9 @@ export default function InteractiveMapViewer({
       return;
     }
 
-    if (markers.length === 0) {
+    if (
+      markers.length === 0
+    ) {
       return;
     }
 
@@ -209,10 +345,6 @@ export default function InteractiveMapViewer({
       return;
     }
 
-    /*
-     * Make sure the marker type is visible,
-     * even if the user previously disabled it.
-     */
     setEnabledTypes(
       (current) =>
         current.includes(
@@ -229,10 +361,6 @@ export default function InteractiveMapViewer({
       marker
     );
 
-    /*
-     * Wait one frame so the stage already
-     * has its final rendered dimensions.
-     */
     requestAnimationFrame(() => {
       focusMarker(
         marker
@@ -265,12 +393,19 @@ export default function InteractiveMapViewer({
   ========================================================= */
 
   function resetView() {
-    setScale(1);
+    applyScale(1);
 
-    setPosition({
+    applyPosition({
       x: 0,
       y: 0,
     });
+
+    activePointersRef.current.clear();
+
+    pinchRef.current =
+      null;
+
+    setDragging(false);
   }
 
   function clampScale(
@@ -314,12 +449,6 @@ export default function InteractiveMapViewer({
     const stageRect =
       stage.getBoundingClientRect();
 
-    /*
-     * Stage coordinates at scale 1.
-     *
-     * marker.x / marker.y are percentages
-     * relative to the exact map image.
-     */
     const markerX =
       stageRect.left -
       viewportRect.left +
@@ -335,15 +464,13 @@ export default function InteractiveMapViewer({
           100);
 
     const viewportCenterX =
-      viewportRect.width / 2;
+      viewportRect.width /
+      2;
 
     const viewportCenterY =
-      viewportRect.height / 2;
+      viewportRect.height /
+      2;
 
-    /*
-     * Translate so that the marker ends up
-     * approximately in the center after scaling.
-     */
     const offsetX =
       viewportCenterX -
       markerX;
@@ -352,11 +479,11 @@ export default function InteractiveMapViewer({
       viewportCenterY -
       markerY;
 
-    setScale(
+    applyScale(
       focusScale
     );
 
-    setPosition({
+    applyPosition({
       x:
         offsetX *
         focusScale,
@@ -368,67 +495,100 @@ export default function InteractiveMapViewer({
   }
 
   /* =========================================================
-     ZOOM
+     ZOOM BUTTONS
   ========================================================= */
 
   function zoomIn() {
-    setScale((current) =>
+    const next =
       clampScale(
-        current +
+        scaleRef.current +
           ZOOM_STEP
-      )
-    );
+      );
+
+    applyScale(next);
   }
 
   function zoomOut() {
-    setScale((current) => {
-      const next =
-        clampScale(
-          current -
-            ZOOM_STEP
-        );
+    const next =
+      clampScale(
+        scaleRef.current -
+          ZOOM_STEP
+      );
 
-      if (next === 1) {
-        setPosition({
-          x: 0,
-          y: 0,
-        });
-      }
+    applyScale(next);
 
-      return next;
-    });
-  }
-
-  function handleWheel(
-    event: ReactWheelEvent<HTMLDivElement>
-  ) {
-    event.preventDefault();
-
-    const direction =
-      event.deltaY > 0
-        ? -ZOOM_STEP
-        : ZOOM_STEP;
-
-    setScale((current) => {
-      const next =
-        clampScale(
-          current +
-            direction
-        );
-
-      if (next === 1) {
-        setPosition({
-          x: 0,
-          y: 0,
-        });
-      }
-
-      return next;
-    });
+    if (
+      next ===
+      MIN_SCALE
+    ) {
+      applyPosition({
+        x: 0,
+        y: 0,
+      });
+    }
   }
 
   /* =========================================================
-     DRAG MAP
+     POINTER / TOUCH HELPERS
+  ========================================================= */
+
+  function getPointerDistance(
+    first: Position,
+    second: Position
+  ) {
+    return Math.hypot(
+      second.x -
+        first.x,
+
+      second.y -
+        first.y
+    );
+  }
+
+  function getPointerCenter(
+    first: Position,
+    second: Position
+  ): Position {
+    return {
+      x:
+        (first.x +
+          second.x) /
+        2,
+
+      y:
+        (first.y +
+          second.y) /
+        2,
+    };
+  }
+
+  function getFirstTwoPointers() {
+    const points =
+      Array.from(
+        activePointersRef.current.values()
+      );
+
+    if (
+      points.length < 2
+    ) {
+      return null;
+    }
+
+    return [
+      points[0],
+      points[1],
+    ] as const;
+  }
+
+  /* =========================================================
+     POINTER DOWN
+
+     Mouse:
+     drag when zoomed
+
+     Touch:
+     1 finger = drag
+     2 fingers = pinch zoom
   ========================================================= */
 
   function handlePointerDown(
@@ -446,12 +606,94 @@ export default function InteractiveMapViewer({
       ) ||
       target.closest(
         ".mapLocationPanel"
+      ) ||
+      target.closest(
+        ".mapTypeFilter"
       )
     ) {
       return;
     }
 
-    if (scale <= 1) {
+    activePointersRef.current.set(
+      event.pointerId,
+      {
+        x: event.clientX,
+        y: event.clientY,
+      }
+    );
+
+    try {
+      event.currentTarget.setPointerCapture(
+        event.pointerId
+      );
+    } catch {
+      //
+    }
+
+    /*
+     * TWO POINTERS
+     *
+     * Start pinch zoom.
+     */
+    if (
+      activePointersRef.current.size >=
+      2
+    ) {
+      const pointers =
+        getFirstTwoPointers();
+
+      if (!pointers) {
+        return;
+      }
+
+      const [
+        first,
+        second,
+      ] = pointers;
+
+      const distance =
+        Math.max(
+          1,
+          getPointerDistance(
+            first,
+            second
+          )
+        );
+
+      const center =
+        getPointerCenter(
+          first,
+          second
+        );
+
+      pinchRef.current = {
+        distance,
+
+        scale:
+          scaleRef.current,
+
+        center,
+
+        position: {
+          ...positionRef.current,
+        },
+      };
+
+      setDragging(false);
+
+      return;
+    }
+
+    /*
+     * ONE POINTER
+     *
+     * Dragging only makes sense when
+     * the map is already zoomed.
+     */
+    if (
+      scaleRef.current <=
+      MIN_SCALE
+    ) {
       return;
     }
 
@@ -463,18 +705,176 @@ export default function InteractiveMapViewer({
     };
 
     positionStartRef.current = {
-      ...position,
+      ...positionRef.current,
     };
-
-    event.currentTarget.setPointerCapture(
-      event.pointerId
-    );
   }
+
+  /* =========================================================
+     POINTER MOVE
+  ========================================================= */
 
   function handlePointerMove(
     event: ReactPointerEvent<HTMLDivElement>
   ) {
+    /*
+     * Update the current pointer position.
+     */
+    if (
+      activePointersRef.current.has(
+        event.pointerId
+      )
+    ) {
+      activePointersRef.current.set(
+        event.pointerId,
+        {
+          x: event.clientX,
+          y: event.clientY,
+        }
+      );
+    }
+
+    /*
+     * ============================================
+     * PINCH ZOOM
+     * ============================================
+     */
+
+    if (
+      activePointersRef.current.size >=
+        2 &&
+      pinchRef.current
+    ) {
+      const pointers =
+        getFirstTwoPointers();
+
+      if (!pointers) {
+        return;
+      }
+
+      const [
+        first,
+        second,
+      ] = pointers;
+
+      const currentDistance =
+        Math.max(
+          1,
+          getPointerDistance(
+            first,
+            second
+          )
+        );
+
+      const currentCenter =
+        getPointerCenter(
+          first,
+          second
+        );
+
+      const pinchStart =
+        pinchRef.current;
+
+      const ratio =
+        currentDistance /
+        pinchStart.distance;
+
+      const nextScale =
+        clampScale(
+          pinchStart.scale *
+            ratio
+        );
+
+      const viewport =
+        viewportRef.current;
+
+      if (!viewport) {
+        applyScale(
+          nextScale
+        );
+
+        return;
+      }
+
+      const viewportRect =
+        viewport.getBoundingClientRect();
+
+      const viewportCenter = {
+        x:
+          viewportRect.left +
+          viewportRect.width /
+            2,
+
+        y:
+          viewportRect.top +
+          viewportRect.height /
+            2,
+      };
+
+      /*
+       * Keep the area between the user's
+       * fingers approximately under the same
+       * point while scaling.
+       *
+       * This also means that moving both
+       * fingers together pans the map.
+       */
+      const scaleRatio =
+        nextScale /
+        pinchStart.scale;
+
+      const nextPosition = {
+        x:
+          currentCenter.x -
+          viewportCenter.x -
+          scaleRatio *
+            (pinchStart.center.x -
+              viewportCenter.x -
+              pinchStart.position.x),
+
+        y:
+          currentCenter.y -
+          viewportCenter.y -
+          scaleRatio *
+            (pinchStart.center.y -
+              viewportCenter.y -
+              pinchStart.position.y),
+      };
+
+      applyScale(
+        nextScale
+      );
+
+      if (
+        nextScale ===
+        MIN_SCALE
+      ) {
+        applyPosition({
+          x: 0,
+          y: 0,
+        });
+      } else {
+        applyPosition(
+          nextPosition
+        );
+      }
+
+      return;
+    }
+
+    /*
+     * ============================================
+     * ONE FINGER / MOUSE DRAG
+     * ============================================
+     */
+
     if (!dragging) {
+      return;
+    }
+
+    if (
+      scaleRef.current <=
+      MIN_SCALE
+    ) {
       return;
     }
 
@@ -486,7 +886,7 @@ export default function InteractiveMapViewer({
       event.clientY -
       dragStartRef.current.y;
 
-    setPosition({
+    applyPosition({
       x:
         positionStartRef.current.x +
         deltaX,
@@ -497,10 +897,16 @@ export default function InteractiveMapViewer({
     });
   }
 
+  /* =========================================================
+     POINTER UP / CANCEL
+  ========================================================= */
+
   function handlePointerUp(
     event: ReactPointerEvent<HTMLDivElement>
   ) {
-    setDragging(false);
+    activePointersRef.current.delete(
+      event.pointerId
+    );
 
     try {
       event.currentTarget.releasePointerCapture(
@@ -508,6 +914,56 @@ export default function InteractiveMapViewer({
       );
     } catch {
       //
+    }
+
+    /*
+     * If one finger remains after a pinch,
+     * allow it to continue dragging without
+     * requiring the user to lift it first.
+     */
+    if (
+      activePointersRef.current.size ===
+      1
+    ) {
+      pinchRef.current =
+        null;
+
+      const remainingPointer =
+        Array.from(
+          activePointersRef.current.values()
+        )[0];
+
+      if (
+        scaleRef.current >
+        MIN_SCALE
+      ) {
+        setDragging(true);
+
+        dragStartRef.current = {
+          ...remainingPointer,
+        };
+
+        positionStartRef.current = {
+          ...positionRef.current,
+        };
+      } else {
+        setDragging(false);
+      }
+
+      return;
+    }
+
+    /*
+     * No pointers remain.
+     */
+    if (
+      activePointersRef.current.size ===
+      0
+    ) {
+      pinchRef.current =
+        null;
+
+      setDragging(false);
     }
   }
 
@@ -644,9 +1100,6 @@ export default function InteractiveMapViewer({
               ? "mapViewport dragging"
               : "mapViewport"
           }
-          onWheel={
-            handleWheel
-          }
           onPointerDown={
             handlePointerDown
           }
@@ -663,7 +1116,7 @@ export default function InteractiveMapViewer({
           <div
             className="mapTransformLayer"
             style={{
-              transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+              transform: `translate3d(${position.x}px, ${position.y}px, 0) scale(${scale})`,
             }}
           >
             <div
@@ -696,6 +1149,7 @@ export default function InteractiveMapViewer({
                         left: `${Number(
                           marker.x
                         )}%`,
+
                         top: `${Number(
                           marker.y
                         )}%`,
@@ -1005,6 +1459,12 @@ export default function InteractiveMapViewer({
 
           overflow-x: auto;
 
+          overscroll-behavior-x:
+            contain;
+
+          scrollbar-width:
+            none;
+
           border-bottom:
             1px solid
             rgba(
@@ -1021,6 +1481,10 @@ export default function InteractiveMapViewer({
               24,
               0.96
             );
+        }
+
+        .mapFilterBar::-webkit-scrollbar {
+          display: none;
         }
 
         .mapFilterBar > span {
@@ -1122,7 +1586,19 @@ export default function InteractiveMapViewer({
 
           overflow: hidden;
 
+          /*
+           * Required for custom mobile gestures.
+           *
+           * Browser-native pan / pinch is disabled
+           * only inside the actual map viewport.
+           */
           touch-action: none;
+
+          overscroll-behavior:
+            contain;
+
+          -webkit-user-select:
+            none;
 
           user-select: none;
 
@@ -1169,6 +1645,11 @@ export default function InteractiveMapViewer({
           transform-origin:
             center center;
 
+          /*
+           * Transform is the only continuously
+           * changing visual property during
+           * drag / pinch.
+           */
           will-change:
             transform;
         }
@@ -1205,6 +1686,9 @@ export default function InteractiveMapViewer({
           object-fit: contain;
 
           pointer-events: none;
+
+          -webkit-user-drag:
+            none;
 
           user-select: none;
         }
@@ -1415,14 +1899,20 @@ export default function InteractiveMapViewer({
               );
         }
 
-        .publicMapMarker:hover
-          .publicMarkerCircle {
-          transform:
-            translate(
-              -50%,
-              -50%
-            )
-            scale(1.1);
+        @media (
+          hover: hover
+        ) and (
+          pointer: fine
+        ) {
+          .publicMapMarker:hover
+            .publicMarkerCircle {
+            transform:
+              translate(
+                -50%,
+                -50%
+              )
+              scale(1.1);
+          }
         }
 
         /* ===============================
@@ -1738,7 +2228,7 @@ export default function InteractiveMapViewer({
         }
 
         /* ===============================
-           RESPONSIVE
+           MOBILE / TOUCH
         ================================ */
 
         @media (
@@ -1768,6 +2258,41 @@ export default function InteractiveMapViewer({
             height: 25px;
 
             font-size: 8px;
+          }
+
+          /*
+           * Slightly larger touch controls.
+           */
+          .mapControls button {
+            width: 44px;
+            height: 44px;
+          }
+
+          .closeLocation {
+            width: 36px;
+            height: 36px;
+          }
+
+          .mapTypeFilter {
+            min-height: 34px;
+
+            padding:
+              0
+              12px;
+          }
+        }
+
+        /* ===============================
+           REDUCED MOTION
+        ================================ */
+
+        @media (
+          prefers-reduced-motion:
+            reduce
+        ) {
+          .publicMarkerCircle,
+          .mapControls button {
+            transition: none;
           }
         }
       `}</style>

@@ -6,6 +6,11 @@ import {
   useState,
 } from "react";
 
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+
 import InteractiveMapViewer from "../../components/map/InteractiveMapViewer";
 import MapCompareSlider from "../../components/map/MapCompareSlider";
 import MapTimeline from "../../components/map/MapTimeline";
@@ -14,11 +19,30 @@ import {
   getPublishedMaps,
 } from "../../services/map.service";
 
+import {
+  getPublishedMapMarkers,
+} from "../../services/map-marker.service";
+
 import type {
   AurosMap,
 } from "../../types/maps";
 
+import type {
+  MapMarker,
+} from "../../types/map-markers";
+
+type SearchMarker = MapMarker & {
+  mapName: string;
+  mapVersion: string | null;
+};
+
 export default function MapPage() {
+  const router =
+    useRouter();
+
+  const searchParams =
+    useSearchParams();
+
   const [maps, setMaps] =
     useState<AurosMap[]>([]);
 
@@ -46,43 +70,94 @@ export default function MapPage() {
     setCompareRightId,
   ] = useState("");
 
+  const [
+    allMarkers,
+    setAllMarkers,
+  ] = useState<SearchMarker[]>([]);
+
+  const [
+    search,
+    setSearch,
+  ] = useState("");
+
+  const [
+    focusMarkerId,
+    setFocusMarkerId,
+  ] = useState<string | null>(
+    null
+  );
+
+  const [
+    markerSearchLoading,
+    setMarkerSearchLoading,
+  ] = useState(false);
+
   useEffect(() => {
-    getPublishedMaps()
-      .then((data) => {
+    async function load() {
+      try {
+        setLoading(true);
+
+        const data =
+          await getPublishedMaps();
+
         setMaps(data);
 
+        const urlMapId =
+          searchParams.get(
+            "map"
+          );
+
+        const urlLocationId =
+          searchParams.get(
+            "location"
+          );
+
+        const mapFromUrl =
+          urlMapId
+            ? data.find(
+                (map) =>
+                  map.id ===
+                  urlMapId
+              )
+            : null;
+
         const current =
+          mapFromUrl ??
           data.find(
-            (map) => map.current
+            (map) =>
+              map.current
           ) ??
           data[0] ??
           null;
 
-        if (!current) {
-          return;
-        }
-
-        setSelectedId(
-          current.id
-        );
-
-        setCompareRightId(
-          current.id
-        );
-
-        const older =
-          data.find(
-            (map) =>
-              map.id !==
-              current.id
+        if (current) {
+          setSelectedId(
+            current.id
           );
 
-        setCompareLeftId(
-          older?.id ??
+          setCompareRightId(
             current.id
-        );
-      })
-      .catch((loadError) => {
+          );
+
+          const older =
+            data.find(
+              (map) =>
+                map.id !==
+                current.id
+            );
+
+          setCompareLeftId(
+            older?.id ??
+              current.id
+          );
+        }
+
+        if (urlLocationId) {
+          setFocusMarkerId(
+            urlLocationId
+          );
+        }
+      } catch (loadError) {
         console.error(
           "MAP LOAD ERROR:",
           loadError
@@ -93,11 +168,71 @@ export default function MapPage() {
             ? loadError.message
             : "Could not load maps."
         );
-      })
-      .finally(() => {
+      } finally {
         setLoading(false);
-      });
+      }
+    }
+
+    load();
   }, []);
+
+  useEffect(() => {
+    if (
+      maps.length === 0
+    ) {
+      return;
+    }
+
+    async function loadMarkers() {
+      setMarkerSearchLoading(
+        true
+      );
+
+      try {
+        const results =
+          await Promise.all(
+            maps.map(
+              async (map) => {
+                const markers =
+                  await getPublishedMapMarkers(
+                    map.id
+                  );
+
+                return markers.map(
+                  (marker) => ({
+                    ...marker,
+
+                    mapName:
+                      map.name,
+
+                    mapVersion:
+                      map.version ??
+                      null,
+                  })
+                );
+              }
+            )
+          );
+
+        setAllMarkers(
+          results.flat()
+        );
+      } catch (markerError) {
+        console.error(
+          "GLOBAL MARKER LOAD ERROR:",
+          markerError
+        );
+
+        setAllMarkers([]);
+      } finally {
+        setMarkerSearchLoading(
+          false
+        );
+      }
+    }
+
+    loadMarkers();
+  }, [maps]);
 
   const selectedMap =
     useMemo(() => {
@@ -156,6 +291,52 @@ export default function MapPage() {
       compareRightId,
     ]);
 
+  const searchResults =
+    useMemo(() => {
+      const query =
+        search
+          .trim()
+          .toLowerCase();
+
+      if (
+        query.length < 2
+      ) {
+        return [];
+      }
+
+      return allMarkers
+        .filter(
+          (marker) =>
+            marker.name
+              .toLowerCase()
+              .includes(
+                query
+              ) ||
+            marker.type
+              .toLowerCase()
+              .includes(
+                query
+              ) ||
+            marker.mapName
+              .toLowerCase()
+              .includes(
+                query
+              ) ||
+            marker.description
+              ?.toLowerCase()
+              .includes(
+                query
+              )
+        )
+        .slice(
+          0,
+          12
+        );
+    }, [
+      search,
+      allMarkers,
+    ]);
+
   function formatDate(
     value: string | null
   ) {
@@ -195,6 +376,78 @@ export default function MapPage() {
       .join(" · ");
   }
 
+  function updateMapUrl(
+    mapId: string,
+    markerId?: string | null
+  ) {
+    const params =
+      new URLSearchParams();
+
+    params.set(
+      "map",
+      mapId
+    );
+
+    if (markerId) {
+      params.set(
+        "location",
+        markerId
+      );
+    }
+
+    router.replace(
+      `/map?${params.toString()}`,
+      {
+        scroll: false,
+      }
+    );
+  }
+
+  function selectMap(
+    mapId: string
+  ) {
+    setSelectedId(
+      mapId
+    );
+
+    setFocusMarkerId(
+      null
+    );
+
+    if (compareMode) {
+      setCompareRightId(
+        mapId
+      );
+    }
+
+    updateMapUrl(
+      mapId
+    );
+  }
+
+  function selectSearchResult(
+    marker: SearchMarker
+  ) {
+    setCompareMode(
+      false
+    );
+
+    setSelectedId(
+      marker.map_id
+    );
+
+    setFocusMarkerId(
+      marker.id
+    );
+
+    setSearch("");
+
+    updateMapUrl(
+      marker.map_id,
+      marker.id
+    );
+  }
+
   function switchCompareMaps() {
     const oldLeft =
       compareLeftId;
@@ -208,26 +461,10 @@ export default function MapPage() {
     );
   }
 
-  function selectMap(
-    mapId: string
-  ) {
-    setSelectedId(
-      mapId
-    );
-
-    if (compareMode) {
-      setCompareRightId(
-        mapId
-      );
-    }
-  }
-
   return (
     <>
       <div className="publicMapPage">
-        {/* =========================================
-            HEADER
-        ========================================== */}
+        {/* HEADER */}
 
         <header className="publicMapHeader">
           <div className="publicMapEyebrow">
@@ -271,10 +508,6 @@ export default function MapPage() {
           </div>
         </header>
 
-        {/* =========================================
-            LOADING / ERROR
-        ========================================== */}
-
         {loading ? (
           <div className="mapState">
             Loading Auros maps...
@@ -289,9 +522,128 @@ export default function MapPage() {
           </div>
         ) : (
           <>
-            {/* =========================================
-                MAP ARCHIVE
-            ========================================== */}
+            {/* SEARCH */}
+
+            <section className="mapSearchSection">
+              <div className="mapSearchHeading">
+                <div>
+                  <span>
+                    LOCATION SEARCH
+                  </span>
+
+                  <strong>
+                    Find a place
+                  </strong>
+                </div>
+
+                <small>
+                  {markerSearchLoading
+                    ? "Loading locations..."
+                    : `${allMarkers.length} locations indexed`}
+                </small>
+              </div>
+
+              <div className="mapSearchBox">
+                <span className="mapSearchIcon">
+                  ⌕
+                </span>
+
+                <input
+                  value={
+                    search
+                  }
+                  onChange={(event) =>
+                    setSearch(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Search Auros City, landmarks, story locations..."
+                />
+
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSearch(
+                        ""
+                      )
+                    }
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              {search.trim().length >=
+                2 && (
+                <div className="mapSearchResults">
+                  {searchResults.length ===
+                  0 ? (
+                    <div className="mapSearchEmpty">
+                      No locations found.
+                    </div>
+                  ) : (
+                    searchResults.map(
+                      (marker) => (
+                        <button
+                          key={
+                            marker.id
+                          }
+                          type="button"
+                          className="mapSearchResult"
+                          onClick={() =>
+                            selectSearchResult(
+                              marker
+                            )
+                          }
+                        >
+                          <div
+                            className={`searchMarkerIcon ${marker.type}`}
+                          >
+                            {marker.icon ||
+                              marker.type
+                                .slice(
+                                  0,
+                                  1
+                                )
+                                .toUpperCase()}
+                          </div>
+
+                          <div className="searchMarkerText">
+                            <strong>
+                              {
+                                marker.name
+                              }
+                            </strong>
+
+                            <span>
+                              {
+                                marker.mapName
+                              }
+                              {marker.mapVersion
+                                ? ` · ${marker.mapVersion}`
+                                : ""}
+                            </span>
+                          </div>
+
+                          <div className="searchMarkerType">
+                            {
+                              marker.type
+                            }
+                          </div>
+
+                          <span className="searchArrow">
+                            →
+                          </span>
+                        </button>
+                      )
+                    )
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* MAP ARCHIVE */}
 
             <section className="mapArchiveSelector">
               <div className="mapArchiveSelectorHeader">
@@ -337,95 +689,101 @@ export default function MapPage() {
               </div>
 
               <div className="mapArchiveCards">
-                {maps.map((map) => (
-                  <button
-                    key={map.id}
-                    type="button"
-                    className={
-                      map.id ===
-                      selectedMap.id
-                        ? "mapArchiveCard active"
-                        : "mapArchiveCard"
-                    }
-                    onClick={() =>
-                      selectMap(
+                {maps.map(
+                  (map) => (
+                    <button
+                      key={
                         map.id
-                      )
-                    }
-                  >
-                    <div className="archiveCardImage">
-                      <img
-                        src={
-                          map.thumbnail_url ||
-                          map.image_url
-                        }
-                        alt={
-                          map.name
-                        }
-                      />
+                      }
+                      type="button"
+                      className={
+                        map.id ===
+                        selectedMap.id
+                          ? "mapArchiveCard active"
+                          : "mapArchiveCard"
+                      }
+                      onClick={() =>
+                        selectMap(
+                          map.id
+                        )
+                      }
+                    >
+                      <div className="archiveCardImage">
+                        <img
+                          src={
+                            map.thumbnail_url ||
+                            map.image_url
+                          }
+                          alt={
+                            map.name
+                          }
+                        />
 
-                      {map.current && (
-                        <span>
-                          CURRENT
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="archiveCardContent">
-                      <div>
-                        {[
-                          map.venture_name,
-
-                          map.season_number !==
-                          null
-                            ? `S${map.season_number}`
-                            : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ") ||
-                          "AUROS"}
+                        {map.current && (
+                          <span>
+                            CURRENT
+                          </span>
+                        )}
                       </div>
 
-                      <strong>
-                        {map.name}
-                      </strong>
+                      <div className="archiveCardContent">
+                        <div>
+                          {[
+                            map.venture_name,
 
-                      <small>
-                        {[
-                          map.season_name,
-                          map.version,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ") ||
-                          "Map Version"}
-                      </small>
-                    </div>
-                  </button>
-                ))}
+                            map.season_number !==
+                            null
+                              ? `S${map.season_number}`
+                              : null,
+                          ]
+                            .filter(
+                              Boolean
+                            )
+                            .join(
+                              " · "
+                            ) ||
+                            "AUROS"}
+                        </div>
+
+                        <strong>
+                          {
+                            map.name
+                          }
+                        </strong>
+
+                        <small>
+                          {[
+                            map.season_name,
+                            map.version,
+                          ]
+                            .filter(
+                              Boolean
+                            )
+                            .join(
+                              " · "
+                            ) ||
+                            "Map Version"}
+                        </small>
+                      </div>
+                    </button>
+                  )
+                )}
               </div>
             </section>
 
-            {/* =========================================
-                PHASE 4.2 — TIMELINE
-            ========================================== */}
+            {/* TIMELINE */}
 
             <MapTimeline
               maps={maps}
               selectedId={
                 selectedId
               }
-              onSelect={(
-                mapId
-              ) => {
-                selectMap(
-                  mapId
-                );
-              }}
+              onSelect={
+                selectMap
+              }
             />
 
-            {/* =========================================
-                COMPARE CONFIGURATION
-            ========================================== */}
+            {/* COMPARE */}
 
             {compareMode && (
               <section className="mapCompareConfiguration">
@@ -470,7 +828,6 @@ export default function MapPage() {
                   onClick={
                     switchCompareMaps
                   }
-                  title="Swap maps"
                 >
                   ⇄
                 </button>
@@ -516,9 +873,7 @@ export default function MapPage() {
               </section>
             )}
 
-            {/* =========================================
-                MAIN AREA
-            ========================================== */}
+            {/* MAIN */}
 
             <div
               className={
@@ -547,13 +902,12 @@ export default function MapPage() {
                     map={
                       selectedMap
                     }
+                    focusMarkerId={
+                      focusMarkerId
+                    }
                   />
                 )}
               </main>
-
-              {/* =========================================
-                  NORMAL INFO SIDEBAR
-              ========================================== */}
 
               {!compareMode && (
                 <aside className="mapInformation">
@@ -571,7 +925,9 @@ export default function MapPage() {
                     </div>
 
                     <h2>
-                      {selectedMap.name}
+                      {
+                        selectedMap.name
+                      }
                     </h2>
 
                     <p className="mapInfoContext">
@@ -585,8 +941,12 @@ export default function MapPage() {
 
                         selectedMap.season_name,
                       ]
-                        .filter(Boolean)
-                        .join(" · ")}
+                        .filter(
+                          Boolean
+                        )
+                        .join(
+                          " · "
+                        )}
                     </p>
 
                     {selectedMap.description && (
@@ -661,27 +1021,25 @@ export default function MapPage() {
                     </div>
                   </div>
 
-                  <div className="mapPhaseNotice">
-                    <span>
-                      AUROS MAP SYSTEM
-                    </span>
+                  {focusMarkerId && (
+                    <button
+                      type="button"
+                      className="clearLocationFocus"
+                      onClick={() => {
+                        setFocusMarkerId(
+                          null
+                        );
 
-                    <strong>
-                      Interactive world archive
-                    </strong>
-
-                    <p>
-                      Explore POIs, landmarks, story locations,
-                      events and historical versions of the
-                      Auros island.
-                    </p>
-                  </div>
+                        updateMapUrl(
+                          selectedMap.id
+                        );
+                      }}
+                    >
+                      Clear Location Focus
+                    </button>
+                  )}
                 </aside>
               )}
-
-              {/* =========================================
-                  COMPARE SIDEBAR
-              ========================================== */}
 
               {compareMode &&
                 compareLeftMap &&
@@ -739,18 +1097,6 @@ export default function MapPage() {
                           "Map Version"}
                       </small>
                     </div>
-
-                    <button
-                      type="button"
-                      className="exitCompareSideButton"
-                      onClick={() =>
-                        setCompareMode(
-                          false
-                        )
-                      }
-                    >
-                      Exit Compare Mode
-                    </button>
                   </aside>
                 )}
             </div>
@@ -766,10 +1112,6 @@ export default function MapPage() {
           padding-bottom: 70px;
         }
 
-        /* =====================================
-           HEADER
-        ====================================== */
-
         .publicMapHeader {
           padding: 45px 0 30px;
         }
@@ -778,7 +1120,7 @@ export default function MapPage() {
           color: #63ddff;
           font-size: 10px;
           font-weight: 900;
-          letter-spacing: 0.15em;
+          letter-spacing: .15em;
         }
 
         .publicMapTitleRow {
@@ -790,16 +1132,9 @@ export default function MapPage() {
 
         .publicMapTitleRow h1 {
           margin: 8px 0 10px;
-
-          font-size:
-            clamp(
-              43px,
-              7vw,
-              72px
-            );
-
+          font-size: clamp(43px,7vw,72px);
           line-height: 1;
-          letter-spacing: -0.045em;
+          letter-spacing: -.045em;
         }
 
         .publicMapTitleRow p {
@@ -813,40 +1148,21 @@ export default function MapPage() {
         .currentMapIndicator {
           min-width: 210px;
           padding: 13px 14px;
-
-          border:
-            1px solid
-            rgba(
-              99,
-              221,
-              255,
-              0.16
-            );
-
+          border: 1px solid rgba(99,221,255,.16);
           border-radius: 12px;
-
-          background:
-            rgba(
-              99,
-              221,
-              255,
-              0.05
-            );
+          background: rgba(99,221,255,.05);
         }
 
         .currentMapIndicator span {
           display: block;
-          margin-bottom: 4px;
-
           color: #63ddff;
           font-size: 7px;
           font-weight: 900;
-          letter-spacing: 0.1em;
         }
 
         .currentMapIndicator strong {
           display: block;
-          color: white;
+          margin-top: 4px;
           font-size: 12px;
         }
 
@@ -857,9 +1173,182 @@ export default function MapPage() {
           font-size: 7px;
         }
 
-        /* =====================================
-           ARCHIVE
-        ====================================== */
+        /* SEARCH */
+
+        .mapSearchSection {
+          position: relative;
+          z-index: 100;
+          margin-bottom: 18px;
+        }
+
+        .mapSearchHeading {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-end;
+          margin-bottom: 8px;
+        }
+
+        .mapSearchHeading > div {
+          display: grid;
+          gap: 3px;
+        }
+
+        .mapSearchHeading span {
+          color: #63ddff;
+          font-size: 7px;
+          font-weight: 900;
+          letter-spacing: .11em;
+        }
+
+        .mapSearchHeading strong {
+          font-size: 15px;
+        }
+
+        .mapSearchHeading small {
+          color: #627899;
+          font-size: 7px;
+        }
+
+        .mapSearchBox {
+          min-height: 48px;
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          padding: 0 13px;
+          border: 1px solid rgba(99,221,255,.14);
+          border-radius: 12px;
+          background: rgba(7,16,31,.9);
+        }
+
+        .mapSearchIcon {
+          color: #63ddff;
+          font-size: 20px;
+        }
+
+        .mapSearchBox input {
+          flex: 1;
+          min-width: 0;
+          border: 0;
+          outline: 0;
+          background: transparent;
+          color: white;
+          font-size: 11px;
+        }
+
+        .mapSearchBox input::placeholder {
+          color: #536b8c;
+        }
+
+        .mapSearchBox button {
+          width: 30px;
+          height: 30px;
+          border: 0;
+          border-radius: 8px;
+          background: rgba(255,255,255,.04);
+          color: #7f94b2;
+          cursor: pointer;
+        }
+
+        .mapSearchResults {
+          position: absolute;
+          top: calc(100% + 6px);
+          left: 0;
+          right: 0;
+          max-height: 390px;
+          overflow-y: auto;
+          padding: 7px;
+          border: 1px solid rgba(99,221,255,.15);
+          border-radius: 12px;
+          background: rgba(4,11,24,.98);
+          box-shadow: 0 25px 70px rgba(0,0,0,.45);
+        }
+
+        .mapSearchResult {
+          width: 100%;
+          min-height: 53px;
+          display: grid;
+          grid-template-columns: auto minmax(0,1fr) auto auto;
+          align-items: center;
+          gap: 10px;
+          padding: 7px 9px;
+          border: 1px solid transparent;
+          border-radius: 9px;
+          background: transparent;
+          color: white;
+          text-align: left;
+          cursor: pointer;
+        }
+
+        .mapSearchResult:hover {
+          border-color: rgba(99,221,255,.13);
+          background: rgba(99,221,255,.05);
+        }
+
+        .searchMarkerIcon {
+          width: 31px;
+          height: 31px;
+          display: grid;
+          place-items: center;
+          border-radius: 50%;
+          background: #63ddff;
+          color: #04101b;
+          font-size: 8px;
+          font-weight: 950;
+        }
+
+        .searchMarkerIcon.landmark {
+          background: #65e8a8;
+        }
+
+        .searchMarkerIcon.story {
+          background: #ab87ff;
+        }
+
+        .searchMarkerIcon.event {
+          background: #ff9e55;
+        }
+
+        .searchMarkerIcon.spawn {
+          background: #ffd866;
+        }
+
+        .searchMarkerText {
+          min-width: 0;
+          display: grid;
+          gap: 2px;
+        }
+
+        .searchMarkerText strong {
+          font-size: 9px;
+        }
+
+        .searchMarkerText span {
+          color: #637b9b;
+          font-size: 7px;
+        }
+
+        .searchMarkerType {
+          padding: 4px 6px;
+          border-radius: 999px;
+          background: rgba(99,221,255,.06);
+          color: #7890af;
+          font-size: 6px;
+          font-weight: 900;
+          text-transform: uppercase;
+        }
+
+        .searchArrow {
+          color: #63ddff;
+        }
+
+        .mapSearchEmpty {
+          padding: 25px;
+          color: #667d9e;
+          font-size: 9px;
+          text-align: center;
+        }
+
+        /* ARCHIVE */
 
         .mapArchiveSelector {
           margin-bottom: 16px;
@@ -877,7 +1366,6 @@ export default function MapPage() {
           color: #63ddff;
           font-size: 8px;
           font-weight: 900;
-          letter-spacing: 0.11em;
         }
 
         .mapArchiveSelectorHeader h2 {
@@ -899,48 +1387,13 @@ export default function MapPage() {
         .compareModeButton {
           min-height: 32px;
           padding: 0 11px;
-
-          border:
-            1px solid
-            rgba(
-              99,
-              221,
-              255,
-              0.17
-            );
-
+          border: 1px solid rgba(99,221,255,.17);
           border-radius: 8px;
-
-          background:
-            rgba(
-              99,
-              221,
-              255,
-              0.05
-            );
-
+          background: rgba(99,221,255,.05);
           color: #83e6ff;
           font-size: 7px;
           font-weight: 900;
           cursor: pointer;
-        }
-
-        .compareModeButton:hover {
-          border-color:
-            rgba(
-              99,
-              221,
-              255,
-              0.3
-            );
-
-          background:
-            rgba(
-              99,
-              221,
-              255,
-              0.09
-            );
         }
 
         .compareModeButton.active {
@@ -951,92 +1404,38 @@ export default function MapPage() {
         .mapArchiveCards {
           display: flex;
           gap: 9px;
-
           overflow-x: auto;
-
           padding-bottom: 5px;
-
-          scrollbar-width: thin;
         }
 
         .mapArchiveCard {
           width: 205px;
           min-width: 205px;
-
           overflow: hidden;
-
           padding: 0;
-
-          border:
-            1px solid
-            rgba(
-              110,
-              148,
-              205,
-              0.11
-            );
-
+          border: 1px solid rgba(110,148,205,.11);
           border-radius: 12px;
-
-          background:
-            rgba(
-              7,
-              16,
-              31,
-              0.7
-            );
-
+          background: rgba(7,16,31,.7);
           color: white;
           text-align: left;
           cursor: pointer;
-
-          transition:
-            border-color 0.15s ease,
-            background 0.15s ease,
-            transform 0.15s ease;
-        }
-
-        .mapArchiveCard:hover {
-          transform: translateY(-2px);
-
-          border-color:
-            rgba(
-              99,
-              221,
-              255,
-              0.23
-            );
         }
 
         .mapArchiveCard.active {
-          border-color:
-            rgba(
-              99,
-              221,
-              255,
-              0.42
-            );
-
-          background:
-            rgba(
-              99,
-              221,
-              255,
-              0.06
-            );
+          border-color: rgba(99,221,255,.42);
+          background: rgba(99,221,255,.06);
         }
 
         .archiveCardImage {
           position: relative;
           aspect-ratio: 16 / 9;
           overflow: hidden;
-          background: #02060d;
         }
 
         .archiveCardImage img {
-          display: block;
           width: 100%;
           height: 100%;
+          display: block;
           object-fit: cover;
         }
 
@@ -1044,17 +1443,12 @@ export default function MapPage() {
           position: absolute;
           top: 7px;
           left: 7px;
-
           padding: 4px 6px;
-
           border-radius: 999px;
-
           background: #63ddff;
           color: #03101a;
-
           font-size: 6px;
           font-weight: 950;
-          letter-spacing: 0.06em;
         }
 
         .archiveCardContent {
@@ -1065,79 +1459,37 @@ export default function MapPage() {
           color: #63ddff;
           font-size: 6px;
           font-weight: 900;
-          letter-spacing: 0.07em;
         }
 
         .archiveCardContent strong {
           display: block;
-
           margin-top: 4px;
-
-          overflow: hidden;
-
           font-size: 11px;
-
-          white-space: nowrap;
-          text-overflow: ellipsis;
         }
 
         .archiveCardContent small {
           display: block;
-
           margin-top: 3px;
-
-          overflow: hidden;
-
           color: #6c82a2;
           font-size: 7px;
-
-          white-space: nowrap;
-          text-overflow: ellipsis;
         }
 
-        /* =====================================
-           COMPARE CONFIG
-        ====================================== */
+        /* COMPARE */
 
         .mapCompareConfiguration {
           display: grid;
-
-          grid-template-columns:
-            minmax(0, 1fr)
-            auto
-            minmax(0, 1fr);
-
-          align-items: end;
-
+          grid-template-columns: 1fr auto 1fr;
           gap: 10px;
-
+          align-items: end;
           margin-bottom: 14px;
-
           padding: 13px;
-
-          border:
-            1px solid
-            rgba(
-              99,
-              221,
-              255,
-              0.13
-            );
-
+          border: 1px solid rgba(99,221,255,.13);
           border-radius: 12px;
-
-          background:
-            rgba(
-              7,
-              16,
-              31,
-              0.72
-            );
+          background: rgba(7,16,31,.72);
         }
 
         .compareSelectField {
-          display: flex;
-          flex-direction: column;
+          display: grid;
           gap: 5px;
         }
 
@@ -1145,234 +1497,102 @@ export default function MapPage() {
           color: #63ddff;
           font-size: 7px;
           font-weight: 900;
-          letter-spacing: 0.09em;
         }
 
         .compareSelectField select {
           width: 100%;
           min-height: 38px;
-
           padding: 0 10px;
-
-          border:
-            1px solid
-            rgba(
-              112,
-              149,
-              205,
-              0.14
-            );
-
+          border: 1px solid rgba(112,149,205,.14);
           border-radius: 8px;
-
-          outline: none;
-
           background: #071122;
           color: white;
-          font-size: 9px;
         }
 
         .compareSwapButton {
           width: 38px;
           height: 38px;
-
-          display: grid;
-          place-items: center;
-
-          border:
-            1px solid
-            rgba(
-              99,
-              221,
-              255,
-              0.16
-            );
-
+          border: 1px solid rgba(99,221,255,.16);
           border-radius: 9px;
-
-          background:
-            rgba(
-              99,
-              221,
-              255,
-              0.05
-            );
-
+          background: rgba(99,221,255,.05);
           color: #8ce9ff;
-          font-size: 17px;
           cursor: pointer;
         }
 
-        .compareSwapButton:hover {
-          background:
-            rgba(
-              99,
-              221,
-              255,
-              0.1
-            );
-        }
-
-        /* =====================================
-           MAIN
-        ====================================== */
+        /* MAIN */
 
         .mapMainLayout {
           display: grid;
-
-          grid-template-columns:
-            minmax(0, 1fr)
-            280px;
-
+          grid-template-columns: minmax(0,1fr) 280px;
           gap: 14px;
-
           align-items: start;
         }
 
         .mapMainLayout.compareActive {
-          grid-template-columns:
-            minmax(0, 1fr)
-            260px;
+          grid-template-columns: minmax(0,1fr) 260px;
         }
 
         .mapViewerColumn {
           min-width: 0;
         }
 
-        /* =====================================
-           SIDE INFO
-        ====================================== */
-
         .mapInformation {
           position: sticky;
           top: 90px;
-
           display: grid;
           gap: 10px;
         }
 
         .mapInfoCard {
           padding: 15px;
-
-          border:
-            1px solid
-            rgba(
-              110,
-              148,
-              205,
-              0.11
-            );
-
+          border: 1px solid rgba(110,148,205,.11);
           border-radius: 13px;
-
-          background:
-            rgba(
-              7,
-              16,
-              31,
-              0.74
-            );
-        }
-
-        .mapInfoCard.primary {
-          padding: 17px;
+          background: rgba(7,16,31,.74);
         }
 
         .mapInfoTop {
           display: flex;
-          align-items: center;
           gap: 7px;
+          align-items: center;
         }
 
-        .mapInfoTop span {
+        .mapInfoTop span,
+        .infoCardLabel {
           color: #63ddff;
           font-size: 7px;
           font-weight: 900;
-          letter-spacing: 0.1em;
         }
 
         .mapInfoTop i {
           width: 5px;
           height: 5px;
-
           border-radius: 50%;
-
           background: #42e5a7;
-
-          box-shadow:
-            0 0 8px
-            rgba(
-              66,
-              229,
-              167,
-              0.6
-            );
         }
 
         .mapInfoCard h2 {
           margin: 8px 0 4px;
-
           font-size: 22px;
-          letter-spacing: -0.025em;
         }
 
-        .mapInfoContext {
-          margin: 0;
+        .mapInfoContext,
+        .compareInfoDescription {
           color: #7186a5;
           font-size: 8px;
         }
 
         .mapDescription {
-          margin: 13px 0 0;
-          padding-top: 12px;
-
-          border-top:
-            1px solid
-            rgba(
-              110,
-              148,
-              205,
-              0.08
-            );
-
           color: #8fa1bc;
           font-size: 9px;
           line-height: 1.6;
         }
 
-        .infoCardLabel {
-          color: #637b9c;
-          font-size: 7px;
-          font-weight: 900;
-          letter-spacing: 0.09em;
-        }
-
-        .mapDetailRows {
-          margin-top: 8px;
-        }
-
         .mapDetailRows > div {
           min-height: 34px;
-
           display: flex;
-          align-items: center;
           justify-content: space-between;
-
-          gap: 10px;
-
-          border-bottom:
-            1px solid
-            rgba(
-              110,
-              148,
-              205,
-              0.07
-            );
-        }
-
-        .mapDetailRows
-          > div:last-child {
-          border-bottom: none;
+          align-items: center;
+          border-bottom: 1px solid rgba(110,148,205,.07);
         }
 
         .mapDetailRows span {
@@ -1381,212 +1601,57 @@ export default function MapPage() {
         }
 
         .mapDetailRows strong {
-          color: #acbad0;
           font-size: 8px;
         }
 
-        .mapDetailRows
-          .currentValue {
+        .currentValue {
           color: #42e5a7;
         }
 
-        .mapPhaseNotice {
-          padding: 15px;
-
-          border:
-            1px dashed
-            rgba(
-              159,
-              112,
-              255,
-              0.2
-            );
-
-          border-radius: 13px;
-
-          background:
-            rgba(
-              77,
-              44,
-              130,
-              0.07
-            );
-        }
-
-        .mapPhaseNotice > span {
-          color: #a98aff;
-          font-size: 6px;
+        .clearLocationFocus {
+          min-height: 38px;
+          border: 1px solid rgba(99,221,255,.15);
+          border-radius: 9px;
+          background: rgba(99,221,255,.05);
+          color: #8ce9ff;
+          font-size: 8px;
           font-weight: 900;
-          letter-spacing: 0.09em;
-        }
-
-        .mapPhaseNotice strong {
-          display: block;
-          margin-top: 5px;
-          font-size: 10px;
-        }
-
-        .mapPhaseNotice p {
-          margin: 5px 0 0;
-
-          color: #7488a6;
-          font-size: 8px;
-          line-height: 1.55;
-        }
-
-        /* =====================================
-           COMPARE INFO
-        ====================================== */
-
-        .compareInfoCard h2 {
-          margin-top: 7px;
-        }
-
-        .compareInfoDescription {
-          margin: 6px 0 0;
-
-          color: #788da9;
-          font-size: 8px;
-          line-height: 1.55;
+          cursor: pointer;
         }
 
         .compareMapInfo {
-          display: flex;
-          flex-direction: column;
+          display: grid;
           gap: 5px;
-        }
-
-        .compareMapInfo strong {
-          font-size: 11px;
-        }
-
-        .compareMapInfo small {
-          color: #697f9e;
-          font-size: 7px;
         }
 
         .compareColorLabel {
           width: fit-content;
-
           padding: 4px 6px;
-
           border-radius: 999px;
-
           font-size: 6px;
           font-weight: 900;
         }
 
         .compareColorLabel.left {
-          background:
-            rgba(
-              99,
-              221,
-              255,
-              0.1
-            );
-
           color: #63ddff;
+          background: rgba(99,221,255,.1);
         }
 
         .compareColorLabel.right {
-          background:
-            rgba(
-              171,
-              135,
-              255,
-              0.12
-            );
-
           color: #b89cff;
+          background: rgba(171,135,255,.12);
         }
-
-        .exitCompareSideButton {
-          min-height: 38px;
-
-          border:
-            1px solid
-            rgba(
-              112,
-              149,
-              205,
-              0.13
-            );
-
-          border-radius: 9px;
-
-          background:
-            rgba(
-              7,
-              16,
-              31,
-              0.7
-            );
-
-          color: #8299b8;
-
-          font-size: 8px;
-          font-weight: 900;
-
-          cursor: pointer;
-        }
-
-        .exitCompareSideButton:hover {
-          color: white;
-
-          border-color:
-            rgba(
-              99,
-              221,
-              255,
-              0.21
-            );
-        }
-
-        /* =====================================
-           STATES
-        ====================================== */
 
         .mapState {
           min-height: 360px;
-
           display: grid;
           place-items: center;
-
-          padding: 30px;
-
-          border:
-            1px dashed
-            rgba(
-              110,
-              148,
-              205,
-              0.12
-            );
-
-          border-radius: 16px;
-
           color: #6d82a1;
-
-          background:
-            rgba(
-              6,
-              14,
-              28,
-              0.45
-            );
-
-          font-size: 10px;
-
-          text-align: center;
         }
 
         .mapState.error {
           color: #ff9aa5;
         }
-
-        /* =====================================
-           RESPONSIVE
-        ====================================== */
 
         @media (max-width: 1000px) {
           .mapMainLayout,
@@ -1596,51 +1661,13 @@ export default function MapPage() {
 
           .mapInformation {
             position: static;
-
-            grid-template-columns:
-              repeat(
-                2,
-                minmax(
-                  0,
-                  1fr
-                )
-              );
-          }
-
-          .mapInfoCard.primary,
-          .compareInfoCard {
-            grid-column: 1 / -1;
           }
         }
 
         @media (max-width: 700px) {
-          .publicMapHeader {
-            padding-top: 28px;
-          }
-
           .publicMapTitleRow {
+            flex-direction: column;
             align-items: stretch;
-            flex-direction: column;
-          }
-
-          .currentMapIndicator {
-            min-width: 0;
-          }
-
-          .mapArchiveSelectorHeader {
-            align-items: flex-start;
-            flex-direction: column;
-          }
-
-          .mapArchiveActions {
-            width: 100%;
-
-            justify-content: space-between;
-          }
-
-          .mapArchiveCard {
-            width: 175px;
-            min-width: 175px;
           }
 
           .mapCompareConfiguration {
@@ -1651,27 +1678,15 @@ export default function MapPage() {
             width: 100%;
           }
 
-          .mapInformation {
-            grid-template-columns: 1fr;
+          .mapSearchResult {
+            grid-template-columns:
+              auto
+              minmax(0,1fr)
+              auto;
           }
 
-          .mapInfoCard.primary,
-          .compareInfoCard {
-            grid-column: auto;
-          }
-        }
-
-        @media (
-          prefers-reduced-motion:
-            reduce
-        ) {
-          .mapArchiveCard,
-          .compareModeButton {
-            transition: none;
-          }
-
-          .mapArchiveCard:hover {
-            transform: none;
+          .searchMarkerType {
+            display: none;
           }
         }
       `}</style>
