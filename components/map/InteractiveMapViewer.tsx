@@ -20,22 +20,20 @@ import {
   getPublishedMapMarkers,
 } from "../../services/map-marker.service";
 
-
 interface InteractiveMapViewerProps {
   map: AurosMap;
-}
 
+  focusMarkerId?: string | null;
+}
 
 interface Position {
   x: number;
   y: number;
 }
 
-
 const MIN_SCALE = 1;
-const MAX_SCALE = 5;
+const MAX_SCALE = 6;
 const ZOOM_STEP = 0.35;
-
 
 const filterTypes: {
   value: MapMarkerType;
@@ -67,11 +65,21 @@ const filterTypes: {
   },
 ];
 
-
 export default function InteractiveMapViewer({
   map,
+  focusMarkerId = null,
 }: InteractiveMapViewerProps) {
   const containerRef =
+    useRef<HTMLDivElement | null>(
+      null
+    );
+
+  const viewportRef =
+    useRef<HTMLDivElement | null>(
+      null
+    );
+
+  const stageRef =
     useRef<HTMLDivElement | null>(
       null
     );
@@ -106,36 +114,51 @@ export default function InteractiveMapViewer({
   const [markers, setMarkers] =
     useState<MapMarker[]>([]);
 
-  const [selectedMarker, setSelectedMarker] =
+  const [
+    selectedMarker,
+    setSelectedMarker,
+  ] =
     useState<MapMarker | null>(
       null
     );
 
-  const [enabledTypes, setEnabledTypes] =
-    useState<MapMarkerType[]>(
-      filterTypes.map(
-        (type) => type.value
-      )
-    );
+  const [
+    enabledTypes,
+    setEnabledTypes,
+  ] = useState<MapMarkerType[]>(
+    filterTypes.map(
+      (type) => type.value
+    )
+  );
 
+  /* =========================================================
+     LOAD MAP MARKERS
+  ========================================================= */
 
   useEffect(() => {
-    setScale(1);
+    resetView();
 
-    setPosition({
-      x: 0,
-      y: 0,
-    });
-
-    setSelectedMarker(null);
+    setSelectedMarker(
+      null
+    );
 
     getPublishedMapMarkers(
       map.id
     )
       .then(setMarkers)
-      .catch(console.error);
+      .catch((error) => {
+        console.error(
+          "MAP MARKER LOAD ERROR:",
+          error
+        );
+
+        setMarkers([]);
+      });
   }, [map.id]);
 
+  /* =========================================================
+     FULLSCREEN STATE
+  ========================================================= */
 
   useEffect(() => {
     function handleFullscreenChange() {
@@ -158,6 +181,71 @@ export default function InteractiveMapViewer({
     };
   }, []);
 
+  /* =========================================================
+     PHASE 4.3
+     FOCUS MARKER FROM SEARCH / DEEP LINK
+
+     Example:
+     /map?map=MAP_ID&location=MARKER_ID
+  ========================================================= */
+
+  useEffect(() => {
+    if (!focusMarkerId) {
+      return;
+    }
+
+    if (markers.length === 0) {
+      return;
+    }
+
+    const marker =
+      markers.find(
+        (item) =>
+          item.id ===
+          focusMarkerId
+      );
+
+    if (!marker) {
+      return;
+    }
+
+    /*
+     * Make sure the marker type is visible,
+     * even if the user previously disabled it.
+     */
+    setEnabledTypes(
+      (current) =>
+        current.includes(
+          marker.type
+        )
+          ? current
+          : [
+              ...current,
+              marker.type,
+            ]
+    );
+
+    setSelectedMarker(
+      marker
+    );
+
+    /*
+     * Wait one frame so the stage already
+     * has its final rendered dimensions.
+     */
+    requestAnimationFrame(() => {
+      focusMarker(
+        marker
+      );
+    });
+  }, [
+    focusMarkerId,
+    markers,
+  ]);
+
+  /* =========================================================
+     VISIBLE MARKERS
+  ========================================================= */
 
   const visibleMarkers =
     useMemo(() => {
@@ -172,6 +260,9 @@ export default function InteractiveMapViewer({
       enabledTypes,
     ]);
 
+  /* =========================================================
+     VIEW
+  ========================================================= */
 
   function resetView() {
     setScale(1);
@@ -181,7 +272,6 @@ export default function InteractiveMapViewer({
       y: 0,
     });
   }
-
 
   function clampScale(
     value: number
@@ -195,6 +285,91 @@ export default function InteractiveMapViewer({
     );
   }
 
+  /* =========================================================
+     FOCUS LOCATION
+  ========================================================= */
+
+  function focusMarker(
+    marker: MapMarker
+  ) {
+    const viewport =
+      viewportRef.current;
+
+    const stage =
+      stageRef.current;
+
+    if (
+      !viewport ||
+      !stage
+    ) {
+      return;
+    }
+
+    const focusScale =
+      2.5;
+
+    const viewportRect =
+      viewport.getBoundingClientRect();
+
+    const stageRect =
+      stage.getBoundingClientRect();
+
+    /*
+     * Stage coordinates at scale 1.
+     *
+     * marker.x / marker.y are percentages
+     * relative to the exact map image.
+     */
+    const markerX =
+      stageRect.left -
+      viewportRect.left +
+      stageRect.width *
+        (Number(marker.x) /
+          100);
+
+    const markerY =
+      stageRect.top -
+      viewportRect.top +
+      stageRect.height *
+        (Number(marker.y) /
+          100);
+
+    const viewportCenterX =
+      viewportRect.width / 2;
+
+    const viewportCenterY =
+      viewportRect.height / 2;
+
+    /*
+     * Translate so that the marker ends up
+     * approximately in the center after scaling.
+     */
+    const offsetX =
+      viewportCenterX -
+      markerX;
+
+    const offsetY =
+      viewportCenterY -
+      markerY;
+
+    setScale(
+      focusScale
+    );
+
+    setPosition({
+      x:
+        offsetX *
+        focusScale,
+
+      y:
+        offsetY *
+        focusScale,
+    });
+  }
+
+  /* =========================================================
+     ZOOM
+  ========================================================= */
 
   function zoomIn() {
     setScale((current) =>
@@ -204,7 +379,6 @@ export default function InteractiveMapViewer({
       )
     );
   }
-
 
   function zoomOut() {
     setScale((current) => {
@@ -224,7 +398,6 @@ export default function InteractiveMapViewer({
       return next;
     });
   }
-
 
   function handleWheel(
     event: ReactWheelEvent<HTMLDivElement>
@@ -254,10 +427,30 @@ export default function InteractiveMapViewer({
     });
   }
 
+  /* =========================================================
+     DRAG MAP
+  ========================================================= */
 
   function handlePointerDown(
     event: ReactPointerEvent<HTMLDivElement>
   ) {
+    const target =
+      event.target as HTMLElement;
+
+    if (
+      target.closest(
+        ".publicMapMarker"
+      ) ||
+      target.closest(
+        ".mapControls"
+      ) ||
+      target.closest(
+        ".mapLocationPanel"
+      )
+    ) {
+      return;
+    }
+
     if (scale <= 1) {
       return;
     }
@@ -269,14 +462,14 @@ export default function InteractiveMapViewer({
       y: event.clientY,
     };
 
-    positionStartRef.current =
-      position;
+    positionStartRef.current = {
+      ...position,
+    };
 
     event.currentTarget.setPointerCapture(
       event.pointerId
     );
   }
-
 
   function handlePointerMove(
     event: ReactPointerEvent<HTMLDivElement>
@@ -285,23 +478,24 @@ export default function InteractiveMapViewer({
       return;
     }
 
+    const deltaX =
+      event.clientX -
+      dragStartRef.current.x;
+
+    const deltaY =
+      event.clientY -
+      dragStartRef.current.y;
+
     setPosition({
       x:
         positionStartRef.current.x +
-        (
-          event.clientX -
-          dragStartRef.current.x
-        ),
+        deltaX,
 
       y:
         positionStartRef.current.y +
-        (
-          event.clientY -
-          dragStartRef.current.y
-        ),
+        deltaY,
     });
   }
-
 
   function handlePointerUp(
     event: ReactPointerEvent<HTMLDivElement>
@@ -317,23 +511,37 @@ export default function InteractiveMapViewer({
     }
   }
 
+  /* =========================================================
+     FULLSCREEN
+  ========================================================= */
 
   async function toggleFullscreen() {
-    if (
-      !containerRef.current
-    ) {
+    const container =
+      containerRef.current;
+
+    if (!container) {
       return;
     }
 
-    if (
-      !document.fullscreenElement
-    ) {
-      await containerRef.current.requestFullscreen();
-    } else {
-      await document.exitFullscreen();
+    try {
+      if (
+        !document.fullscreenElement
+      ) {
+        await container.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.error(
+        "FULLSCREEN ERROR:",
+        error
+      );
     }
   }
 
+  /* =========================================================
+     FILTER
+  ========================================================= */
 
   function toggleType(
     type: MapMarkerType
@@ -355,16 +563,16 @@ export default function InteractiveMapViewer({
       selectedMarker?.type ===
       type
     ) {
-      setSelectedMarker(null);
+      setSelectedMarker(
+        null
+      );
     }
   }
-
 
   const zoomPercent =
     Math.round(
       scale * 100
     );
-
 
   return (
     <>
@@ -376,6 +584,8 @@ export default function InteractiveMapViewer({
             : "interactiveMapViewer"
         }
       >
+        {/* TOPBAR */}
+
         <div className="mapViewerTopbar">
           <div>
             <span>
@@ -391,6 +601,8 @@ export default function InteractiveMapViewer({
             {zoomPercent}%
           </div>
         </div>
+
+        {/* FILTERS */}
 
         <div className="mapFilterBar">
           <span>
@@ -423,7 +635,10 @@ export default function InteractiveMapViewer({
           )}
         </div>
 
+        {/* MAP */}
+
         <div
+          ref={viewportRef}
           className={
             dragging
               ? "mapViewport dragging"
@@ -451,82 +666,107 @@ export default function InteractiveMapViewer({
               transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
             }}
           >
-            <img
-              src={
-                map.image_url
-              }
-              alt={map.name}
-              draggable={false}
-            />
+            <div
+              ref={stageRef}
+              className="publicMapStage"
+            >
+              <img
+                src={
+                  map.image_url
+                }
+                alt={map.name}
+                draggable={false}
+              />
 
-            <div className="publicMarkersLayer">
-              {visibleMarkers.map(
-                (marker) => (
-                  <button
-                    key={
-                      marker.id
-                    }
-                    type="button"
-                    className={
-                      selectedMarker?.id ===
-                      marker.id
-                        ? `publicMapMarker ${marker.type} selected`
-                        : `publicMapMarker ${marker.type}`
-                    }
-                    style={{
-                      left: `${marker.x}%`,
-                      top: `${marker.y}%`,
-                    }}
-                    onPointerDown={(
-                      event
-                    ) =>
-                      event.stopPropagation()
-                    }
-                    onClick={(
-                      event
-                    ) => {
-                      event.stopPropagation();
+              <div className="publicMarkersLayer">
+                {visibleMarkers.map(
+                  (marker) => (
+                    <button
+                      key={
+                        marker.id
+                      }
+                      type="button"
+                      className={
+                        selectedMarker?.id ===
+                        marker.id
+                          ? `publicMapMarker ${marker.type} selected`
+                          : `publicMapMarker ${marker.type}`
+                      }
+                      style={{
+                        left: `${Number(
+                          marker.x
+                        )}%`,
+                        top: `${Number(
+                          marker.y
+                        )}%`,
+                      }}
+                      onPointerDown={(
+                        event
+                      ) => {
+                        event.stopPropagation();
+                      }}
+                      onClick={(
+                        event
+                      ) => {
+                        event.stopPropagation();
 
-                      setSelectedMarker(
-                        marker
-                      );
-                    }}
-                    aria-label={
-                      marker.name
-                    }
-                  >
-                    <span>
-                      {marker.icon ||
-                        markerTypeSymbol(
-                          marker.type
-                        )}
-                    </span>
+                        setSelectedMarker(
+                          marker
+                        );
+                      }}
+                      title={
+                        marker.name
+                      }
+                      aria-label={
+                        marker.name
+                      }
+                    >
+                      <span className="publicMarkerCircle">
+                        {marker.icon ||
+                          markerTypeSymbol(
+                            marker.type
+                          )}
+                      </span>
 
-                    {scale >=
-                      1.7 && (
-                      <strong>
+                      <strong className="publicMarkerLabel">
                         {
                           marker.name
                         }
                       </strong>
-                    )}
-                  </button>
-                )
-              )}
+                    </button>
+                  )
+                )}
+              </div>
             </div>
           </div>
+
+          {/* CONTROLS */}
 
           <div className="mapControls">
             <button
               type="button"
-              onClick={zoomIn}
+              onClick={
+                zoomIn
+              }
+              disabled={
+                scale >=
+                MAX_SCALE
+              }
+              title="Zoom in"
             >
               +
             </button>
 
             <button
               type="button"
-              onClick={zoomOut}
+              onClick={
+                zoomOut
+              }
+              disabled={
+                scale <=
+                MIN_SCALE
+              }
+              title="Zoom out"
             >
               −
             </button>
@@ -536,6 +776,7 @@ export default function InteractiveMapViewer({
               onClick={
                 resetView
               }
+              title="Reset view"
             >
               ↺
             </button>
@@ -545,6 +786,7 @@ export default function InteractiveMapViewer({
               onClick={
                 toggleFullscreen
               }
+              title="Fullscreen"
             >
               {fullscreen
                 ? "×"
@@ -552,9 +794,12 @@ export default function InteractiveMapViewer({
             </button>
           </div>
 
+          {/* LOCATION INFO */}
+
           {selectedMarker && (
             <div className="mapLocationPanel">
               <button
+                type="button"
                 className="closeLocation"
                 onClick={() =>
                   setSelectedMarker(
@@ -578,7 +823,9 @@ export default function InteractiveMapViewer({
 
               <div className="locationPanelContent">
                 <span>
-                  {selectedMarker.type.toUpperCase()}
+                  {getMarkerTypeLabel(
+                    selectedMarker.type
+                  )}
                 </span>
 
                 <h3>
@@ -597,12 +844,33 @@ export default function InteractiveMapViewer({
               </div>
             </div>
           )}
+
+          <div className="mapViewerHint">
+            <span>
+              Scroll to zoom
+            </span>
+
+            <span>
+              Drag to move
+            </span>
+
+            <span>
+              Click location for details
+            </span>
+          </div>
         </div>
+
+        {/* BOTTOM BAR */}
 
         <div className="mapViewerBottomBar">
           <div>
             <span className="statusDot" />
-            {visibleMarkers.length} locations visible
+
+            {visibleMarkers.length}{" "}
+            {visibleMarkers.length === 1
+              ? "location"
+              : "locations"}{" "}
+            visible
           </div>
 
           <div>
@@ -614,313 +882,898 @@ export default function InteractiveMapViewer({
       <style jsx global>{`
         .interactiveMapViewer {
           position: relative;
-          overflow: hidden;
+
           width: 100%;
-          border: 1px solid rgba(107, 150, 210, 0.15);
+
+          overflow: hidden;
+
+          border:
+            1px solid
+            rgba(
+              107,
+              150,
+              210,
+              0.15
+            );
+
           border-radius: 20px;
+
           background: #02060d;
+
+          box-shadow:
+            0 30px 80px
+            rgba(
+              0,
+              0,
+              0,
+              0.24
+            );
         }
 
         .interactiveMapViewer.fullscreen {
           width: 100vw;
           height: 100vh;
-          border: 0;
+
+          display: grid;
+
+          grid-template-rows:
+            auto
+            auto
+            minmax(0, 1fr)
+            auto;
+
+          border: none;
           border-radius: 0;
         }
 
+        /* ===============================
+           TOPBAR
+        ================================ */
+
         .mapViewerTopbar {
           min-height: 52px;
+
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 0 15px;
-          background: #050c18;
-          border-bottom: 1px solid rgba(107,150,210,.1);
+
+          gap: 16px;
+
+          padding:
+            0
+            15px;
+
+          border-bottom:
+            1px solid
+            rgba(
+              107,
+              150,
+              210,
+              0.1
+            );
+
+          background:
+            #050c18;
         }
 
-        .mapViewerTopbar > div:first-child {
+        .mapViewerTopbar
+          > div:first-child {
           display: flex;
-          gap: 9px;
           align-items: center;
+
+          gap: 9px;
         }
 
-        .mapViewerTopbar span,
-        .mapFilterBar > span {
+        .mapViewerTopbar span {
           color: #63ddff;
-          font-size: 7px;
+
+          font-size: 8px;
           font-weight: 900;
-          letter-spacing: .11em;
+
+          letter-spacing:
+            0.11em;
         }
 
         .mapViewerTopbar strong {
-          font-size: 10px;
+          color: #e5efff;
+
+          font-size: 11px;
         }
 
         .mapViewerZoomLabel {
           color: #7187a8;
-          font-size: 8px;
+
+          font-size: 9px;
+          font-weight: 800;
         }
+
+        /* ===============================
+           FILTERS
+        ================================ */
 
         .mapFilterBar {
           min-height: 43px;
+
           display: flex;
           align-items: center;
+
           gap: 6px;
-          padding: 0 13px;
+
+          padding:
+            0
+            13px;
+
           overflow-x: auto;
-          border-bottom: 1px solid rgba(107,150,210,.08);
-          background: rgba(5,12,24,.96);
+
+          border-bottom:
+            1px solid
+            rgba(
+              107,
+              150,
+              210,
+              0.08
+            );
+
+          background:
+            rgba(
+              5,
+              12,
+              24,
+              0.96
+            );
+        }
+
+        .mapFilterBar > span {
+          margin-right: 2px;
+
+          color: #63ddff;
+
+          font-size: 7px;
+          font-weight: 900;
+
+          letter-spacing:
+            0.1em;
         }
 
         .mapTypeFilter {
-          min-height: 27px;
-          padding: 0 9px;
           flex-shrink: 0;
-          border: 1px solid rgba(110,148,205,.12);
+
+          min-height: 29px;
+
+          padding:
+            0
+            10px;
+
+          border:
+            1px solid
+            rgba(
+              110,
+              148,
+              205,
+              0.14
+            );
+
           border-radius: 999px;
-          background: rgba(8,18,34,.8);
-          color: #687f9f;
+
+          background:
+            rgba(
+              8,
+              18,
+              34,
+              0.8
+            );
+
+          color: #7388a7;
+
           font-size: 7px;
           font-weight: 800;
+
           cursor: pointer;
+        }
+
+        .mapTypeFilter:hover {
+          color: #c7d9ef;
+
+          border-color:
+            rgba(
+              99,
+              221,
+              255,
+              0.22
+            );
         }
 
         .mapTypeFilter.active {
           color: white;
-          border-color: rgba(99,221,255,.23);
-          background: rgba(99,221,255,.08);
+
+          border-color:
+            rgba(
+              99,
+              221,
+              255,
+              0.3
+            );
+
+          background:
+            rgba(
+              99,
+              221,
+              255,
+              0.11
+            );
         }
+
+        /* ===============================
+           VIEWPORT
+        ================================ */
 
         .mapViewport {
           position: relative;
-          height: min(70vh, 760px);
+
+          width: 100%;
+
+          height:
+            min(
+              70vh,
+              760px
+            );
+
           min-height: 500px;
+
           overflow: hidden;
+
           touch-action: none;
+
           user-select: none;
+
           cursor: grab;
-          background: #01040a;
+
+          background:
+            radial-gradient(
+              circle at center,
+              rgba(
+                21,
+                48,
+                73,
+                0.16
+              ),
+              transparent
+              70%
+            ),
+            #01040a;
         }
 
-        .interactiveMapViewer.fullscreen .mapViewport {
-          height: calc(100vh - 131px);
+        .interactiveMapViewer.fullscreen
+          .mapViewport {
+          height: auto;
+          min-height: 0;
         }
 
         .mapViewport.dragging {
           cursor: grabbing;
         }
 
+        /* ===============================
+           TRANSFORM LAYER
+        ================================ */
+
         .mapTransformLayer {
           position: absolute;
+
           inset: 0;
+
           display: flex;
           align-items: center;
           justify-content: center;
-          transform-origin: center center;
-          will-change: transform;
+
+          transform-origin:
+            center center;
+
+          will-change:
+            transform;
         }
 
-        .mapTransformLayer > img {
-          width: 100%;
-          height: 100%;
+        /* ===============================
+           EXACT MAP STAGE
+        ================================ */
+
+        .publicMapStage {
+          position: relative;
+
+          display: inline-block;
+
+          max-width: 100%;
+          max-height: 100%;
+
+          line-height: 0;
+        }
+
+        .publicMapStage > img {
           display: block;
+
+          width: auto;
+          height: auto;
+
+          max-width: 100%;
+
+          max-height:
+            min(
+              70vh,
+              760px
+            );
+
           object-fit: contain;
+
           pointer-events: none;
+
           user-select: none;
         }
 
+        .interactiveMapViewer.fullscreen
+          .publicMapStage
+          > img {
+          max-width:
+            calc(
+              100vw - 30px
+            );
+
+          max-height:
+            calc(
+              100vh - 145px
+            );
+        }
+
+        /* ===============================
+           MARKERS
+        ================================ */
+
         .publicMarkersLayer {
           position: absolute;
+
           inset: 0;
+
           pointer-events: none;
         }
 
         .publicMapMarker {
           position: absolute;
-          z-index: 10;
-          display: flex;
-          align-items: center;
-          gap: 5px;
+
+          z-index: 20;
+
+          width: 0;
+          height: 0;
+
           padding: 0;
-          border: 0;
-          background: transparent;
+
+          border: none;
+
+          background:
+            transparent;
+
           color: white;
+
           cursor: pointer;
-          transform: translate(-50%, -50%);
+
           pointer-events: auto;
         }
 
-        .publicMapMarker > span {
-          width: 24px;
-          height: 24px;
+        .publicMarkerCircle {
+          position: absolute;
+
+          left: 0;
+          top: 0;
+
+          width: 29px;
+          height: 29px;
+
           display: grid;
           place-items: center;
-          flex-shrink: 0;
-          border: 2px solid white;
+
+          border:
+            2px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.95
+            );
+
           border-radius: 50%;
-          background: #63ddff;
+
+          background:
+            #63ddff;
+
           color: #04101b;
-          font-size: 8px;
+
+          font-size: 9px;
           font-weight: 950;
-          box-shadow: 0 3px 12px rgba(0,0,0,.6);
-        }
 
-        .publicMapMarker.landmark > span {
-          background: #65e8a8;
-        }
+          transform:
+            translate(
+              -50%,
+              -50%
+            );
 
-        .publicMapMarker.story > span {
-          background: #ab87ff;
-        }
-
-        .publicMapMarker.event > span {
-          background: #ff9e55;
-        }
-
-        .publicMapMarker.spawn > span {
-          background: #ffd866;
-        }
-
-        .publicMapMarker.other > span {
-          background: #9baac2;
-        }
-
-        .publicMapMarker.selected > span {
           box-shadow:
-            0 0 0 4px rgba(99,221,255,.18),
-            0 3px 12px rgba(0,0,0,.6);
+            0 4px 16px
+            rgba(
+              0,
+              0,
+              0,
+              0.58
+            );
+
+          pointer-events: none;
         }
 
-        .publicMapMarker strong {
-          max-width: 120px;
+        .publicMarkerLabel {
+          position: absolute;
+
+          left: 20px;
+          top: 0;
+
+          max-width: 170px;
+
           overflow: hidden;
-          padding: 4px 6px;
-          border-radius: 6px;
-          background: rgba(3,9,20,.82);
-          font-size: 6px;
+
+          padding:
+            5px
+            7px;
+
+          border-radius: 7px;
+
+          background:
+            rgba(
+              3,
+              9,
+              20,
+              0.88
+            );
+
+          color: #edf6ff;
+
+          font-size: 8px;
+          line-height: 1;
+
           white-space: nowrap;
-          text-overflow: ellipsis;
+
+          text-overflow:
+            ellipsis;
+
+          transform:
+            translateY(
+              -50%
+            );
+
+          box-shadow:
+            0 4px 14px
+            rgba(
+              0,
+              0,
+              0,
+              0.38
+            );
+
+          pointer-events: none;
         }
+
+        .publicMapMarker.poi
+          .publicMarkerCircle {
+          background:
+            #63ddff;
+        }
+
+        .publicMapMarker.landmark
+          .publicMarkerCircle {
+          background:
+            #65e8a8;
+        }
+
+        .publicMapMarker.story
+          .publicMarkerCircle {
+          background:
+            #ab87ff;
+        }
+
+        .publicMapMarker.event
+          .publicMarkerCircle {
+          background:
+            #ff9e55;
+        }
+
+        .publicMapMarker.spawn
+          .publicMarkerCircle {
+          background:
+            #ffd866;
+        }
+
+        .publicMapMarker.other
+          .publicMarkerCircle {
+          background:
+            #9baac2;
+        }
+
+        .publicMapMarker.selected
+          .publicMarkerCircle {
+          width: 35px;
+          height: 35px;
+
+          box-shadow:
+            0 0 0 6px
+              rgba(
+                99,
+                221,
+                255,
+                0.18
+              ),
+            0 4px 18px
+              rgba(
+                0,
+                0,
+                0,
+                0.62
+              );
+        }
+
+        .publicMapMarker:hover
+          .publicMarkerCircle {
+          transform:
+            translate(
+              -50%,
+              -50%
+            )
+            scale(1.1);
+        }
+
+        /* ===============================
+           CONTROLS
+        ================================ */
 
         .mapControls {
           position: absolute;
-          z-index: 30;
+
+          z-index: 50;
+
           top: 13px;
           right: 13px;
+
           display: grid;
+
           gap: 6px;
         }
 
         .mapControls button {
-          width: 38px;
-          height: 38px;
+          width: 40px;
+          height: 40px;
+
           display: grid;
           place-items: center;
-          border: 1px solid rgba(119,156,211,.16);
+
+          border:
+            1px solid
+            rgba(
+              119,
+              156,
+              211,
+              0.17
+            );
+
           border-radius: 10px;
-          background: rgba(4,12,25,.9);
+
+          background:
+            rgba(
+              4,
+              12,
+              25,
+              0.92
+            );
+
           color: white;
+
           font-size: 15px;
+          font-weight: 800;
+
           cursor: pointer;
+
+          backdrop-filter:
+            blur(7px);
         }
+
+        .mapControls
+          button:hover:not(:disabled) {
+          color: #63ddff;
+
+          border-color:
+            rgba(
+              99,
+              221,
+              255,
+              0.32
+            );
+        }
+
+        .mapControls button:disabled {
+          opacity: 0.35;
+
+          cursor: default;
+        }
+
+        /* ===============================
+           LOCATION PANEL
+        ================================ */
 
         .mapLocationPanel {
           position: absolute;
-          z-index: 40;
+
+          z-index: 60;
+
           left: 14px;
           bottom: 14px;
-          width: min(340px, calc(100% - 28px));
+
+          width:
+            min(
+              350px,
+              calc(
+                100% - 28px
+              )
+            );
+
           overflow: hidden;
-          border: 1px solid rgba(99,221,255,.18);
-          border-radius: 14px;
-          background: rgba(5,13,27,.96);
-          box-shadow: 0 20px 50px rgba(0,0,0,.35);
+
+          border:
+            1px solid
+            rgba(
+              99,
+              221,
+              255,
+              0.2
+            );
+
+          border-radius: 15px;
+
+          background:
+            rgba(
+              5,
+              13,
+              27,
+              0.97
+            );
+
+          box-shadow:
+            0 24px 60px
+            rgba(
+              0,
+              0,
+              0,
+              0.42
+            );
         }
 
         .mapLocationPanel > img {
           display: block;
+
           width: 100%;
-          aspect-ratio: 16 / 8;
+
+          aspect-ratio:
+            16 / 8;
+
           object-fit: cover;
         }
 
         .locationPanelContent {
-          padding: 13px;
+          padding: 14px;
         }
 
         .locationPanelContent > span {
           color: #63ddff;
-          font-size: 6px;
+
+          font-size: 7px;
           font-weight: 900;
-          letter-spacing: .1em;
+
+          letter-spacing:
+            0.1em;
         }
 
         .locationPanelContent h3 {
-          margin: 5px 0;
-          font-size: 16px;
+          margin:
+            5px
+            0;
+
+          color: white;
+
+          font-size: 18px;
         }
 
         .locationPanelContent p {
           margin: 0;
+
           color: #8398b7;
-          font-size: 8px;
-          line-height: 1.55;
+
+          font-size: 9px;
+
+          line-height: 1.6;
         }
 
         .closeLocation {
           position: absolute;
+
+          z-index: 2;
+
           top: 8px;
           right: 8px;
-          z-index: 2;
-          width: 28px;
-          height: 28px;
-          border: 1px solid rgba(255,255,255,.13);
+
+          width: 29px;
+          height: 29px;
+
+          border:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.13
+            );
+
           border-radius: 8px;
-          background: rgba(3,9,20,.8);
+
+          background:
+            rgba(
+              3,
+              9,
+              20,
+              0.86
+            );
+
           color: white;
+
           cursor: pointer;
         }
 
+        /* ===============================
+           HINT
+        ================================ */
+
+        .mapViewerHint {
+          position: absolute;
+
+          z-index: 30;
+
+          left: 14px;
+          top: 14px;
+
+          display: flex;
+
+          gap: 6px;
+
+          pointer-events: none;
+        }
+
+        .mapViewerHint span {
+          padding:
+            6px
+            8px;
+
+          border:
+            1px solid
+            rgba(
+              119,
+              156,
+              211,
+              0.1
+            );
+
+          border-radius: 999px;
+
+          background:
+            rgba(
+              4,
+              12,
+              25,
+              0.72
+            );
+
+          color: #7186a4;
+
+          font-size: 7px;
+          font-weight: 800;
+        }
+
+        /* ===============================
+           BOTTOM BAR
+        ================================ */
+
         .mapViewerBottomBar {
           min-height: 36px;
+
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 0 14px;
-          border-top: 1px solid rgba(107,150,210,.09);
-          background: #050c18;
+
+          padding:
+            0
+            14px;
+
+          border-top:
+            1px solid
+            rgba(
+              107,
+              150,
+              210,
+              0.09
+            );
+
+          background:
+            #050c18;
+
           color: #546c8e;
-          font-size: 7px;
+
+          font-size: 8px;
         }
 
-        .mapViewerBottomBar > div:first-child {
+        .mapViewerBottomBar
+          > div:first-child {
           display: flex;
           align-items: center;
+
           gap: 6px;
         }
 
         .statusDot {
           width: 5px;
           height: 5px;
+
           border-radius: 50%;
-          background: #42e5a7;
+
+          background:
+            #42e5a7;
+
+          box-shadow:
+            0 0 8px
+            rgba(
+              66,
+              229,
+              167,
+              0.55
+            );
         }
 
-        @media (max-width: 700px) {
+        /* ===============================
+           RESPONSIVE
+        ================================ */
+
+        @media (
+          max-width: 700px
+        ) {
           .mapViewport {
-            height: 62vh;
             min-height: 420px;
+
+            height: 62vh;
           }
 
-          .mapFilterBar > span {
+          .mapFilterBar
+            > span {
             display: none;
+          }
+
+          .mapViewerHint {
+            display: none;
+          }
+
+          .publicMarkerLabel {
+            display: none;
+          }
+
+          .publicMarkerCircle {
+            width: 25px;
+            height: 25px;
+
+            font-size: 8px;
           }
         }
       `}</style>
     </>
   );
 }
-
 
 function markerTypeSymbol(
   type: MapMarkerType
@@ -943,5 +1796,29 @@ function markerTypeSymbol(
 
     default:
       return "•";
+  }
+}
+
+function getMarkerTypeLabel(
+  type: MapMarkerType
+) {
+  switch (type) {
+    case "poi":
+      return "POINT OF INTEREST";
+
+    case "landmark":
+      return "LANDMARK";
+
+    case "story":
+      return "STORY LOCATION";
+
+    case "event":
+      return "EVENT LOCATION";
+
+    case "spawn":
+      return "SPAWN";
+
+    default:
+      return "LOCATION";
   }
 }
