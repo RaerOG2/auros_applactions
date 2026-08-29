@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Suspense,
   useEffect,
   useMemo,
   useState,
@@ -36,7 +37,72 @@ type SearchMarker = MapMarker & {
   mapVersion: string | null;
 };
 
+/* =========================================================
+   PAGE
+
+   useSearchParams requires a Suspense boundary during
+   production prerendering in Next.js.
+
+   The complete interactive map lives inside
+   MapPageContent so none of the existing map logic
+   needs to change.
+   ========================================================= */
+
 export default function MapPage() {
+  return (
+    <Suspense
+      fallback={
+        <MapPageLoading />
+      }
+    >
+      <MapPageContent />
+    </Suspense>
+  );
+}
+
+/* =========================================================
+   SUSPENSE FALLBACK
+   ========================================================= */
+
+function MapPageLoading() {
+  return (
+    <>
+      <div className="publicMapPage">
+        <header className="publicMapHeader">
+          <div className="publicMapEyebrow">
+            AUROS WORLD
+          </div>
+
+          <div className="publicMapTitleRow">
+            <div>
+              <h1>
+                Interactive Map
+              </h1>
+
+              <p>
+                Explore every version of the Auros island,
+                discover locations and travel through the
+                history of the world.
+              </p>
+            </div>
+          </div>
+        </header>
+
+        <div className="mapState">
+          Loading Auros maps...
+        </div>
+      </div>
+
+      <MapPageStyles />
+    </>
+  );
+}
+
+/* =========================================================
+   MAP PAGE CONTENT
+   ========================================================= */
+
+function MapPageContent() {
   const router =
     useRouter();
 
@@ -174,7 +240,7 @@ export default function MapPage() {
     }
 
     load();
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (
@@ -1104,592 +1170,602 @@ export default function MapPage() {
         )}
       </div>
 
-      <style jsx global>{`
-        .publicMapPage {
-          width: 100%;
-          max-width: 1500px;
-          margin: 0 auto;
-          padding-bottom: 70px;
-        }
+      <MapPageStyles />
+    </>
+  );
+}
 
-        .publicMapHeader {
-          padding: 45px 0 30px;
-        }
+/* =========================================================
+   STYLES
+   ========================================================= */
 
-        .publicMapEyebrow {
-          color: #63ddff;
-          font-size: 10px;
-          font-weight: 900;
-          letter-spacing: .15em;
-        }
+function MapPageStyles() {
+  return (
+    <style jsx global>{`
+      .publicMapPage {
+        width: 100%;
+        max-width: 1500px;
+        margin: 0 auto;
+        padding-bottom: 70px;
+      }
 
-        .publicMapTitleRow {
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
-          gap: 30px;
-        }
+      .publicMapHeader {
+        padding: 45px 0 30px;
+      }
 
-        .publicMapTitleRow h1 {
-          margin: 8px 0 10px;
-          font-size: clamp(43px,7vw,72px);
-          line-height: 1;
-          letter-spacing: -.045em;
-        }
+      .publicMapEyebrow {
+        color: #63ddff;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: .15em;
+      }
 
-        .publicMapTitleRow p {
-          max-width: 700px;
-          margin: 0;
-          color: #91a4c2;
-          font-size: 15px;
-          line-height: 1.7;
-        }
+      .publicMapTitleRow {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 30px;
+      }
 
-        .currentMapIndicator {
-          min-width: 210px;
-          padding: 13px 14px;
-          border: 1px solid rgba(99,221,255,.16);
-          border-radius: 12px;
-          background: rgba(99,221,255,.05);
-        }
+      .publicMapTitleRow h1 {
+        margin: 8px 0 10px;
+        font-size: clamp(43px,7vw,72px);
+        line-height: 1;
+        letter-spacing: -.045em;
+      }
 
-        .currentMapIndicator span {
-          display: block;
-          color: #63ddff;
-          font-size: 7px;
-          font-weight: 900;
-        }
+      .publicMapTitleRow p {
+        max-width: 700px;
+        margin: 0;
+        color: #91a4c2;
+        font-size: 15px;
+        line-height: 1.7;
+      }
 
-        .currentMapIndicator strong {
-          display: block;
-          margin-top: 4px;
-          font-size: 12px;
-        }
+      .currentMapIndicator {
+        min-width: 210px;
+        padding: 13px 14px;
+        border: 1px solid rgba(99,221,255,.16);
+        border-radius: 12px;
+        background: rgba(99,221,255,.05);
+      }
 
-        .currentMapIndicator small {
-          display: block;
-          margin-top: 3px;
-          color: #6f87a7;
-          font-size: 7px;
-        }
+      .currentMapIndicator span {
+        display: block;
+        color: #63ddff;
+        font-size: 7px;
+        font-weight: 900;
+      }
 
-        /* SEARCH */
+      .currentMapIndicator strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 12px;
+      }
 
-        .mapSearchSection {
-          position: relative;
-          z-index: 100;
-          margin-bottom: 18px;
-        }
+      .currentMapIndicator small {
+        display: block;
+        margin-top: 3px;
+        color: #6f87a7;
+        font-size: 7px;
+      }
 
-        .mapSearchHeading {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-end;
-          margin-bottom: 8px;
-        }
+      /* SEARCH */
 
-        .mapSearchHeading > div {
-          display: grid;
-          gap: 3px;
-        }
+      .mapSearchSection {
+        position: relative;
+        z-index: 100;
+        margin-bottom: 18px;
+      }
 
-        .mapSearchHeading span {
-          color: #63ddff;
-          font-size: 7px;
-          font-weight: 900;
-          letter-spacing: .11em;
-        }
+      .mapSearchHeading {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 8px;
+      }
 
-        .mapSearchHeading strong {
-          font-size: 15px;
-        }
+      .mapSearchHeading > div {
+        display: grid;
+        gap: 3px;
+      }
 
-        .mapSearchHeading small {
-          color: #627899;
-          font-size: 7px;
-        }
+      .mapSearchHeading span {
+        color: #63ddff;
+        font-size: 7px;
+        font-weight: 900;
+        letter-spacing: .11em;
+      }
 
-        .mapSearchBox {
-          min-height: 48px;
-          display: flex;
-          align-items: center;
-          gap: 9px;
-          padding: 0 13px;
-          border: 1px solid rgba(99,221,255,.14);
-          border-radius: 12px;
-          background: rgba(7,16,31,.9);
-        }
+      .mapSearchHeading strong {
+        font-size: 15px;
+      }
 
-        .mapSearchIcon {
-          color: #63ddff;
-          font-size: 20px;
-        }
+      .mapSearchHeading small {
+        color: #627899;
+        font-size: 7px;
+      }
 
-        .mapSearchBox input {
-          flex: 1;
-          min-width: 0;
-          border: 0;
-          outline: 0;
-          background: transparent;
-          color: white;
-          font-size: 11px;
-        }
+      .mapSearchBox {
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 0 13px;
+        border: 1px solid rgba(99,221,255,.14);
+        border-radius: 12px;
+        background: rgba(7,16,31,.9);
+      }
 
-        .mapSearchBox input::placeholder {
-          color: #536b8c;
-        }
+      .mapSearchIcon {
+        color: #63ddff;
+        font-size: 20px;
+      }
 
-        .mapSearchBox button {
-          width: 30px;
-          height: 30px;
-          border: 0;
-          border-radius: 8px;
-          background: rgba(255,255,255,.04);
-          color: #7f94b2;
-          cursor: pointer;
-        }
+      .mapSearchBox input {
+        flex: 1;
+        min-width: 0;
+        border: 0;
+        outline: 0;
+        background: transparent;
+        color: white;
+        font-size: 11px;
+      }
 
-        .mapSearchResults {
-          position: absolute;
-          top: calc(100% + 6px);
-          left: 0;
-          right: 0;
-          max-height: 390px;
-          overflow-y: auto;
-          padding: 7px;
-          border: 1px solid rgba(99,221,255,.15);
-          border-radius: 12px;
-          background: rgba(4,11,24,.98);
-          box-shadow: 0 25px 70px rgba(0,0,0,.45);
-        }
+      .mapSearchBox input::placeholder {
+        color: #536b8c;
+      }
 
-        .mapSearchResult {
-          width: 100%;
-          min-height: 53px;
-          display: grid;
-          grid-template-columns: auto minmax(0,1fr) auto auto;
-          align-items: center;
-          gap: 10px;
-          padding: 7px 9px;
-          border: 1px solid transparent;
-          border-radius: 9px;
-          background: transparent;
-          color: white;
-          text-align: left;
-          cursor: pointer;
-        }
+      .mapSearchBox button {
+        width: 30px;
+        height: 30px;
+        border: 0;
+        border-radius: 8px;
+        background: rgba(255,255,255,.04);
+        color: #7f94b2;
+        cursor: pointer;
+      }
 
-        .mapSearchResult:hover {
-          border-color: rgba(99,221,255,.13);
-          background: rgba(99,221,255,.05);
-        }
+      .mapSearchResults {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        max-height: 390px;
+        overflow-y: auto;
+        padding: 7px;
+        border: 1px solid rgba(99,221,255,.15);
+        border-radius: 12px;
+        background: rgba(4,11,24,.98);
+        box-shadow: 0 25px 70px rgba(0,0,0,.45);
+      }
 
-        .searchMarkerIcon {
-          width: 31px;
-          height: 31px;
-          display: grid;
-          place-items: center;
-          border-radius: 50%;
-          background: #63ddff;
-          color: #04101b;
-          font-size: 8px;
-          font-weight: 950;
-        }
+      .mapSearchResult {
+        width: 100%;
+        min-height: 53px;
+        display: grid;
+        grid-template-columns: auto minmax(0,1fr) auto auto;
+        align-items: center;
+        gap: 10px;
+        padding: 7px 9px;
+        border: 1px solid transparent;
+        border-radius: 9px;
+        background: transparent;
+        color: white;
+        text-align: left;
+        cursor: pointer;
+      }
 
-        .searchMarkerIcon.landmark {
-          background: #65e8a8;
-        }
+      .mapSearchResult:hover {
+        border-color: rgba(99,221,255,.13);
+        background: rgba(99,221,255,.05);
+      }
 
-        .searchMarkerIcon.story {
-          background: #ab87ff;
-        }
+      .searchMarkerIcon {
+        width: 31px;
+        height: 31px;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: #63ddff;
+        color: #04101b;
+        font-size: 8px;
+        font-weight: 950;
+      }
 
-        .searchMarkerIcon.event {
-          background: #ff9e55;
-        }
+      .searchMarkerIcon.landmark {
+        background: #65e8a8;
+      }
 
-        .searchMarkerIcon.spawn {
-          background: #ffd866;
-        }
+      .searchMarkerIcon.story {
+        background: #ab87ff;
+      }
 
-        .searchMarkerText {
-          min-width: 0;
-          display: grid;
-          gap: 2px;
-        }
+      .searchMarkerIcon.event {
+        background: #ff9e55;
+      }
 
-        .searchMarkerText strong {
-          font-size: 9px;
-        }
+      .searchMarkerIcon.spawn {
+        background: #ffd866;
+      }
 
-        .searchMarkerText span {
-          color: #637b9b;
-          font-size: 7px;
-        }
+      .searchMarkerText {
+        min-width: 0;
+        display: grid;
+        gap: 2px;
+      }
 
-        .searchMarkerType {
-          padding: 4px 6px;
-          border-radius: 999px;
-          background: rgba(99,221,255,.06);
-          color: #7890af;
-          font-size: 6px;
-          font-weight: 900;
-          text-transform: uppercase;
-        }
+      .searchMarkerText strong {
+        font-size: 9px;
+      }
 
-        .searchArrow {
-          color: #63ddff;
-        }
+      .searchMarkerText span {
+        color: #637b9b;
+        font-size: 7px;
+      }
 
-        .mapSearchEmpty {
-          padding: 25px;
-          color: #667d9e;
-          font-size: 9px;
-          text-align: center;
-        }
+      .searchMarkerType {
+        padding: 4px 6px;
+        border-radius: 999px;
+        background: rgba(99,221,255,.06);
+        color: #7890af;
+        font-size: 6px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
 
-        /* ARCHIVE */
+      .searchArrow {
+        color: #63ddff;
+      }
 
-        .mapArchiveSelector {
-          margin-bottom: 16px;
-        }
+      .mapSearchEmpty {
+        padding: 25px;
+        color: #667d9e;
+        font-size: 9px;
+        text-align: center;
+      }
 
-        .mapArchiveSelectorHeader {
-          display: flex;
-          align-items: flex-end;
-          justify-content: space-between;
-          gap: 16px;
-          margin-bottom: 11px;
-        }
+      /* ARCHIVE */
 
-        .mapArchiveSelectorHeader span {
-          color: #63ddff;
-          font-size: 8px;
-          font-weight: 900;
-        }
+      .mapArchiveSelector {
+        margin-bottom: 16px;
+      }
 
-        .mapArchiveSelectorHeader h2 {
-          margin: 3px 0 0;
-          font-size: 20px;
-        }
+      .mapArchiveSelectorHeader {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 11px;
+      }
 
-        .mapArchiveActions {
-          display: flex;
-          align-items: center;
-          gap: 9px;
-        }
+      .mapArchiveSelectorHeader span {
+        color: #63ddff;
+        font-size: 8px;
+        font-weight: 900;
+      }
 
-        .mapArchiveActions small {
-          color: #627899;
-          font-size: 8px;
-        }
+      .mapArchiveSelectorHeader h2 {
+        margin: 3px 0 0;
+        font-size: 20px;
+      }
 
-        .compareModeButton {
-          min-height: 32px;
-          padding: 0 11px;
-          border: 1px solid rgba(99,221,255,.17);
-          border-radius: 8px;
-          background: rgba(99,221,255,.05);
-          color: #83e6ff;
-          font-size: 7px;
-          font-weight: 900;
-          cursor: pointer;
-        }
+      .mapArchiveActions {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
 
-        .compareModeButton.active {
-          background: #63ddff;
-          color: #04101b;
-        }
+      .mapArchiveActions small {
+        color: #627899;
+        font-size: 8px;
+      }
 
-        .mapArchiveCards {
-          display: flex;
-          gap: 9px;
-          overflow-x: auto;
-          padding-bottom: 5px;
-        }
+      .compareModeButton {
+        min-height: 32px;
+        padding: 0 11px;
+        border: 1px solid rgba(99,221,255,.17);
+        border-radius: 8px;
+        background: rgba(99,221,255,.05);
+        color: #83e6ff;
+        font-size: 7px;
+        font-weight: 900;
+        cursor: pointer;
+      }
 
-        .mapArchiveCard {
-          width: 205px;
-          min-width: 205px;
-          overflow: hidden;
-          padding: 0;
-          border: 1px solid rgba(110,148,205,.11);
-          border-radius: 12px;
-          background: rgba(7,16,31,.7);
-          color: white;
-          text-align: left;
-          cursor: pointer;
-        }
+      .compareModeButton.active {
+        background: #63ddff;
+        color: #04101b;
+      }
 
-        .mapArchiveCard.active {
-          border-color: rgba(99,221,255,.42);
-          background: rgba(99,221,255,.06);
-        }
+      .mapArchiveCards {
+        display: flex;
+        gap: 9px;
+        overflow-x: auto;
+        padding-bottom: 5px;
+      }
 
-        .archiveCardImage {
-          position: relative;
-          aspect-ratio: 16 / 9;
-          overflow: hidden;
-        }
+      .mapArchiveCard {
+        width: 205px;
+        min-width: 205px;
+        overflow: hidden;
+        padding: 0;
+        border: 1px solid rgba(110,148,205,.11);
+        border-radius: 12px;
+        background: rgba(7,16,31,.7);
+        color: white;
+        text-align: left;
+        cursor: pointer;
+      }
 
-        .archiveCardImage img {
-          width: 100%;
-          height: 100%;
-          display: block;
-          object-fit: cover;
-        }
+      .mapArchiveCard.active {
+        border-color: rgba(99,221,255,.42);
+        background: rgba(99,221,255,.06);
+      }
 
-        .archiveCardImage span {
-          position: absolute;
-          top: 7px;
-          left: 7px;
-          padding: 4px 6px;
-          border-radius: 999px;
-          background: #63ddff;
-          color: #03101a;
-          font-size: 6px;
-          font-weight: 950;
-        }
+      .archiveCardImage {
+        position: relative;
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+      }
 
-        .archiveCardContent {
-          padding: 9px 10px 11px;
-        }
+      .archiveCardImage img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
 
-        .archiveCardContent > div {
-          color: #63ddff;
-          font-size: 6px;
-          font-weight: 900;
-        }
+      .archiveCardImage span {
+        position: absolute;
+        top: 7px;
+        left: 7px;
+        padding: 4px 6px;
+        border-radius: 999px;
+        background: #63ddff;
+        color: #03101a;
+        font-size: 6px;
+        font-weight: 950;
+      }
 
-        .archiveCardContent strong {
-          display: block;
-          margin-top: 4px;
-          font-size: 11px;
-        }
+      .archiveCardContent {
+        padding: 9px 10px 11px;
+      }
 
-        .archiveCardContent small {
-          display: block;
-          margin-top: 3px;
-          color: #6c82a2;
-          font-size: 7px;
-        }
+      .archiveCardContent > div {
+        color: #63ddff;
+        font-size: 6px;
+        font-weight: 900;
+      }
 
-        /* COMPARE */
+      .archiveCardContent strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 11px;
+      }
 
-        .mapCompareConfiguration {
-          display: grid;
-          grid-template-columns: 1fr auto 1fr;
-          gap: 10px;
-          align-items: end;
-          margin-bottom: 14px;
-          padding: 13px;
-          border: 1px solid rgba(99,221,255,.13);
-          border-radius: 12px;
-          background: rgba(7,16,31,.72);
-        }
+      .archiveCardContent small {
+        display: block;
+        margin-top: 3px;
+        color: #6c82a2;
+        font-size: 7px;
+      }
 
-        .compareSelectField {
-          display: grid;
-          gap: 5px;
-        }
+      /* COMPARE */
 
-        .compareSelectField span {
-          color: #63ddff;
-          font-size: 7px;
-          font-weight: 900;
-        }
+      .mapCompareConfiguration {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 10px;
+        align-items: end;
+        margin-bottom: 14px;
+        padding: 13px;
+        border: 1px solid rgba(99,221,255,.13);
+        border-radius: 12px;
+        background: rgba(7,16,31,.72);
+      }
 
-        .compareSelectField select {
-          width: 100%;
-          min-height: 38px;
-          padding: 0 10px;
-          border: 1px solid rgba(112,149,205,.14);
-          border-radius: 8px;
-          background: #071122;
-          color: white;
-        }
+      .compareSelectField {
+        display: grid;
+        gap: 5px;
+      }
 
-        .compareSwapButton {
-          width: 38px;
-          height: 38px;
-          border: 1px solid rgba(99,221,255,.16);
-          border-radius: 9px;
-          background: rgba(99,221,255,.05);
-          color: #8ce9ff;
-          cursor: pointer;
-        }
+      .compareSelectField span {
+        color: #63ddff;
+        font-size: 7px;
+        font-weight: 900;
+      }
 
-        /* MAIN */
+      .compareSelectField select {
+        width: 100%;
+        min-height: 38px;
+        padding: 0 10px;
+        border: 1px solid rgba(112,149,205,.14);
+        border-radius: 8px;
+        background: #071122;
+        color: white;
+      }
 
-        .mapMainLayout {
-          display: grid;
-          grid-template-columns: minmax(0,1fr) 280px;
-          gap: 14px;
-          align-items: start;
-        }
+      .compareSwapButton {
+        width: 38px;
+        height: 38px;
+        border: 1px solid rgba(99,221,255,.16);
+        border-radius: 9px;
+        background: rgba(99,221,255,.05);
+        color: #8ce9ff;
+        cursor: pointer;
+      }
 
+      /* MAIN */
+
+      .mapMainLayout {
+        display: grid;
+        grid-template-columns: minmax(0,1fr) 280px;
+        gap: 14px;
+        align-items: start;
+      }
+
+      .mapMainLayout.compareActive {
+        grid-template-columns: minmax(0,1fr) 260px;
+      }
+
+      .mapViewerColumn {
+        min-width: 0;
+      }
+
+      .mapInformation {
+        position: sticky;
+        top: 90px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .mapInfoCard {
+        padding: 15px;
+        border: 1px solid rgba(110,148,205,.11);
+        border-radius: 13px;
+        background: rgba(7,16,31,.74);
+      }
+
+      .mapInfoTop {
+        display: flex;
+        gap: 7px;
+        align-items: center;
+      }
+
+      .mapInfoTop span,
+      .infoCardLabel {
+        color: #63ddff;
+        font-size: 7px;
+        font-weight: 900;
+      }
+
+      .mapInfoTop i {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: #42e5a7;
+      }
+
+      .mapInfoCard h2 {
+        margin: 8px 0 4px;
+        font-size: 22px;
+      }
+
+      .mapInfoContext,
+      .compareInfoDescription {
+        color: #7186a5;
+        font-size: 8px;
+      }
+
+      .mapDescription {
+        color: #8fa1bc;
+        font-size: 9px;
+        line-height: 1.6;
+      }
+
+      .mapDetailRows > div {
+        min-height: 34px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(110,148,205,.07);
+      }
+
+      .mapDetailRows span {
+        color: #637897;
+        font-size: 7px;
+      }
+
+      .mapDetailRows strong {
+        font-size: 8px;
+      }
+
+      .currentValue {
+        color: #42e5a7;
+      }
+
+      .clearLocationFocus {
+        min-height: 38px;
+        border: 1px solid rgba(99,221,255,.15);
+        border-radius: 9px;
+        background: rgba(99,221,255,.05);
+        color: #8ce9ff;
+        font-size: 8px;
+        font-weight: 900;
+        cursor: pointer;
+      }
+
+      .compareMapInfo {
+        display: grid;
+        gap: 5px;
+      }
+
+      .compareColorLabel {
+        width: fit-content;
+        padding: 4px 6px;
+        border-radius: 999px;
+        font-size: 6px;
+        font-weight: 900;
+      }
+
+      .compareColorLabel.left {
+        color: #63ddff;
+        background: rgba(99,221,255,.1);
+      }
+
+      .compareColorLabel.right {
+        color: #b89cff;
+        background: rgba(171,135,255,.12);
+      }
+
+      .mapState {
+        min-height: 360px;
+        display: grid;
+        place-items: center;
+        color: #6d82a1;
+      }
+
+      .mapState.error {
+        color: #ff9aa5;
+      }
+
+      @media (max-width: 1000px) {
+        .mapMainLayout,
         .mapMainLayout.compareActive {
-          grid-template-columns: minmax(0,1fr) 260px;
-        }
-
-        .mapViewerColumn {
-          min-width: 0;
+          grid-template-columns: 1fr;
         }
 
         .mapInformation {
-          position: sticky;
-          top: 90px;
-          display: grid;
-          gap: 10px;
+          position: static;
+        }
+      }
+
+      @media (max-width: 700px) {
+        .publicMapTitleRow {
+          flex-direction: column;
+          align-items: stretch;
         }
 
-        .mapInfoCard {
-          padding: 15px;
-          border: 1px solid rgba(110,148,205,.11);
-          border-radius: 13px;
-          background: rgba(7,16,31,.74);
+        .mapCompareConfiguration {
+          grid-template-columns: 1fr;
         }
 
-        .mapInfoTop {
-          display: flex;
-          gap: 7px;
-          align-items: center;
+        .compareSwapButton {
+          width: 100%;
         }
 
-        .mapInfoTop span,
-        .infoCardLabel {
-          color: #63ddff;
-          font-size: 7px;
-          font-weight: 900;
+        .mapSearchResult {
+          grid-template-columns:
+            auto
+            minmax(0,1fr)
+            auto;
         }
 
-        .mapInfoTop i {
-          width: 5px;
-          height: 5px;
-          border-radius: 50%;
-          background: #42e5a7;
+        .searchMarkerType {
+          display: none;
         }
-
-        .mapInfoCard h2 {
-          margin: 8px 0 4px;
-          font-size: 22px;
-        }
-
-        .mapInfoContext,
-        .compareInfoDescription {
-          color: #7186a5;
-          font-size: 8px;
-        }
-
-        .mapDescription {
-          color: #8fa1bc;
-          font-size: 9px;
-          line-height: 1.6;
-        }
-
-        .mapDetailRows > div {
-          min-height: 34px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          border-bottom: 1px solid rgba(110,148,205,.07);
-        }
-
-        .mapDetailRows span {
-          color: #637897;
-          font-size: 7px;
-        }
-
-        .mapDetailRows strong {
-          font-size: 8px;
-        }
-
-        .currentValue {
-          color: #42e5a7;
-        }
-
-        .clearLocationFocus {
-          min-height: 38px;
-          border: 1px solid rgba(99,221,255,.15);
-          border-radius: 9px;
-          background: rgba(99,221,255,.05);
-          color: #8ce9ff;
-          font-size: 8px;
-          font-weight: 900;
-          cursor: pointer;
-        }
-
-        .compareMapInfo {
-          display: grid;
-          gap: 5px;
-        }
-
-        .compareColorLabel {
-          width: fit-content;
-          padding: 4px 6px;
-          border-radius: 999px;
-          font-size: 6px;
-          font-weight: 900;
-        }
-
-        .compareColorLabel.left {
-          color: #63ddff;
-          background: rgba(99,221,255,.1);
-        }
-
-        .compareColorLabel.right {
-          color: #b89cff;
-          background: rgba(171,135,255,.12);
-        }
-
-        .mapState {
-          min-height: 360px;
-          display: grid;
-          place-items: center;
-          color: #6d82a1;
-        }
-
-        .mapState.error {
-          color: #ff9aa5;
-        }
-
-        @media (max-width: 1000px) {
-          .mapMainLayout,
-          .mapMainLayout.compareActive {
-            grid-template-columns: 1fr;
-          }
-
-          .mapInformation {
-            position: static;
-          }
-        }
-
-        @media (max-width: 700px) {
-          .publicMapTitleRow {
-            flex-direction: column;
-            align-items: stretch;
-          }
-
-          .mapCompareConfiguration {
-            grid-template-columns: 1fr;
-          }
-
-          .compareSwapButton {
-            width: 100%;
-          }
-
-          .mapSearchResult {
-            grid-template-columns:
-              auto
-              minmax(0,1fr)
-              auto;
-          }
-
-          .searchMarkerType {
-            display: none;
-          }
-        }
-      `}</style>
-    </>
+      }
+    `}</style>
   );
 }
