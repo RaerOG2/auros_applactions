@@ -14,7 +14,6 @@ import {
   uploadMapImage,
 } from "../../services/map-admin.service";
 
-
 interface MapEditorProps {
   initialValue: MapEditorForm;
 
@@ -24,7 +23,6 @@ interface MapEditorProps {
     form: MapEditorForm
   ) => Promise<void>;
 }
-
 
 export default function MapEditor({
   initialValue,
@@ -60,7 +58,6 @@ export default function MapEditor({
       null
     );
 
-
   function updateField<
     K extends keyof MapEditorForm
   >(
@@ -73,6 +70,25 @@ export default function MapEditor({
     }));
   }
 
+  function handleDevOnlyChange(
+    checked: boolean
+  ) {
+    setForm((current) => ({
+      ...current,
+
+      dev_only:
+        checked,
+
+      /*
+       * DEV maps must never become
+       * the public Current map.
+       */
+      current:
+        checked
+          ? false
+          : current.current,
+    }));
+  }
 
   async function handleImageUpload(
     event: ChangeEvent<HTMLInputElement>,
@@ -119,7 +135,9 @@ export default function MapEditor({
         );
       }
     } catch (uploadError) {
-      console.error(uploadError);
+      console.error(
+        uploadError
+      );
 
       setError(
         uploadError instanceof Error
@@ -134,12 +152,12 @@ export default function MapEditor({
     }
   }
 
-
   async function handleSave() {
     if (!form.name.trim()) {
       setError(
         "Please enter a map name."
       );
+
       return;
     }
 
@@ -147,6 +165,7 @@ export default function MapEditor({
       setError(
         "Please upload a map image."
       );
+
       return;
     }
 
@@ -154,9 +173,13 @@ export default function MapEditor({
     setError("");
 
     try {
-      await onSave(form);
+      await onSave(
+        form
+      );
     } catch (saveError) {
-      console.error(saveError);
+      console.error(
+        saveError
+      );
 
       setError(
         saveError instanceof Error
@@ -167,7 +190,6 @@ export default function MapEditor({
       setSaving(false);
     }
   }
-
 
   return (
     <>
@@ -194,7 +216,9 @@ export default function MapEditor({
           <button
             type="button"
             className="mapSaveButton"
-            onClick={handleSave}
+            onClick={
+              handleSave
+            }
             disabled={
               saving ||
               uploadingMap ||
@@ -219,7 +243,9 @@ export default function MapEditor({
           <div className="mapEditorMain">
             <section className="mapEditorSection">
               <div className="mapSectionTitle">
-                <span>01</span>
+                <span>
+                  01
+                </span>
 
                 <div>
                   <h2>
@@ -235,7 +261,9 @@ export default function MapEditor({
               </div>
 
               <input
-                ref={mapInputRef}
+                ref={
+                  mapInputRef
+                }
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 hidden
@@ -305,7 +333,9 @@ export default function MapEditor({
 
             <section className="mapEditorSection">
               <div className="mapSectionTitle">
-                <span>02</span>
+                <span>
+                  02
+                </span>
 
                 <div>
                   <h2>
@@ -327,7 +357,9 @@ export default function MapEditor({
                   </span>
 
                   <input
-                    value={form.name}
+                    value={
+                      form.name
+                    }
                     onChange={(event) =>
                       updateField(
                         "name",
@@ -478,7 +510,9 @@ export default function MapEditor({
 
             <section className="mapEditorSection">
               <div className="mapSectionTitle">
-                <span>03</span>
+                <span>
+                  03
+                </span>
 
                 <div>
                   <h2>
@@ -486,15 +520,17 @@ export default function MapEditor({
                   </h2>
 
                   <p>
-                    Used later in map
-                    selectors and the
-                    historical archive.
+                    Used in map selectors
+                    and the historical
+                    archive.
                   </p>
                 </div>
               </div>
 
               <input
-                ref={thumbnailInputRef}
+                ref={
+                  thumbnailInputRef
+                }
                 type="file"
                 accept="image/png,image/jpeg,image/webp"
                 hidden
@@ -561,8 +597,9 @@ export default function MapEditor({
                   </strong>
 
                   <span>
-                    Visible on the public
-                    website.
+                    {form.dev_only
+                      ? "Available to admins in DEV Map mode."
+                      : "Visible on the public website."}
                   </span>
                 </div>
 
@@ -580,15 +617,53 @@ export default function MapEditor({
                 />
               </label>
 
-              <label className="mapToggle">
+              <label
+                className={
+                  form.dev_only
+                    ? "mapToggle devToggle active"
+                    : "mapToggle devToggle"
+                }
+              >
+                <div>
+                  <strong>
+                    Development Map
+                  </strong>
+
+                  <span>
+                    Admin only. Hidden from
+                    public visitors.
+                  </span>
+                </div>
+
+                <input
+                  type="checkbox"
+                  checked={
+                    form.dev_only
+                  }
+                  onChange={(event) =>
+                    handleDevOnlyChange(
+                      event.target.checked
+                    )
+                  }
+                />
+              </label>
+
+              <label
+                className={
+                  form.dev_only
+                    ? "mapToggle disabled"
+                    : "mapToggle"
+                }
+              >
                 <div>
                   <strong>
                     Current Map
                   </strong>
 
                   <span>
-                    Mark this as the active
-                    Auros island.
+                    {form.dev_only
+                      ? "DEV maps cannot be the public Current Map."
+                      : "Mark this as the active Auros island."}
                   </span>
                 </div>
 
@@ -596,6 +671,9 @@ export default function MapEditor({
                   type="checkbox"
                   checked={
                     form.current
+                  }
+                  disabled={
+                    form.dev_only
                   }
                   onChange={(event) =>
                     updateField(
@@ -605,6 +683,26 @@ export default function MapEditor({
                   }
                 />
               </label>
+
+              {form.dev_only && (
+                <div className="devMapWarning">
+                  <span>
+                    DEV MAP
+                  </span>
+
+                  <strong>
+                    Admin Only
+                  </strong>
+
+                  <p>
+                    This map will not be
+                    shown to normal visitors.
+                    You can prepare and test
+                    it before making it
+                    public.
+                  </p>
+                </div>
+              )}
             </section>
 
             <section className="mapEditorSection mapArchivePreview">
@@ -629,11 +727,18 @@ export default function MapEditor({
 
               <div className="previewContent">
                 <div className="previewTags">
-                  {form.current && (
-                    <span className="currentTag">
-                      CURRENT
+                  {form.dev_only && (
+                    <span className="devTag">
+                      DEV ONLY
                     </span>
                   )}
+
+                  {form.current &&
+                    !form.dev_only && (
+                      <span className="currentTag">
+                        CURRENT
+                      </span>
+                    )}
 
                   {form.venture_name && (
                     <span>
@@ -654,31 +759,51 @@ export default function MapEditor({
                     form.season_number
                       ? `Season ${form.season_number}`
                       : null,
+
                     form.season_name ||
                       null,
+
                     form.version ||
                       null,
                   ]
-                    .filter(Boolean)
-                    .join(" · ") ||
+                    .filter(
+                      Boolean
+                    )
+                    .join(
+                      " · "
+                    ) ||
                     "No season information"}
                 </p>
               </div>
             </section>
 
-            <div className="futureEditorNotice">
+            <div
+              className={
+                form.dev_only
+                  ? "mapEditorStatusNotice dev"
+                  : "mapEditorStatusNotice"
+              }
+            >
               <span>
-                COMING IN PHASE 3
+                {form.dev_only
+                  ? "DEVELOPMENT MODE"
+                  : "MAP STATUS"}
               </span>
 
               <strong>
-                Interactive Marker Editor
+                {form.dev_only
+                  ? "Private Map Testing"
+                  : form.published
+                  ? "Public Map"
+                  : "Draft Map"}
               </strong>
 
               <p>
-                POIs, landmarks and story
-                locations will be placed
-                directly on this map.
+                {form.dev_only
+                  ? "This map is reserved for administrators and can be prepared before its public release."
+                  : form.published
+                  ? "This map is available through the public Interactive Map."
+                  : "This map is currently unpublished and hidden from visitors."}
               </p>
             </div>
           </aside>
@@ -905,7 +1030,13 @@ export default function MapEditor({
         .mapFormGrid {
           display: grid;
           grid-template-columns:
-            repeat(2, minmax(0, 1fr));
+            repeat(
+              2,
+              minmax(
+                0,
+                1fr
+              )
+            );
           gap: 13px;
         }
 
@@ -955,7 +1086,9 @@ export default function MapEditor({
 
         .thumbnailEditor {
           display: grid;
-          grid-template-columns: 180px 1fr;
+          grid-template-columns:
+            180px
+            1fr;
           gap: 15px;
           align-items: center;
         }
@@ -990,7 +1123,7 @@ export default function MapEditor({
           cursor: pointer;
         }
 
-        .mapToggle:last-child {
+        .mapToggle:last-of-type {
           border-bottom: none;
         }
 
@@ -1005,14 +1138,68 @@ export default function MapEditor({
         }
 
         .mapToggle span {
+          max-width: 225px;
           color: #6f84a2;
           font-size: 8px;
+          line-height: 1.45;
         }
 
         .mapToggle input {
           width: 17px;
           height: 17px;
+          flex-shrink: 0;
           accent-color: #63ddff;
+        }
+
+        .mapToggle.disabled {
+          opacity: 0.48;
+          cursor: not-allowed;
+        }
+
+        .mapToggle.disabled input {
+          cursor: not-allowed;
+        }
+
+        .mapToggle.devToggle.active strong {
+          color: #c5b4ff;
+        }
+
+        .mapToggle.devToggle input {
+          accent-color: #ab87ff;
+        }
+
+        .devMapWarning {
+          margin-top: 12px;
+          padding: 12px;
+          border: 1px solid rgba(171, 135, 255, 0.2);
+          border-radius: 10px;
+          background:
+            linear-gradient(
+              135deg,
+              rgba(171, 135, 255, 0.1),
+              rgba(76, 55, 140, 0.04)
+            );
+        }
+
+        .devMapWarning > span {
+          color: #ab87ff;
+          font-size: 7px;
+          font-weight: 950;
+          letter-spacing: 0.11em;
+        }
+
+        .devMapWarning strong {
+          display: block;
+          margin-top: 4px;
+          color: #d1c4ff;
+          font-size: 11px;
+        }
+
+        .devMapWarning p {
+          margin: 5px 0 0;
+          color: #8275a7;
+          font-size: 8px;
+          line-height: 1.55;
         }
 
         .mapArchivePreview {
@@ -1075,6 +1262,11 @@ export default function MapEditor({
           color: #63ddff;
         }
 
+        .previewTags .devTag {
+          background: rgba(171, 135, 255, 0.13);
+          color: #c7b5ff;
+        }
+
         .previewContent h3 {
           margin: 8px 0 4px;
           font-size: 16px;
@@ -1086,27 +1278,36 @@ export default function MapEditor({
           font-size: 8px;
         }
 
-        .futureEditorNotice {
+        .mapEditorStatusNotice {
           padding: 16px;
-          border: 1px dashed rgba(159, 112, 255, 0.22);
+          border: 1px solid rgba(99, 221, 255, 0.13);
           border-radius: 14px;
+          background: rgba(99, 221, 255, 0.04);
+        }
+
+        .mapEditorStatusNotice.dev {
+          border-color: rgba(171, 135, 255, 0.22);
           background: rgba(67, 35, 120, 0.08);
         }
 
-        .futureEditorNotice > span {
-          color: #ad8bff;
+        .mapEditorStatusNotice > span {
+          color: #63ddff;
           font-size: 7px;
           font-weight: 900;
           letter-spacing: 0.1em;
         }
 
-        .futureEditorNotice strong {
+        .mapEditorStatusNotice.dev > span {
+          color: #ad8bff;
+        }
+
+        .mapEditorStatusNotice strong {
           display: block;
           margin-top: 6px;
           font-size: 11px;
         }
 
-        .futureEditorNotice p {
+        .mapEditorStatusNotice p {
           margin: 5px 0 0;
           color: #798dac;
           font-size: 8px;

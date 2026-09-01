@@ -1,148 +1,249 @@
-import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import type {
+  Metadata,
+} from "next";
+
+import type {
+  ReactNode,
+} from "react";
+
 import "./globals.css";
 import "../styles/auros-channel.css";
+
 import {
   Geist,
   Geist_Mono,
 } from "next/font/google";
+
 import AurosSiteShell from "../components/AurosSiteShell";
+import StructuredData from "../components/seo/StructuredData";
 
-const geistSans = Geist({
-  variable:
-    "--font-geist-sans",
-  subsets: ["latin"],
-});
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_IMAGE,
+  SITE_NAME,
+  SITE_URL,
+} from "../lib/seo";
 
-const geistMono = Geist_Mono({
-  variable:
-    "--font-geist-mono",
-  subsets: ["latin"],
-});
+import {
+  createOrganizationStructuredData,
+  createVideoGameStructuredData,
+  createWebsiteStructuredData,
+} from "../lib/structured-data";
 
-export const metadata: Metadata = {
-  metadataBase:
-    new URL(
-      "https://auros-uefn.com"
-    ),
 
-  title: {
-    default:
-      "Auros Royale — Official Website",
+const geistSans =
+  Geist({
+    variable:
+      "--font-geist-sans",
 
-    template:
-      "%s | Auros Royale",
-  },
+    subsets: [
+      "latin",
+    ],
+  });
 
-  description:
-    "Explore Auros Royale, discover the interactive map, read the latest news and patchnotes, browse the gallery and stay connected with the Auros community.",
 
-  applicationName:
-    "Auros Royale",
+const geistMono =
+  Geist_Mono({
+    variable:
+      "--font-geist-mono",
 
-  keywords: [
-    "Auros Royale",
-    "Auros",
-    "Fortnite",
-    "UEFN",
-    "Fortnite Creative",
-    "Auros Royale Map",
-    "Auros Royale News",
-    "Auros Royale Patchnotes",
-  ],
+    subsets: [
+      "latin",
+    ],
+  });
 
-  authors: [
-    {
-      name:
-        "Auros Royale",
+
+export const metadata:
+  Metadata =
+  {
+    metadataBase:
+      new URL(
+        SITE_URL
+      ),
+
+    title: {
+      default:
+        "Auros Royale — Official Website",
+
+      template:
+        "%s | Auros Royale",
     },
-  ],
-
-  creator:
-    "Auros Royale",
-
-  publisher:
-    "Auros Royale",
-
-  icons: {
-    icon:
-      "/auros_royale_pfp_draft_1.png",
-
-    shortcut:
-      "/auros_royale_pfp_draft_1.png",
-
-    apple:
-      "/auros_royale_pfp_draft_1.png",
-  },
-
-  openGraph: {
-    type:
-      "website",
-
-    locale:
-      "en_US",
-
-    url:
-      "https://auros-uefn.com",
-
-    siteName:
-      "Auros Royale",
-
-    title:
-      "Auros Royale — Official Website",
 
     description:
-      "Explore Auros Royale, discover the interactive map, read the latest news and patchnotes, browse the gallery and stay connected with the Auros community.",
+      DEFAULT_DESCRIPTION,
 
-    images: [
+    applicationName:
+      SITE_NAME,
+
+    keywords: [
+      "Auros Royale",
+      "Auros",
+      "Fortnite",
+      "UEFN",
+      "Fortnite Creative",
+      "Battle Royale",
+      "Auros Map",
+      "Auros Interactive Map",
+      "Auros News",
+      "Auros Patchnotes",
+      "Auros Gallery",
+    ],
+
+    authors: [
       {
-        url:
-          "/auros_royale_pfp_draft_1.png",
+        name:
+          SITE_NAME,
 
-        alt:
-          "Auros Royale",
+        url:
+          SITE_URL,
       },
     ],
-  },
 
-  twitter: {
-    card:
-      "summary_large_image",
+    creator:
+      SITE_NAME,
 
-    title:
-      "Auros Royale — Official Website",
+    publisher:
+      SITE_NAME,
 
-    description:
-      "Explore Auros Royale, discover the interactive map, read the latest news and patchnotes, browse the gallery and stay connected with the Auros community.",
+    category:
+      "gaming",
 
-    images: [
-      "/auros_royale_pfp_draft_1.png",
-    ],
-  },
+    icons: {
+      icon:
+        DEFAULT_IMAGE,
 
-  robots: {
-    index: true,
-    follow: true,
+      shortcut:
+        DEFAULT_IMAGE,
 
-    googleBot: {
-      index: true,
-      follow: true,
+      apple:
+        DEFAULT_IMAGE,
     },
-  },
-};
+
+    alternates: {
+      canonical:
+        SITE_URL,
+    },
+
+    openGraph: {
+      type:
+        "website",
+
+      locale:
+        "en_US",
+
+      url:
+        SITE_URL,
+
+      siteName:
+        SITE_NAME,
+
+      title:
+        "Auros Royale — Official Website",
+
+      description:
+        DEFAULT_DESCRIPTION,
+
+      images: [
+        {
+          url:
+            DEFAULT_IMAGE,
+
+          alt:
+            "Auros Royale",
+        },
+      ],
+    },
+
+    twitter: {
+      card:
+        "summary_large_image",
+
+      title:
+        "Auros Royale — Official Website",
+
+      description:
+        DEFAULT_DESCRIPTION,
+
+      images: [
+        DEFAULT_IMAGE,
+      ],
+    },
+
+    robots: {
+      index:
+        true,
+
+      follow:
+        true,
+
+      googleBot: {
+        index:
+          true,
+
+        follow:
+          true,
+
+        "max-image-preview":
+          "large",
+
+        "max-snippet":
+          -1,
+
+        "max-video-preview":
+          -1,
+      },
+    },
+  };
+
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: ReactNode;
+  children:
+    ReactNode;
 }>) {
+  const websiteData =
+    createWebsiteStructuredData();
+
+
+  const organizationData =
+    createOrganizationStructuredData();
+
+
+  const gameData =
+    createVideoGameStructuredData();
+
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <StructuredData
+          data={
+            websiteData
+          }
+        />
+
+
+        <StructuredData
+          data={
+            organizationData
+          }
+        />
+
+
+        <StructuredData
+          data={
+            gameData
+          }
+        />
+
+
         <AurosSiteShell>
-          {children}
+          {
+            children
+          }
         </AurosSiteShell>
       </body>
     </html>

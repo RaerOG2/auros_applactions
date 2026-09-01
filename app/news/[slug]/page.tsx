@@ -1,65 +1,157 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
 
-import { getNewsBySlug } from "../../../services/community.service";
-import type { NewsItem } from "../../../types/community";
+import {
+  useParams,
+} from "next/navigation";
+
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import ShareActions from "../../../components/seo/ShareActions";
+
+import {
+  getNewsBySlug,
+} from "../../../services/community.service";
+
+import type {
+  NewsItem,
+} from "../../../types/community";
+
 
 export default function NewsDetailPage() {
-  const params = useParams();
+  const params =
+    useParams();
+
 
   const slug =
-    typeof params.slug === "string"
+    typeof params.slug ===
+    "string"
       ? params.slug
       : "";
 
-  const [item, setItem] =
-    useState<NewsItem | null>(null);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    item,
+    setItem,
+  ] =
+    useState<
+      NewsItem | null
+    >(
+      null
+    );
 
-  const [notFound, setNotFound] =
-    useState(false);
 
-  useEffect(() => {
-    if (!slug) {
-      return;
-    }
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(
+      true
+    );
 
-    getNewsBySlug(slug)
-      .then((data) => {
-        if (!data) {
-          setNotFound(true);
-          return;
-        }
 
-        setItem(data);
-      })
-      .catch((error) => {
-        console.error(error);
-        setNotFound(true);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [slug]);
+  const [
+    notFound,
+    setNotFound,
+  ] =
+    useState(
+      false
+    );
 
-  function formatDate(value?: string | null) {
+
+  useEffect(
+    () => {
+      if (!slug) {
+        return;
+      }
+
+
+      getNewsBySlug(
+        slug
+      )
+        .then(
+          (
+            data
+          ) => {
+            if (
+              !data
+            ) {
+              setNotFound(
+                true
+              );
+
+              return;
+            }
+
+
+            setItem(
+              data
+            );
+          }
+        )
+        .catch(
+          (
+            error
+          ) => {
+            console.error(
+              error
+            );
+
+            setNotFound(
+              true
+            );
+          }
+        )
+        .finally(
+          () => {
+            setLoading(
+              false
+            );
+          }
+        );
+    },
+    [
+      slug,
+    ]
+  );
+
+
+  function formatDate(
+    value?:
+      string | null
+  ) {
     if (!value) {
       return "";
     }
 
-    return new Intl.DateTimeFormat("en-GB", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    }).format(new Date(value));
+
+    return new Intl.DateTimeFormat(
+      "en-GB",
+      {
+        day:
+          "2-digit",
+
+        month:
+          "long",
+
+        year:
+          "numeric",
+      }
+    ).format(
+      new Date(
+        value
+      )
+    );
   }
 
-  if (loading) {
+
+  if (
+    loading
+  ) {
     return (
       <div className="newsDetailState">
         Loading article...
@@ -67,7 +159,11 @@ export default function NewsDetailPage() {
     );
   }
 
-  if (notFound || !item) {
+
+  if (
+    notFound ||
+    !item
+  ) {
     return (
       <>
         <div className="newsDetailState">
@@ -76,19 +172,23 @@ export default function NewsDetailPage() {
               AUROS NEWS
             </span>
 
+
             <h1>
               Article not found
             </h1>
 
+
             <p>
               This news article does not exist or is no longer published.
             </p>
+
 
             <Link href="/news">
               ← Back to News
             </Link>
           </div>
         </div>
+
 
         <style jsx global>{`
           .newsDetailState {
@@ -98,6 +198,7 @@ export default function NewsDetailPage() {
             text-align: center;
           }
 
+
           .newsDetailState span {
             color: #63ddff;
             font-size: 9px;
@@ -105,13 +206,16 @@ export default function NewsDetailPage() {
             letter-spacing: 0.12em;
           }
 
+
           .newsDetailState h1 {
             margin: 10px 0;
           }
 
+
           .newsDetailState p {
             color: #8ea2c1;
           }
+
 
           .newsDetailState a {
             display: inline-block;
@@ -124,6 +228,7 @@ export default function NewsDetailPage() {
     );
   }
 
+
   return (
     <>
       <article className="newsDetailPage">
@@ -133,6 +238,7 @@ export default function NewsDetailPage() {
         >
           ← Back to News
         </Link>
+
 
         <header className="newsDetailHeader">
           <div className="newsDetailMeta">
@@ -148,57 +254,105 @@ export default function NewsDetailPage() {
                 : "AUROS NEWS"}
             </span>
 
+
             {item.created_at && (
               <span className="detailDate">
-                {formatDate(item.created_at)}
+                {formatDate(
+                  item.created_at
+                )}
               </span>
             )}
           </div>
 
+
           <h1>
-            {item.title}
+            {
+              item.title
+            }
           </h1>
+
 
           {item.summary && (
             <p className="newsLead">
-              {item.summary}
+              {
+                item.summary
+              }
             </p>
           )}
+
+
+          <div className="newsShareActions">
+            <ShareActions
+              title={
+                item.title
+              }
+              text={
+                item.summary
+              }
+            />
+          </div>
         </header>
+
 
         {item.image_url && (
           <div className="newsHeroImage">
             <img
-              src={item.image_url}
-              alt={item.title}
+              src={
+                item.image_url
+              }
+              alt={
+                item.title
+              }
             />
           </div>
         )}
 
+
         <div className="newsArticleLayout">
           <main className="newsArticleBody">
-            {(item.content ?? "")
-                .split("\n")
-                .map((paragraph, index) => {
-                const clean =
-                  paragraph.trim();
+            {(item.content ??
+              "")
+              .split(
+                "\n"
+              )
+              .map(
+                (
+                  paragraph,
+                  index
+                ) => {
+                  const clean =
+                    paragraph.trim();
 
-                if (!clean) {
+
+                  if (
+                    !clean
+                  ) {
+                    return (
+                      <div
+                        key={
+                          index
+                        }
+                        className="articleSpacer"
+                      />
+                    );
+                  }
+
+
                   return (
-                    <div
-                      key={index}
-                      className="articleSpacer"
-                    />
+                    <p
+                      key={
+                        index
+                      }
+                    >
+                      {
+                        clean
+                      }
+                    </p>
                   );
                 }
-
-                return (
-                  <p key={index}>
-                    {clean}
-                  </p>
-                );
-              })}
+              )}
           </main>
+
 
           <aside className="newsArticleSidebar">
             <div className="sidebarCard">
@@ -206,9 +360,11 @@ export default function NewsDetailPage() {
                 ARTICLE
               </span>
 
+
               <strong>
                 Auros Royale
               </strong>
+
 
               {item.created_at && (
                 <small>
@@ -220,16 +376,20 @@ export default function NewsDetailPage() {
               )}
             </div>
 
+
             <Link
               href="/news"
               className="sidebarBack"
             >
               More Auros News
-              <span>→</span>
+              <span>
+                →
+              </span>
             </Link>
           </aside>
         </div>
       </article>
+
 
       <style jsx global>{`
         .newsDetailPage {
@@ -238,6 +398,7 @@ export default function NewsDetailPage() {
           margin: 0 auto;
           padding: 32px 0 75px;
         }
+
 
         .newsBack {
           display: inline-flex;
@@ -249,14 +410,17 @@ export default function NewsDetailPage() {
           transition: color 0.15s ease;
         }
 
+
         .newsBack:hover {
           color: #63ddff;
         }
+
 
         .newsDetailHeader {
           max-width: 960px;
           margin-bottom: 28px;
         }
+
 
         .newsDetailMeta {
           display: flex;
@@ -266,6 +430,7 @@ export default function NewsDetailPage() {
           margin-bottom: 13px;
         }
 
+
         .detailBadge {
           color: #63ddff;
           font-size: 9px;
@@ -273,14 +438,17 @@ export default function NewsDetailPage() {
           letter-spacing: 0.11em;
         }
 
+
         .detailBadge.pinned {
           color: #ffd66b;
         }
+
 
         .detailDate {
           color: #7086a6;
           font-size: 9px;
         }
+
 
         .newsDetailHeader h1 {
           margin: 0;
@@ -293,6 +461,7 @@ export default function NewsDetailPage() {
           letter-spacing: -0.045em;
         }
 
+
         .newsLead {
           max-width: 850px;
           margin: 18px 0 0;
@@ -300,6 +469,12 @@ export default function NewsDetailPage() {
           font-size: 18px;
           line-height: 1.65;
         }
+
+
+        .newsShareActions {
+          margin-top: 21px;
+        }
+
 
         .newsHeroImage {
           overflow: hidden;
@@ -316,12 +491,14 @@ export default function NewsDetailPage() {
           background: #030812;
         }
 
+
         .newsHeroImage img {
           display: block;
           width: 100%;
           max-height: 680px;
           object-fit: cover;
         }
+
 
         .newsArticleLayout {
           display: grid;
@@ -332,9 +509,11 @@ export default function NewsDetailPage() {
           align-items: start;
         }
 
+
         .newsArticleBody {
           max-width: 820px;
         }
+
 
         .newsArticleBody p {
           margin:
@@ -346,14 +525,17 @@ export default function NewsDetailPage() {
           line-height: 1.85;
         }
 
+
         .articleSpacer {
           height: 8px;
         }
+
 
         .newsArticleSidebar {
           position: sticky;
           top: 95px;
         }
+
 
         .sidebarCard {
           display: flex;
@@ -376,6 +558,7 @@ export default function NewsDetailPage() {
           );
         }
 
+
         .sidebarCard span {
           color: #63ddff;
           font-size: 8px;
@@ -383,14 +566,17 @@ export default function NewsDetailPage() {
           letter-spacing: 0.1em;
         }
 
+
         .sidebarCard strong {
           font-size: 13px;
         }
+
 
         .sidebarCard small {
           color: #7187a7;
           font-size: 9px;
         }
+
 
         .sidebarBack {
           display: flex;
@@ -418,9 +604,11 @@ export default function NewsDetailPage() {
           text-decoration: none;
         }
 
+
         .sidebarBack span {
           color: #63ddff;
         }
+
 
         .sidebarBack:hover {
           color: white;
@@ -433,29 +621,39 @@ export default function NewsDetailPage() {
             );
         }
 
-        @media (max-width: 850px) {
+
+        @media (
+          max-width: 850px
+        ) {
           .newsArticleLayout {
             grid-template-columns: 1fr;
             gap: 25px;
           }
+
 
           .newsArticleSidebar {
             position: static;
           }
         }
 
-        @media (max-width: 650px) {
+
+        @media (
+          max-width: 650px
+        ) {
           .newsDetailPage {
             padding-top: 22px;
           }
+
 
           .newsLead {
             font-size: 15px;
           }
 
+
           .newsHeroImage {
             border-radius: 15px;
           }
+
 
           .newsArticleBody p {
             font-size: 14px;

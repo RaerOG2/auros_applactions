@@ -21,43 +21,68 @@ import type {
   AurosMap,
 } from "../../../types/maps";
 
+type MapStatusFilter =
+  | "all"
+  | "published"
+  | "dev"
+  | "draft";
 
 export default function AdminMapsPage() {
-  const [maps, setMaps] =
-    useState<AurosMap[]>([]);
+  const [
+    maps,
+    setMaps,
+  ] = useState<
+    AurosMap[]
+  >([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    loading,
+    setLoading,
+  ] = useState(
+    true
+  );
 
-  const [search, setSearch] =
-    useState("");
+  const [
+    search,
+    setSearch,
+  ] = useState(
+    ""
+  );
 
-  const [status, setStatus] =
-    useState<
-      "all" | "published" | "draft"
-    >("all");
-
+  const [
+    status,
+    setStatus,
+  ] =
+    useState<MapStatusFilter>(
+      "all"
+    );
 
   async function loadMaps() {
-    setLoading(true);
+    setLoading(
+      true
+    );
 
     try {
       const data =
         await getAdminMaps();
 
-      setMaps(data);
+      setMaps(
+        data
+      );
     } catch (error) {
-      console.error(error);
+      console.error(
+        error
+      );
     } finally {
-      setLoading(false);
+      setLoading(
+        false
+      );
     }
   }
-
 
   useEffect(() => {
     loadMaps();
   }, []);
-
 
   const filteredMaps =
     useMemo(() => {
@@ -71,13 +96,25 @@ export default function AdminMapsPage() {
           if (
             status ===
               "published" &&
-            !map.published
+            (
+              !map.published ||
+              map.dev_only
+            )
           ) {
             return false;
           }
 
           if (
-            status === "draft" &&
+            status ===
+              "dev" &&
+            !map.dev_only
+          ) {
+            return false;
+          }
+
+          if (
+            status ===
+              "draft" &&
             map.published
           ) {
             return false;
@@ -93,11 +130,20 @@ export default function AdminMapsPage() {
             map.season_name,
             map.version,
           ]
-            .filter(Boolean)
-            .some((value) =>
-              String(value)
-                .toLowerCase()
-                .includes(query)
+            .filter(
+              Boolean
+            )
+            .some(
+              (
+                value
+              ) =>
+                String(
+                  value
+                )
+                  .toLowerCase()
+                  .includes(
+                    query
+                  )
             );
         }
       );
@@ -107,6 +153,18 @@ export default function AdminMapsPage() {
       status,
     ]);
 
+  const publicMapsCount =
+    maps.filter(
+      (map) =>
+        map.published &&
+        !map.dev_only
+    ).length;
+
+  const devMapsCount =
+    maps.filter(
+      (map) =>
+        map.dev_only
+    ).length;
 
   async function handlePublish(
     map: AurosMap
@@ -119,11 +177,12 @@ export default function AdminMapsPage() {
     await loadMaps();
   }
 
-
   async function handleCurrent(
     map: AurosMap
   ) {
-    if (map.current) {
+    if (
+      map.current
+    ) {
       return;
     }
 
@@ -134,7 +193,6 @@ export default function AdminMapsPage() {
     await loadMaps();
   }
 
-
   async function handleDelete(
     map: AurosMap
   ) {
@@ -143,7 +201,9 @@ export default function AdminMapsPage() {
         `Delete "${map.name}"?\n\nThis cannot be undone.`
       );
 
-    if (!accepted) {
+    if (
+      !accepted
+    ) {
       return;
     }
 
@@ -153,7 +213,6 @@ export default function AdminMapsPage() {
 
     await loadMaps();
   }
-
 
   return (
     <AdminPageGuard>
@@ -169,9 +228,10 @@ export default function AdminMapsPage() {
             </h1>
 
             <p>
-              Manage every version of the
-              Auros island and build the
-              historical map archive.
+              Manage public,
+              archived and
+              development versions
+              of the Auros island.
             </p>
           </div>
 
@@ -190,36 +250,32 @@ export default function AdminMapsPage() {
             </span>
 
             <strong>
-              {maps.length}
-            </strong>
-          </div>
-
-          <div>
-            <span>
-              PUBLISHED
-            </span>
-
-            <strong>
               {
-                maps.filter(
-                  (map) =>
-                    map.published
-                ).length
+                maps.length
               }
             </strong>
           </div>
 
           <div>
             <span>
-              ARCHIVED
+              PUBLIC
             </span>
 
             <strong>
               {
-                maps.filter(
-                  (map) =>
-                    !map.current
-                ).length
+                publicMapsCount
+              }
+            </strong>
+          </div>
+
+          <div>
+            <span>
+              DEV MAPS
+            </span>
+
+            <strong className="devStat">
+              {
+                devMapsCount
               }
             </strong>
           </div>
@@ -232,8 +288,10 @@ export default function AdminMapsPage() {
             <strong className="currentStat">
               {maps.find(
                 (map) =>
-                  map.current
-              )?.name || "—"}
+                  map.current &&
+                  !map.dev_only
+              )?.name ||
+                "—"}
             </strong>
           </div>
         </div>
@@ -242,10 +300,16 @@ export default function AdminMapsPage() {
           <input
             type="search"
             placeholder="Search maps, seasons or versions..."
-            value={search}
-            onChange={(event) =>
+            value={
+              search
+            }
+            onChange={(
+              event
+            ) =>
               setSearch(
-                event.target.value
+                event
+                  .target
+                  .value
               )
             }
           />
@@ -255,43 +319,69 @@ export default function AdminMapsPage() {
               [
                 "all",
                 "published",
+                "dev",
                 "draft",
               ] as const
-            ).map((value) => (
-              <button
-                key={value}
-                type="button"
-                className={
-                  status === value
-                    ? "active"
-                    : ""
-                }
-                onClick={() =>
-                  setStatus(value)
-                }
-              >
-                {value}
-              </button>
-            ))}
+            ).map(
+              (
+                value
+              ) => (
+                <button
+                  key={
+                    value
+                  }
+                  type="button"
+                  className={
+                    status ===
+                    value
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() =>
+                    setStatus(
+                      value
+                    )
+                  }
+                >
+                  {value ===
+                  "published"
+                    ? "Public"
+                    : value ===
+                        "dev"
+                      ? "Dev"
+                      : value}
+                </button>
+              )
+            )}
           </div>
         </div>
 
         {loading ? (
           <div className="mapsEmpty">
-            Loading maps...
+            Loading
+            maps...
           </div>
         ) : filteredMaps.length ===
           0 ? (
           <div className="mapsEmpty">
-            No maps found.
+            No maps
+            found.
           </div>
         ) : (
           <div className="mapsGrid">
             {filteredMaps.map(
-              (map) => (
+              (
+                map
+              ) => (
                 <article
-                  key={map.id}
-                  className="adminMapCard"
+                  key={
+                    map.id
+                  }
+                  className={
+                    map.dev_only
+                      ? "adminMapCard devMapCard"
+                      : "adminMapCard"
+                  }
                 >
                   <div className="adminMapImage">
                     <img
@@ -305,9 +395,16 @@ export default function AdminMapsPage() {
                     />
 
                     <div className="adminMapBadges">
-                      {map.current && (
-                        <span className="currentBadge">
-                          CURRENT
+                      {map.current &&
+                        !map.dev_only && (
+                          <span className="currentBadge">
+                            CURRENT
+                          </span>
+                        )}
+
+                      {map.dev_only && (
+                        <span className="devBadge">
+                          DEV ONLY
                         </span>
                       )}
 
@@ -329,19 +426,27 @@ export default function AdminMapsPage() {
                     <div className="adminMapContext">
                       {[
                         map.venture_name,
+
                         map.season_number !==
                         null
                           ? `Season ${map.season_number}`
                           : null,
+
                         map.season_name,
                       ]
-                        .filter(Boolean)
-                        .join(" · ") ||
+                        .filter(
+                          Boolean
+                        )
+                        .join(
+                          " · "
+                        ) ||
                         "AUROS MAP"}
                     </div>
 
                     <h2>
-                      {map.name}
+                      {
+                        map.name
+                      }
                     </h2>
 
                     <p>
@@ -350,6 +455,22 @@ export default function AdminMapsPage() {
                         : "No version label"}
                     </p>
 
+                    {map.dev_only && (
+                      <div className="devMapNotice">
+                        <strong>
+                          Development
+                          Map
+                        </strong>
+
+                        <span>
+                          Hidden
+                          from
+                          public
+                          visitors.
+                        </span>
+                      </div>
+                    )}
+
                     <div className="adminMapActions">
                       <Link
                         href={`/admin/maps/${map.id}/edit`}
@@ -357,18 +478,20 @@ export default function AdminMapsPage() {
                         Edit
                       </Link>
 
-                      {!map.current && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleCurrent(
-                              map
-                            )
-                          }
-                        >
-                          Make Current
-                        </button>
-                      )}
+                      {!map.current &&
+                        !map.dev_only && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCurrent(
+                                map
+                              )
+                            }
+                          >
+                            Make
+                            Current
+                          </button>
+                        )}
 
                       <button
                         type="button"
@@ -456,7 +579,10 @@ export default function AdminMapsPage() {
           grid-template-columns:
             repeat(
               4,
-              minmax(0, 1fr)
+              minmax(
+                0,
+                1fr
+              )
             );
           gap: 10px;
           margin-bottom: 15px;
@@ -469,16 +595,16 @@ export default function AdminMapsPage() {
           min-height: 80px;
           justify-content: center;
           padding: 14px;
-          border: 1px solid rgba(112, 147, 202, 0.11);
+          border: 1px solid rgba(112,147,202,.11);
           border-radius: 12px;
-          background: rgba(7, 16, 32, 0.7);
+          background: rgba(7,16,32,.7);
         }
 
         .mapsStats span {
           color: #637998;
           font-size: 7px;
           font-weight: 900;
-          letter-spacing: 0.09em;
+          letter-spacing: .09em;
         }
 
         .mapsStats strong {
@@ -490,6 +616,10 @@ export default function AdminMapsPage() {
           font-size: 13px;
         }
 
+        .mapsStats .devStat {
+          color: #b89cff;
+        }
+
         .mapsToolbar {
           display: flex;
           align-items: center;
@@ -499,13 +629,13 @@ export default function AdminMapsPage() {
         }
 
         .mapsToolbar > input {
-          width: min(100%, 420px);
+          width: min(100%,420px);
           min-height: 39px;
           padding: 0 12px;
-          border: 1px solid rgba(112, 147, 202, 0.13);
+          border: 1px solid rgba(112,147,202,.13);
           border-radius: 9px;
           outline: none;
-          background: rgba(5, 13, 27, 0.78);
+          background: rgba(5,13,27,.78);
           color: white;
           font-size: 9px;
         }
@@ -518,9 +648,9 @@ export default function AdminMapsPage() {
         .mapStatusFilters button {
           min-height: 35px;
           padding: 0 11px;
-          border: 1px solid rgba(112, 147, 202, 0.11);
+          border: 1px solid rgba(112,147,202,.11);
           border-radius: 8px;
-          background: rgba(8, 18, 34, 0.7);
+          background: rgba(8,18,34,.7);
           color: #7186a5;
           font-size: 8px;
           font-weight: 800;
@@ -529,8 +659,8 @@ export default function AdminMapsPage() {
         }
 
         .mapStatusFilters button.active {
-          border-color: rgba(99, 221, 255, 0.25);
-          background: rgba(99, 221, 255, 0.08);
+          border-color: rgba(99,221,255,.25);
+          background: rgba(99,221,255,.08);
           color: #b8f3ff;
         }
 
@@ -539,16 +669,29 @@ export default function AdminMapsPage() {
           grid-template-columns:
             repeat(
               3,
-              minmax(0, 1fr)
+              minmax(
+                0,
+                1fr
+              )
             );
           gap: 12px;
         }
 
         .adminMapCard {
           overflow: hidden;
-          border: 1px solid rgba(112, 147, 202, 0.11);
+          border: 1px solid rgba(112,147,202,.11);
           border-radius: 14px;
-          background: rgba(7, 16, 32, 0.78);
+          background: rgba(7,16,32,.78);
+        }
+
+        .adminMapCard.devMapCard {
+          border-color: rgba(171,135,255,.24);
+          background:
+            linear-gradient(
+              180deg,
+              rgba(171,135,255,.045),
+              rgba(7,16,32,.78)
+            );
         }
 
         .adminMapImage {
@@ -580,22 +723,27 @@ export default function AdminMapsPage() {
           backdrop-filter: blur(5px);
           font-size: 6px;
           font-weight: 900;
-          letter-spacing: 0.06em;
+          letter-spacing: .06em;
         }
 
         .currentBadge {
-          background: rgba(99, 221, 255, 0.85);
+          background: rgba(99,221,255,.85);
           color: #03101a;
         }
 
         .publishedBadge {
-          background: rgba(49, 210, 138, 0.75);
+          background: rgba(49,210,138,.75);
           color: white;
         }
 
         .draftBadge {
-          background: rgba(8, 16, 30, 0.8);
+          background: rgba(8,16,30,.8);
           color: #91a3bd;
+        }
+
+        .devBadge {
+          background: rgba(171,135,255,.9);
+          color: #090416;
         }
 
         .adminMapContent {
@@ -606,7 +754,7 @@ export default function AdminMapsPage() {
           color: #63ddff;
           font-size: 7px;
           font-weight: 900;
-          letter-spacing: 0.06em;
+          letter-spacing: .06em;
         }
 
         .adminMapContent h2 {
@@ -620,13 +768,33 @@ export default function AdminMapsPage() {
           font-size: 8px;
         }
 
+        .devMapNotice {
+          display: grid;
+          gap: 2px;
+          margin-top: 11px;
+          padding: 9px 10px;
+          border: 1px solid rgba(171,135,255,.18);
+          border-radius: 8px;
+          background: rgba(171,135,255,.06);
+        }
+
+        .devMapNotice strong {
+          color: #c7b5ff;
+          font-size: 8px;
+        }
+
+        .devMapNotice span {
+          color: #7f70a8;
+          font-size: 7px;
+        }
+
         .adminMapActions {
           display: flex;
           gap: 5px;
           flex-wrap: wrap;
           margin-top: 13px;
           padding-top: 11px;
-          border-top: 1px solid rgba(112, 147, 202, 0.08);
+          border-top: 1px solid rgba(112,147,202,.08);
         }
 
         .adminMapActions a,
@@ -635,9 +803,9 @@ export default function AdminMapsPage() {
           display: inline-flex;
           align-items: center;
           padding: 0 9px;
-          border: 1px solid rgba(112, 147, 202, 0.13);
+          border: 1px solid rgba(112,147,202,.13);
           border-radius: 7px;
-          background: rgba(9, 20, 38, 0.78);
+          background: rgba(9,20,38,.78);
           color: #a9bad0;
           font-size: 7px;
           font-weight: 800;
@@ -647,7 +815,7 @@ export default function AdminMapsPage() {
 
         .adminMapActions a:hover,
         .adminMapActions button:hover {
-          border-color: rgba(99, 221, 255, 0.25);
+          border-color: rgba(99,221,255,.25);
           color: white;
         }
 
@@ -658,7 +826,7 @@ export default function AdminMapsPage() {
 
         .mapsEmpty {
           padding: 50px 20px;
-          border: 1px dashed rgba(112, 147, 202, 0.12);
+          border: 1px dashed rgba(112,147,202,.12);
           border-radius: 13px;
           text-align: center;
           color: #647a9a;
@@ -670,7 +838,10 @@ export default function AdminMapsPage() {
             grid-template-columns:
               repeat(
                 2,
-                minmax(0, 1fr)
+                minmax(
+                  0,
+                  1fr
+                )
               );
           }
         }
@@ -690,7 +861,10 @@ export default function AdminMapsPage() {
             grid-template-columns:
               repeat(
                 2,
-                minmax(0, 1fr)
+                minmax(
+                  0,
+                  1fr
+                )
               );
           }
 
@@ -700,6 +874,10 @@ export default function AdminMapsPage() {
 
           .mapsToolbar > input {
             width: 100%;
+          }
+
+          .mapStatusFilters {
+            overflow-x: auto;
           }
         }
       `}</style>

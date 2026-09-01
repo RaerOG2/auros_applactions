@@ -17,12 +17,17 @@ import MapCompareSlider from "../../components/map/MapCompareSlider";
 import MapTimeline from "../../components/map/MapTimeline";
 
 import {
+  getDevMaps,
   getPublishedMaps,
 } from "../../services/map.service";
 
 import {
   getPublishedMapMarkers,
 } from "../../services/map-marker.service";
+
+import {
+  getAdminAccess,
+} from "../../services/admin-service";
 
 import type {
   AurosMap,
@@ -32,20 +37,15 @@ import type {
   MapMarker,
 } from "../../types/map-markers";
 
-type SearchMarker = MapMarker & {
-  mapName: string;
-  mapVersion: string | null;
-};
+type SearchMarker =
+  MapMarker & {
+    mapName: string;
+    mapVersion: string | null;
+    mapDevOnly: boolean;
+  };
 
 /* =========================================================
    PAGE
-
-   useSearchParams requires a Suspense boundary during
-   production prerendering in Next.js.
-
-   The complete interactive map lives inside
-   MapPageContent so none of the existing map logic
-   needs to change.
    ========================================================= */
 
 export default function MapPage() {
@@ -109,64 +109,222 @@ function MapPageContent() {
   const searchParams =
     useSearchParams();
 
-  const [maps, setMaps] =
-    useState<AurosMap[]>([]);
+  const [
+    maps,
+    setMaps,
+  ] =
+    useState<AurosMap[]>(
+      []
+    );
 
-  const [selectedId, setSelectedId] =
-    useState("");
+  const [
+    isAdmin,
+    setIsAdmin,
+  ] =
+    useState(
+      false
+    );
 
-  const [loading, setLoading] =
-    useState(true);
+  const [
+    selectedId,
+    setSelectedId,
+  ] =
+    useState(
+      ""
+    );
 
-  const [error, setError] =
-    useState("");
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(
+      true
+    );
+
+  const [
+    error,
+    setError,
+  ] =
+    useState(
+      ""
+    );
 
   const [
     compareMode,
     setCompareMode,
-  ] = useState(false);
+  ] =
+    useState(
+      false
+    );
 
   const [
     compareLeftId,
     setCompareLeftId,
-  ] = useState("");
+  ] =
+    useState(
+      ""
+    );
 
   const [
     compareRightId,
     setCompareRightId,
-  ] = useState("");
+  ] =
+    useState(
+      ""
+    );
 
   const [
     allMarkers,
     setAllMarkers,
-  ] = useState<SearchMarker[]>([]);
+  ] =
+    useState<SearchMarker[]>(
+      []
+    );
 
   const [
     search,
     setSearch,
-  ] = useState("");
+  ] =
+    useState(
+      ""
+    );
 
   const [
     focusMarkerId,
     setFocusMarkerId,
-  ] = useState<string | null>(
-    null
-  );
+  ] =
+    useState<string | null>(
+      null
+    );
 
   const [
     markerSearchLoading,
     setMarkerSearchLoading,
-  ] = useState(false);
+  ] =
+    useState(
+      false
+    );
+
+  /* =========================================================
+     LOAD MAPS + ADMIN ACCESS
+     ========================================================= */
 
   useEffect(() => {
+    let alive =
+      true;
+
     async function load() {
       try {
-        setLoading(true);
+        setLoading(
+          true
+        );
 
-        const data =
+        setError(
+          ""
+        );
+
+        /*
+         * Always load the public maps.
+         */
+        const publicMaps =
           await getPublishedMaps();
 
-        setMaps(data);
+        /*
+         * Check existing Auros admin access.
+         */
+        let admin =
+          false;
+
+        try {
+          const access =
+            await getAdminAccess();
+
+          admin =
+            Boolean(
+              access.user &&
+              access.isAdmin
+            );
+        } catch (
+          accessError
+        ) {
+          console.error(
+            "MAP ADMIN ACCESS ERROR:",
+            accessError
+          );
+
+          admin =
+            false;
+        }
+
+        if (!alive) {
+          return;
+        }
+
+        setIsAdmin(
+          admin
+        );
+
+        let loadedMaps =
+          publicMaps;
+
+        /*
+         * Admins also receive published DEV maps.
+         */
+        if (admin) {
+          try {
+            const devMaps =
+              await getDevMaps();
+
+            const combined =
+              [
+                ...publicMaps,
+                ...devMaps,
+              ];
+
+            /*
+             * Defensive dedupe in case database logic
+             * ever returns the same map twice.
+             */
+            loadedMaps =
+              combined.filter(
+                (
+                  map,
+                  index,
+                  collection
+                ) =>
+                  collection.findIndex(
+                    (
+                      candidate
+                    ) =>
+                      candidate.id ===
+                      map.id
+                  ) ===
+                  index
+              );
+          } catch (
+            devError
+          ) {
+            console.error(
+              "DEV MAP LOAD ERROR:",
+              devError
+            );
+
+            /*
+             * Public map still works if DEV loading
+             * fails for any reason.
+             */
+            loadedMaps =
+              publicMaps;
+          }
+        }
+
+        if (!alive) {
+          return;
+        }
+
+        setMaps(
+          loadedMaps
+        );
 
         const urlMapId =
           searchParams.get(
@@ -180,20 +338,30 @@ function MapPageContent() {
 
         const mapFromUrl =
           urlMapId
-            ? data.find(
-                (map) =>
+            ? loadedMaps.find(
+                (
+                  map
+                ) =>
                   map.id ===
                   urlMapId
               )
             : null;
 
+        /*
+         * Current always prefers the PUBLIC current map.
+         *
+         * DEV maps can never be Current.
+         */
         const current =
           mapFromUrl ??
-          data.find(
-            (map) =>
-              map.current
+          loadedMaps.find(
+            (
+              map
+            ) =>
+              map.current &&
+              !map.dev_only
           ) ??
-          data[0] ??
+          loadedMaps[0] ??
           null;
 
         if (current) {
@@ -206,8 +374,10 @@ function MapPageContent() {
           );
 
           const older =
-            data.find(
-              (map) =>
+            loadedMaps.find(
+              (
+                map
+              ) =>
                 map.id !==
                 current.id
             );
@@ -216,38 +386,84 @@ function MapPageContent() {
             older?.id ??
               current.id
           );
+        } else {
+          setSelectedId(
+            ""
+          );
+
+          setCompareLeftId(
+            ""
+          );
+
+          setCompareRightId(
+            ""
+          );
         }
 
-        if (urlLocationId) {
+        if (
+          urlLocationId
+        ) {
           setFocusMarkerId(
             urlLocationId
           );
         }
-      } catch (loadError) {
+      } catch (
+        loadError
+      ) {
         console.error(
           "MAP LOAD ERROR:",
           loadError
         );
 
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : "Could not load maps."
-        );
+        if (
+          alive
+        ) {
+          setError(
+            loadError instanceof
+              Error
+              ? loadError.message
+              : "Could not load maps."
+          );
+        }
       } finally {
-        setLoading(false);
+        if (
+          alive
+        ) {
+          setLoading(
+            false
+          );
+        }
       }
     }
 
     load();
-  }, [searchParams]);
+
+    return () => {
+      alive =
+        false;
+    };
+  }, [
+    searchParams,
+  ]);
+
+  /* =========================================================
+     LOAD MARKERS FOR SEARCH
+     ========================================================= */
 
   useEffect(() => {
     if (
-      maps.length === 0
+      maps.length ===
+      0
     ) {
+      setAllMarkers(
+        []
+      );
+
       return;
     }
+
+    let alive =
+      true;
 
     async function loadMarkers() {
       setMarkerSearchLoading(
@@ -258,14 +474,18 @@ function MapPageContent() {
         const results =
           await Promise.all(
             maps.map(
-              async (map) => {
+              async (
+                map
+              ) => {
                 const markers =
                   await getPublishedMapMarkers(
                     map.id
                   );
 
                 return markers.map(
-                  (marker) => ({
+                  (
+                    marker
+                  ) => ({
                     ...marker,
 
                     mapName:
@@ -274,37 +494,69 @@ function MapPageContent() {
                     mapVersion:
                       map.version ??
                       null,
+
+                    mapDevOnly:
+                      map.dev_only,
                   })
                 );
               }
             )
           );
 
-        setAllMarkers(
-          results.flat()
-        );
-      } catch (markerError) {
+        if (
+          alive
+        ) {
+          setAllMarkers(
+            results.flat()
+          );
+        }
+      } catch (
+        markerError
+      ) {
         console.error(
           "GLOBAL MARKER LOAD ERROR:",
           markerError
         );
 
-        setAllMarkers([]);
+        if (
+          alive
+        ) {
+          setAllMarkers(
+            []
+          );
+        }
       } finally {
-        setMarkerSearchLoading(
-          false
-        );
+        if (
+          alive
+        ) {
+          setMarkerSearchLoading(
+            false
+          );
+        }
       }
     }
 
     loadMarkers();
-  }, [maps]);
+
+    return () => {
+      alive =
+        false;
+    };
+  }, [
+    maps,
+  ]);
+
+  /* =========================================================
+     DERIVED MAPS
+     ========================================================= */
 
   const selectedMap =
     useMemo(() => {
       return (
         maps.find(
-          (map) =>
+          (
+            map
+          ) =>
             map.id ===
             selectedId
         ) ??
@@ -320,18 +572,25 @@ function MapPageContent() {
     useMemo(() => {
       return (
         maps.find(
-          (map) =>
-            map.current
+          (
+            map
+          ) =>
+            map.current &&
+            !map.dev_only
         ) ??
         null
       );
-    }, [maps]);
+    }, [
+      maps,
+    ]);
 
   const compareLeftMap =
     useMemo(() => {
       return (
         maps.find(
-          (map) =>
+          (
+            map
+          ) =>
             map.id ===
             compareLeftId
         ) ??
@@ -346,7 +605,9 @@ function MapPageContent() {
     useMemo(() => {
       return (
         maps.find(
-          (map) =>
+          (
+            map
+          ) =>
             map.id ===
             compareRightId
         ) ??
@@ -357,6 +618,22 @@ function MapPageContent() {
       compareRightId,
     ]);
 
+  const devMapCount =
+    useMemo(() => {
+      return maps.filter(
+        (
+          map
+        ) =>
+          map.dev_only
+      ).length;
+    }, [
+      maps,
+    ]);
+
+  /* =========================================================
+     SEARCH
+     ========================================================= */
+
   const searchResults =
     useMemo(() => {
       const query =
@@ -365,14 +642,17 @@ function MapPageContent() {
           .toLowerCase();
 
       if (
-        query.length < 2
+        query.length <
+        2
       ) {
         return [];
       }
 
       return allMarkers
         .filter(
-          (marker) =>
+          (
+            marker
+          ) =>
             marker.name
               .toLowerCase()
               .includes(
@@ -403,10 +683,18 @@ function MapPageContent() {
       allMarkers,
     ]);
 
+  /* =========================================================
+     HELPERS
+     ========================================================= */
+
   function formatDate(
-    value: string | null
+    value:
+      | string
+      | null
   ) {
-    if (!value) {
+    if (
+      !value
+    ) {
       return null;
     }
 
@@ -414,12 +702,19 @@ function MapPageContent() {
       return new Intl.DateTimeFormat(
         "en-GB",
         {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
+          day:
+            "2-digit",
+
+          month:
+            "short",
+
+          year:
+            "numeric",
         }
       ).format(
-        new Date(value)
+        new Date(
+          value
+        )
       );
     } catch {
       return value;
@@ -427,24 +722,34 @@ function MapPageContent() {
   }
 
   function getMapMeta(
-    map: AurosMap
+    map:
+      AurosMap
   ) {
     return [
       map.venture_name,
 
-      map.season_number !== null
+      map.season_number !==
+      null
         ? `S${map.season_number}`
         : null,
 
       map.version,
     ]
-      .filter(Boolean)
-      .join(" · ");
+      .filter(
+        Boolean
+      )
+      .join(
+        " · "
+      );
   }
 
   function updateMapUrl(
-    mapId: string,
-    markerId?: string | null
+    mapId:
+      string,
+
+    markerId?:
+      | string
+      | null
   ) {
     const params =
       new URLSearchParams();
@@ -454,7 +759,9 @@ function MapPageContent() {
       mapId
     );
 
-    if (markerId) {
+    if (
+      markerId
+    ) {
       params.set(
         "location",
         markerId
@@ -464,13 +771,15 @@ function MapPageContent() {
     router.replace(
       `/map?${params.toString()}`,
       {
-        scroll: false,
+        scroll:
+          false,
       }
     );
   }
 
   function selectMap(
-    mapId: string
+    mapId:
+      string
   ) {
     setSelectedId(
       mapId
@@ -480,7 +789,9 @@ function MapPageContent() {
       null
     );
 
-    if (compareMode) {
+    if (
+      compareMode
+    ) {
       setCompareRightId(
         mapId
       );
@@ -492,7 +803,8 @@ function MapPageContent() {
   }
 
   function selectSearchResult(
-    marker: SearchMarker
+    marker:
+      SearchMarker
   ) {
     setCompareMode(
       false
@@ -506,7 +818,9 @@ function MapPageContent() {
       marker.id
     );
 
-    setSearch("");
+    setSearch(
+      ""
+    );
 
     updateMapUrl(
       marker.map_id,
@@ -526,6 +840,10 @@ function MapPageContent() {
       oldLeft
     );
   }
+
+  /* =========================================================
+     RENDER
+     ========================================================= */
 
   return (
     <>
@@ -557,7 +875,9 @@ function MapPageContent() {
                 </span>
 
                 <strong>
-                  {currentMap.name}
+                  {
+                    currentMap.name
+                  }
                 </strong>
 
                 {getMapMeta(
@@ -572,11 +892,39 @@ function MapPageContent() {
               </div>
             )}
           </div>
+
+          {isAdmin &&
+            devMapCount >
+              0 && (
+              <div className="devAccessBanner">
+                <div className="devAccessIcon">
+                  DEV
+                </div>
+
+                <div>
+                  <strong>
+                    Admin Development Access
+                  </strong>
+
+                  <span>
+                    {devMapCount}{" "}
+                    {devMapCount ===
+                    1
+                      ? "development map is"
+                      : "development maps are"}{" "}
+                    visible only because you
+                    are signed in as an
+                    Auros administrator.
+                  </span>
+                </div>
+              </div>
+            )}
         </header>
 
         {loading ? (
           <div className="mapState">
-            Loading Auros maps...
+            Loading Auros
+            maps...
           </div>
         ) : error ? (
           <div className="mapState error">
@@ -584,7 +932,9 @@ function MapPageContent() {
           </div>
         ) : !selectedMap ? (
           <div className="mapState">
-            No published maps are currently available.
+            No published maps
+            are currently
+            available.
           </div>
         ) : (
           <>
@@ -618,9 +968,13 @@ function MapPageContent() {
                   value={
                     search
                   }
-                  onChange={(event) =>
+                  onChange={(
+                    event
+                  ) =>
                     setSearch(
-                      event.target.value
+                      event
+                        .target
+                        .value
                     )
                   }
                   placeholder="Search Auros City, landmarks, story locations..."
@@ -640,17 +994,22 @@ function MapPageContent() {
                 )}
               </div>
 
-              {search.trim().length >=
+              {search
+                .trim()
+                .length >=
                 2 && (
                 <div className="mapSearchResults">
                   {searchResults.length ===
                   0 ? (
                     <div className="mapSearchEmpty">
-                      No locations found.
+                      No locations
+                      found.
                     </div>
                   ) : (
                     searchResults.map(
-                      (marker) => (
+                      (
+                        marker
+                      ) => (
                         <button
                           key={
                             marker.id
@@ -686,16 +1045,27 @@ function MapPageContent() {
                               {
                                 marker.mapName
                               }
+
                               {marker.mapVersion
                                 ? ` · ${marker.mapVersion}`
+                                : ""}
+
+                              {marker.mapDevOnly
+                                ? " · DEV"
                                 : ""}
                             </span>
                           </div>
 
-                          <div className="searchMarkerType">
-                            {
-                              marker.type
+                          <div
+                            className={
+                              marker.mapDevOnly
+                                ? "searchMarkerType dev"
+                                : "searchMarkerType"
                             }
+                          >
+                            {marker.mapDevOnly
+                              ? "DEV"
+                              : marker.type}
                           </div>
 
                           <span className="searchArrow">
@@ -725,13 +1095,17 @@ function MapPageContent() {
 
                 <div className="mapArchiveActions">
                   <small>
-                    {maps.length}{" "}
-                    {maps.length === 1
+                    {
+                      maps.length
+                    }{" "}
+                    {maps.length ===
+                    1
                       ? "map"
                       : "maps"}
                   </small>
 
-                  {maps.length >= 2 && (
+                  {maps.length >=
+                    2 && (
                     <button
                       type="button"
                       className={
@@ -741,7 +1115,9 @@ function MapPageContent() {
                       }
                       onClick={() =>
                         setCompareMode(
-                          (current) =>
+                          (
+                            current
+                          ) =>
                             !current
                         )
                       }
@@ -756,18 +1132,32 @@ function MapPageContent() {
 
               <div className="mapArchiveCards">
                 {maps.map(
-                  (map) => (
+                  (
+                    map
+                  ) => (
                     <button
                       key={
                         map.id
                       }
                       type="button"
-                      className={
+                      className={[
+                        "mapArchiveCard",
+
                         map.id ===
                         selectedMap.id
-                          ? "mapArchiveCard active"
-                          : "mapArchiveCard"
-                      }
+                          ? "active"
+                          : "",
+
+                        map.dev_only
+                          ? "dev"
+                          : "",
+                      ]
+                        .filter(
+                          Boolean
+                        )
+                        .join(
+                          " "
+                        )}
                       onClick={() =>
                         selectMap(
                           map.id
@@ -785,15 +1175,30 @@ function MapPageContent() {
                           }
                         />
 
-                        {map.current && (
-                          <span>
-                            CURRENT
-                          </span>
-                        )}
+                        <div className="archiveCardBadges">
+                          {map.current &&
+                            !map.dev_only && (
+                              <span className="archiveCurrentBadge">
+                                CURRENT
+                              </span>
+                            )}
+
+                          {map.dev_only && (
+                            <span className="archiveDevBadge">
+                              DEV ONLY
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="archiveCardContent">
-                        <div>
+                        <div
+                          className={
+                            map.dev_only
+                              ? "archiveCardContext dev"
+                              : "archiveCardContext"
+                          }
+                        >
                           {[
                             map.venture_name,
 
@@ -840,7 +1245,9 @@ function MapPageContent() {
             {/* TIMELINE */}
 
             <MapTimeline
-              maps={maps}
+              maps={
+                maps
+              }
               selectedId={
                 selectedId
               }
@@ -862,14 +1269,20 @@ function MapPageContent() {
                     value={
                       compareLeftId
                     }
-                    onChange={(event) =>
+                    onChange={(
+                      event
+                    ) =>
                       setCompareLeftId(
-                        event.target.value
+                        event
+                          .target
+                          .value
                       )
                     }
                   >
                     {maps.map(
-                      (map) => (
+                      (
+                        map
+                      ) => (
                         <option
                           key={
                             map.id
@@ -878,7 +1291,12 @@ function MapPageContent() {
                             map.id
                           }
                         >
+                          {map.dev_only
+                            ? "[DEV] "
+                            : ""}
+
                           {map.name}
+
                           {map.version
                             ? ` · ${map.version}`
                             : ""}
@@ -907,18 +1325,26 @@ function MapPageContent() {
                     value={
                       compareRightId
                     }
-                    onChange={(event) => {
+                    onChange={(
+                      event
+                    ) => {
                       setCompareRightId(
-                        event.target.value
+                        event
+                          .target
+                          .value
                       );
 
                       setSelectedId(
-                        event.target.value
+                        event
+                          .target
+                          .value
                       );
                     }}
                   >
                     {maps.map(
-                      (map) => (
+                      (
+                        map
+                      ) => (
                         <option
                           key={
                             map.id
@@ -927,7 +1353,12 @@ function MapPageContent() {
                             map.id
                           }
                         >
+                          {map.dev_only
+                            ? "[DEV] "
+                            : ""}
+
                           {map.name}
+
                           {map.version
                             ? ` · ${map.version}`
                             : ""}
@@ -949,6 +1380,29 @@ function MapPageContent() {
               }
             >
               <main className="mapViewerColumn">
+                {selectedMap.dev_only &&
+                  !compareMode && (
+                    <div className="selectedDevNotice">
+                      <span>
+                        DEV MAP
+                      </span>
+
+                      <strong>
+                        Administrator
+                        Preview
+                      </strong>
+
+                      <p>
+                        This map is hidden
+                        from normal visitors.
+                        You are viewing the
+                        development version
+                        through your admin
+                        account.
+                      </p>
+                    </div>
+                  )}
+
                 {compareMode &&
                 compareLeftMap &&
                 compareRightMap ? (
@@ -977,16 +1431,29 @@ function MapPageContent() {
 
               {!compareMode && (
                 <aside className="mapInformation">
-                  <div className="mapInfoCard primary">
+                  <div
+                    className={
+                      selectedMap.dev_only
+                        ? "mapInfoCard primary dev"
+                        : "mapInfoCard primary"
+                    }
+                  >
                     <div className="mapInfoTop">
                       <span>
-                        {selectedMap.current
+                        {selectedMap.dev_only
+                          ? "DEVELOPMENT MAP"
+                          : selectedMap.current
                           ? "CURRENT MAP"
                           : "ARCHIVED MAP"}
                       </span>
 
-                      {selectedMap.current && (
-                        <i />
+                      {selectedMap.current &&
+                        !selectedMap.dev_only && (
+                          <i />
+                        )}
+
+                      {selectedMap.dev_only && (
+                        <b className="devStatusDot" />
                       )}
                     </div>
 
@@ -1074,18 +1541,42 @@ function MapPageContent() {
 
                         <strong
                           className={
-                            selectedMap.current
+                            selectedMap.dev_only
+                              ? "devValue"
+                              : selectedMap.current
                               ? "currentValue"
                               : ""
                           }
                         >
-                          {selectedMap.current
+                          {selectedMap.dev_only
+                            ? "Admin Only"
+                            : selectedMap.current
                             ? "Live"
                             : "Archived"}
                         </strong>
                       </div>
                     </div>
                   </div>
+
+                  {selectedMap.dev_only && (
+                    <div className="mapInfoCard devInfoCard">
+                      <span className="infoCardLabel">
+                        DEVELOPMENT ACCESS
+                      </span>
+
+                      <strong>
+                        Hidden from
+                        visitors
+                      </strong>
+
+                      <p>
+                        Only administrators
+                        can load this map
+                        through the
+                        Interactive Map.
+                      </p>
+                    </div>
+                  )}
 
                   {focusMarkerId && (
                     <button
@@ -1101,7 +1592,8 @@ function MapPageContent() {
                         );
                       }}
                     >
-                      Clear Location Focus
+                      Clear Location
+                      Focus
                     </button>
                   )}
                 </aside>
@@ -1126,10 +1618,22 @@ function MapPageContent() {
                       </p>
                     </div>
 
-                    <div className="mapInfoCard compareMapInfo">
+                    <div
+                      className={
+                        compareLeftMap.dev_only
+                          ? "mapInfoCard compareMapInfo dev"
+                          : "mapInfoCard compareMapInfo"
+                      }
+                    >
                       <span className="compareColorLabel left">
                         MAP A
                       </span>
+
+                      {compareLeftMap.dev_only && (
+                        <span className="compareDevBadge">
+                          DEV ONLY
+                        </span>
+                      )}
 
                       <strong>
                         {
@@ -1145,10 +1649,22 @@ function MapPageContent() {
                       </small>
                     </div>
 
-                    <div className="mapInfoCard compareMapInfo">
+                    <div
+                      className={
+                        compareRightMap.dev_only
+                          ? "mapInfoCard compareMapInfo dev"
+                          : "mapInfoCard compareMapInfo"
+                      }
+                    >
                       <span className="compareColorLabel right">
                         MAP B
                       </span>
+
+                      {compareRightMap.dev_only && (
+                        <span className="compareDevBadge">
+                          DEV ONLY
+                        </span>
+                      )}
 
                       <strong>
                         {
@@ -1250,6 +1766,88 @@ function MapPageStyles() {
         font-size: 7px;
       }
 
+      /* DEV ACCESS */
+
+      .devAccessBanner {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        margin-top: 19px;
+        padding: 11px 13px;
+        border: 1px solid rgba(171,135,255,.2);
+        border-radius: 11px;
+        background:
+          linear-gradient(
+            90deg,
+            rgba(171,135,255,.09),
+            rgba(79,57,150,.035)
+          );
+      }
+
+      .devAccessIcon {
+        width: 37px;
+        height: 37px;
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        border-radius: 9px;
+        background: rgba(171,135,255,.14);
+        color: #c7b5ff;
+        font-size: 8px;
+        font-weight: 950;
+        letter-spacing: .06em;
+      }
+
+      .devAccessBanner > div:last-child {
+        display: grid;
+        gap: 3px;
+      }
+
+      .devAccessBanner strong {
+        color: #d3c7ff;
+        font-size: 10px;
+      }
+
+      .devAccessBanner span {
+        color: #7f73a3;
+        font-size: 8px;
+        line-height: 1.5;
+      }
+
+      .selectedDevNotice {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+        padding: 10px 12px;
+        border: 1px solid rgba(171,135,255,.2);
+        border-radius: 11px;
+        background: rgba(171,135,255,.06);
+      }
+
+      .selectedDevNotice > span {
+        flex-shrink: 0;
+        padding: 5px 7px;
+        border-radius: 999px;
+        background: #ab87ff;
+        color: #080413;
+        font-size: 6px;
+        font-weight: 950;
+        letter-spacing: .06em;
+      }
+
+      .selectedDevNotice strong {
+        color: #d2c5ff;
+        font-size: 9px;
+      }
+
+      .selectedDevNotice p {
+        margin: 0;
+        color: #7f72a4;
+        font-size: 7px;
+        line-height: 1.45;
+      }
+
       /* SEARCH */
 
       .mapSearchSection {
@@ -1344,7 +1942,11 @@ function MapPageStyles() {
         width: 100%;
         min-height: 53px;
         display: grid;
-        grid-template-columns: auto minmax(0,1fr) auto auto;
+        grid-template-columns:
+          auto
+          minmax(0,1fr)
+          auto
+          auto;
         align-items: center;
         gap: 10px;
         padding: 7px 9px;
@@ -1412,6 +2014,11 @@ function MapPageStyles() {
         font-size: 6px;
         font-weight: 900;
         text-transform: uppercase;
+      }
+
+      .searchMarkerType.dev {
+        background: rgba(171,135,255,.12);
+        color: #c2afff;
       }
 
       .searchArrow {
@@ -1503,6 +2110,26 @@ function MapPageStyles() {
         background: rgba(99,221,255,.06);
       }
 
+      .mapArchiveCard.dev {
+        border-color: rgba(171,135,255,.18);
+        background:
+          linear-gradient(
+            180deg,
+            rgba(171,135,255,.05),
+            rgba(7,16,31,.72)
+          );
+      }
+
+      .mapArchiveCard.dev.active {
+        border-color: rgba(171,135,255,.55);
+        background:
+          linear-gradient(
+            180deg,
+            rgba(171,135,255,.11),
+            rgba(56,39,103,.1)
+          );
+      }
+
       .archiveCardImage {
         position: relative;
         aspect-ratio: 16 / 9;
@@ -1516,26 +2143,44 @@ function MapPageStyles() {
         object-fit: cover;
       }
 
-      .archiveCardImage span {
+      .archiveCardBadges {
         position: absolute;
         top: 7px;
         left: 7px;
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+      }
+
+      .archiveCardBadges span {
         padding: 4px 6px;
         border-radius: 999px;
-        background: #63ddff;
-        color: #03101a;
         font-size: 6px;
         font-weight: 950;
+      }
+
+      .archiveCurrentBadge {
+        background: #63ddff;
+        color: #03101a;
+      }
+
+      .archiveDevBadge {
+        background: #ab87ff;
+        color: #080413;
       }
 
       .archiveCardContent {
         padding: 9px 10px 11px;
       }
 
-      .archiveCardContent > div {
+      .archiveCardContext {
         color: #63ddff;
         font-size: 6px;
         font-weight: 900;
+      }
+
+      .archiveCardContext.dev {
+        color: #bba6ff;
       }
 
       .archiveCardContent strong {
@@ -1555,7 +2200,10 @@ function MapPageStyles() {
 
       .mapCompareConfiguration {
         display: grid;
-        grid-template-columns: 1fr auto 1fr;
+        grid-template-columns:
+          1fr
+          auto
+          1fr;
         gap: 10px;
         align-items: end;
         margin-bottom: 14px;
@@ -1600,13 +2248,17 @@ function MapPageStyles() {
 
       .mapMainLayout {
         display: grid;
-        grid-template-columns: minmax(0,1fr) 280px;
+        grid-template-columns:
+          minmax(0,1fr)
+          280px;
         gap: 14px;
         align-items: start;
       }
 
       .mapMainLayout.compareActive {
-        grid-template-columns: minmax(0,1fr) 260px;
+        grid-template-columns:
+          minmax(0,1fr)
+          260px;
       }
 
       .mapViewerColumn {
@@ -1627,6 +2279,17 @@ function MapPageStyles() {
         background: rgba(7,16,31,.74);
       }
 
+      .mapInfoCard.primary.dev,
+      .mapInfoCard.compareMapInfo.dev {
+        border-color: rgba(171,135,255,.2);
+        background:
+          linear-gradient(
+            145deg,
+            rgba(171,135,255,.07),
+            rgba(7,16,31,.74)
+          );
+      }
+
       .mapInfoTop {
         display: flex;
         gap: 7px;
@@ -1640,11 +2303,23 @@ function MapPageStyles() {
         font-weight: 900;
       }
 
+      .mapInfoCard.primary.dev .mapInfoTop span {
+        color: #bda9ff;
+      }
+
       .mapInfoTop i {
         width: 5px;
         height: 5px;
         border-radius: 50%;
         background: #42e5a7;
+      }
+
+      .devStatusDot {
+        width: 5px;
+        height: 5px;
+        display: block;
+        border-radius: 50%;
+        background: #ab87ff;
       }
 
       .mapInfoCard h2 {
@@ -1685,6 +2360,33 @@ function MapPageStyles() {
         color: #42e5a7;
       }
 
+      .devValue {
+        color: #bba6ff;
+      }
+
+      .devInfoCard {
+        border-color: rgba(171,135,255,.18);
+        background: rgba(171,135,255,.055);
+      }
+
+      .devInfoCard .infoCardLabel {
+        color: #bba6ff;
+      }
+
+      .devInfoCard > strong {
+        display: block;
+        margin-top: 8px;
+        color: #d0c2ff;
+        font-size: 10px;
+      }
+
+      .devInfoCard > p {
+        margin: 5px 0 0;
+        color: #7d72a0;
+        font-size: 8px;
+        line-height: 1.5;
+      }
+
       .clearLocationFocus {
         min-height: 38px;
         border: 1px solid rgba(99,221,255,.15);
@@ -1717,6 +2419,16 @@ function MapPageStyles() {
       .compareColorLabel.right {
         color: #b89cff;
         background: rgba(171,135,255,.12);
+      }
+
+      .compareDevBadge {
+        width: fit-content;
+        padding: 4px 6px;
+        border-radius: 999px;
+        background: rgba(171,135,255,.13);
+        color: #c5b4ff;
+        font-size: 6px;
+        font-weight: 950;
       }
 
       .mapState {
@@ -1764,6 +2476,15 @@ function MapPageStyles() {
 
         .searchMarkerType {
           display: none;
+        }
+
+        .devAccessBanner {
+          align-items: flex-start;
+        }
+
+        .selectedDevNotice {
+          align-items: flex-start;
+          flex-direction: column;
         }
       }
     `}</style>

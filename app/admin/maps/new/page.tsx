@@ -14,7 +14,6 @@ import {
   type MapEditorForm,
 } from "../../../../types/maps";
 
-
 export default function NewMapPage() {
   const router = useRouter();
 

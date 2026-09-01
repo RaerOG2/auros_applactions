@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { supabase } from "../lib/supabase";
+import { getSiteAccess } from "../services/access.service";
 
 type PageKey =
   | "home"
@@ -22,6 +23,7 @@ type PageKey =
   | "faq"
   | "contact"
   | "admin"
+  | "dev"
   | "login";
 
 type NavItem = {
@@ -82,6 +84,11 @@ export default function AurosTopbar({
     setIsAdmin,
   ] = useState(false);
 
+  const [
+    isDev,
+    setIsDev,
+  ] = useState(false);
+
   const navRef =
     useRef<HTMLElement | null>(
       null
@@ -117,38 +124,46 @@ export default function AurosTopbar({
     let alive = true;
 
     async function load() {
-      const { data } =
-        await supabase.auth.getUser();
+      try {
+        const access =
+          await getSiteAccess();
 
-      if (!alive) {
-        return;
-      }
+        if (!alive) {
+          return;
+        }
 
-      setIsLoggedIn(
-        !!data.user
-      );
-
-      if (!data.user) {
-        setIsAdmin(false);
-
-        return;
-      }
-
-      const {
-        data: profile,
-      } = await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq(
-          "id",
-          data.user.id
-        )
-        .maybeSingle();
-
-      if (alive) {
-        setIsAdmin(
-          !!profile?.is_admin
+        setIsLoggedIn(
+          !!access.user
         );
+
+        setIsAdmin(
+          access.isAdmin
+        );
+
+        setIsDev(
+          access.isDev
+        );
+      } catch (
+        error
+      ) {
+        console.error(
+          "Topbar access lookup failed:",
+          error
+        );
+
+        if (alive) {
+          setIsLoggedIn(
+            false
+          );
+
+          setIsAdmin(
+            false
+          );
+
+          setIsDev(
+            false
+          );
+        }
       }
     }
 
@@ -190,6 +205,14 @@ export default function AurosTopbar({
     },
   ];
 
+  if (isDev) {
+    navItems.push({
+      label: "DEV",
+      href: "/dev",
+      key: "dev",
+    });
+  }
+
   if (isAdmin) {
     navItems.push({
       label: "Admin",
@@ -220,7 +243,9 @@ export default function AurosTopbar({
       !current
     ) {
       setIndicator(
-        (previous) => ({
+        (
+          previous
+        ) => ({
           ...previous,
           visible: false,
         })
@@ -236,7 +261,9 @@ export default function AurosTopbar({
 
     if (!activeLink) {
       setIndicator(
-        (previous) => ({
+        (
+          previous
+        ) => ({
           ...previous,
           visible: false,
         })
@@ -276,6 +303,7 @@ export default function AurosTopbar({
   }, [
     current,
     isAdmin,
+    isDev,
     isLoggedIn,
   ]);
 
@@ -337,6 +365,7 @@ export default function AurosTopbar({
   }, [
     current,
     isAdmin,
+    isDev,
     isLoggedIn,
   ]);
 
@@ -344,8 +373,6 @@ export default function AurosTopbar({
     <>
       <header className="aurosTopbar">
         <div className="aurosTopbarCard auros-card">
-          {/* BRAND */}
-
           <Link
             href="/"
             prefetch
@@ -369,14 +396,10 @@ export default function AurosTopbar({
             </div>
           </Link>
 
-          {/* NAVIGATION */}
-
           <nav
             ref={navRef}
             className="aurosTopbarNav"
           >
-            {/* SLIDING ACTIVE BACKGROUND */}
-
             <span
               aria-hidden="true"
               className={
@@ -391,12 +414,15 @@ export default function AurosTopbar({
                 height:
                   indicator.height,
 
-                transform: `translate3d(${indicator.x}px, ${indicator.y}px, 0)`,
+                transform:
+                  `translate3d(${indicator.x}px, ${indicator.y}px, 0)`,
               }}
             />
 
             {navItems.map(
-              (item) => (
+              (
+                item
+              ) => (
                 <NavLink
                   key={
                     item.href
@@ -431,133 +457,164 @@ export default function AurosTopbar({
       </header>
 
       <style jsx global>{`
-        /* =========================================
-           TOPBAR
-        ========================================== */
-
         .aurosTopbar {
-          position: sticky;
+          position:
+            sticky;
 
-          top: 14px;
+          top:
+            14px;
 
-          z-index: 50;
+          z-index:
+            50;
 
           margin-bottom:
             32px;
         }
 
         .aurosTopbarCard {
-          width: 100%;
+          width:
+            100%;
 
-          max-width: 1280px;
+          max-width:
+            1280px;
 
-          display: flex;
+          display:
+            flex;
 
-          align-items: center;
-          justify-content: space-between;
+          align-items:
+            center;
 
-          gap: 16px;
+          justify-content:
+            space-between;
+
+          gap:
+            16px;
 
           margin:
-            0
-            auto;
+            0 auto;
 
           padding:
             12px
             14px;
         }
 
-        /* =========================================
-           BRAND
-        ========================================== */
-
         .aurosTopbarBrand {
-          flex-shrink: 0;
+          flex-shrink:
+            0;
 
-          display: flex;
+          display:
+            flex;
 
-          align-items: center;
+          align-items:
+            center;
 
-          gap: 11px;
+          gap:
+            11px;
 
-          color: white;
+          color:
+            white;
 
-          text-decoration: none;
+          text-decoration:
+            none;
         }
 
-        .aurosTopbarBrand img {
-          width: 44px;
-          height: 44px;
+        .aurosTopbarBrand
+          img {
+          width:
+            44px;
 
-          display: block;
+          height:
+            44px;
 
-          border-radius: 14px;
+          display:
+            block;
 
-          object-fit: cover;
+          border-radius:
+            14px;
+
+          object-fit:
+            cover;
         }
 
-        .aurosTopbarBrandText strong {
-          display: block;
+        .aurosTopbarBrandText
+          strong {
+          display:
+            block;
 
-          color: #ffffff;
+          color:
+            #ffffff;
 
-          font-size: 17px;
+          font-size:
+            17px;
 
-          line-height: 1.1;
+          line-height:
+            1.1;
         }
 
-        .aurosTopbarBrandText span {
-          display: block;
+        .aurosTopbarBrandText
+          span {
+          display:
+            block;
 
-          margin-top: 4px;
+          margin-top:
+            4px;
 
-          color: #91a6c7;
+          color:
+            #91a6c7;
 
-          font-size: 11px;
+          font-size:
+            11px;
 
           letter-spacing:
             0.08em;
         }
 
-        /* =========================================
-           NAV
-        ========================================== */
-
         .aurosTopbarNav {
-          position: relative;
+          position:
+            relative;
 
-          display: flex;
+          display:
+            flex;
 
-          align-items: center;
+          align-items:
+            center;
 
-          gap: 7px;
+          gap:
+            7px;
 
-          min-width: 0;
+          min-width:
+            0;
 
-          overflow-x: auto;
-          overflow-y: hidden;
+          overflow-x:
+            auto;
 
-          scrollbar-width: none;
+          overflow-y:
+            hidden;
+
+          scrollbar-width:
+            none;
 
           overscroll-behavior-x:
             contain;
         }
 
         .aurosTopbarNav::-webkit-scrollbar {
-          display: none;
+          display:
+            none;
         }
 
-        /* =========================================
-           SLIDING ACTIVE INDICATOR
-        ========================================== */
-
         .aurosNavIndicator {
-          position: absolute;
+          position:
+            absolute;
 
-          z-index: 0;
+          z-index:
+            0;
 
-          left: 0;
-          top: 0;
+          left:
+            0;
+
+          top:
+            0;
 
           border:
             1px solid
@@ -568,7 +625,8 @@ export default function AurosTopbar({
               0.28
             );
 
-          border-radius: 12px;
+          border-radius:
+            12px;
 
           background:
             rgba(
@@ -578,9 +636,11 @@ export default function AurosTopbar({
               0.1
             );
 
-          opacity: 0;
+          opacity:
+            0;
 
-          pointer-events: none;
+          pointer-events:
+            none;
 
           transition:
             transform
@@ -617,26 +677,31 @@ export default function AurosTopbar({
         }
 
         .aurosNavIndicator.visible {
-          opacity: 1;
+          opacity:
+            1;
         }
 
-        /* =========================================
-           NAV LINKS
-        ========================================== */
-
         .aurosNavLink {
-          position: relative;
+          position:
+            relative;
 
-          z-index: 1;
+          z-index:
+            1;
 
-          flex-shrink: 0;
+          flex-shrink:
+            0;
 
-          display: inline-flex;
+          display:
+            inline-flex;
 
-          align-items: center;
-          justify-content: center;
+          align-items:
+            center;
 
-          min-height: 39px;
+          justify-content:
+            center;
+
+          min-height:
+            39px;
 
           padding:
             10px
@@ -646,19 +711,26 @@ export default function AurosTopbar({
             1px solid
             transparent;
 
-          border-radius: 12px;
+          border-radius:
+            12px;
 
           background:
             transparent;
 
-          color: #dce8ff;
+          color:
+            #dce8ff;
 
-          text-decoration: none;
+          text-decoration:
+            none;
 
-          font-size: 13px;
-          font-weight: 750;
+          font-size:
+            13px;
 
-          white-space: nowrap;
+          font-weight:
+            750;
+
+          white-space:
+            nowrap;
 
           transition:
             color
@@ -670,11 +742,13 @@ export default function AurosTopbar({
         }
 
         .aurosNavLink.subtle {
-          color: #9fb0cc;
+          color:
+            #9fb0cc;
         }
 
         .aurosNavLink.active {
-          color: #ffffff;
+          color:
+            #ffffff;
         }
 
         @media (
@@ -685,7 +759,8 @@ export default function AurosTopbar({
           .aurosNavLink:hover:not(
               .active
             ) {
-            color: #ffffff;
+            color:
+              #ffffff;
 
             background:
               rgba(
@@ -696,10 +771,6 @@ export default function AurosTopbar({
               );
           }
         }
-
-        /* =========================================
-           FOCUS
-        ========================================== */
 
         .aurosNavLink:focus-visible,
         .aurosTopbarBrand:focus-visible {
@@ -716,12 +787,9 @@ export default function AurosTopbar({
             3px;
         }
 
-        /* =========================================
-           RESPONSIVE
-        ========================================== */
-
         @media (
-          max-width: 1000px
+          max-width:
+            1000px
         ) {
           .aurosTopbarCard {
             align-items:
@@ -730,19 +798,23 @@ export default function AurosTopbar({
             flex-direction:
               column;
 
-            gap: 10px;
+            gap:
+              10px;
           }
 
           .aurosTopbarNav {
-            width: 100%;
+            width:
+              100%;
           }
         }
 
         @media (
-          max-width: 700px
+          max-width:
+            700px
         ) {
           .aurosTopbar {
-            top: 8px;
+            top:
+              8px;
 
             margin-bottom:
               22px;
@@ -753,20 +825,26 @@ export default function AurosTopbar({
               10px;
           }
 
-          .aurosTopbarBrand img {
-            width: 39px;
-            height: 39px;
+          .aurosTopbarBrand
+            img {
+            width:
+              39px;
+
+            height:
+              39px;
 
             border-radius:
               12px;
           }
 
-          .aurosTopbarBrandText strong {
+          .aurosTopbarBrandText
+            strong {
             font-size:
               15px;
           }
 
-          .aurosTopbarBrandText span {
+          .aurosTopbarBrandText
+            span {
             font-size:
               9px;
           }
@@ -784,17 +862,14 @@ export default function AurosTopbar({
           }
         }
 
-        /* =========================================
-           REDUCED MOTION
-        ========================================== */
-
         @media (
           prefers-reduced-motion:
             reduce
         ) {
           .aurosNavIndicator,
           .aurosNavLink {
-            transition: none;
+            transition:
+              none;
           }
         }
       `}</style>
@@ -813,6 +888,7 @@ function NavLink({
   href: string;
   active?: boolean;
   subtle?: boolean;
+
   linkRef?: (
     element:
       | HTMLAnchorElement

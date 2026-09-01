@@ -17,6 +17,7 @@ type PageKey =
   | "faq"
   | "contact"
   | "admin"
+  | "dev"
   | "login";
 
 export default function AurosSiteShell({
@@ -24,30 +25,57 @@ export default function AurosSiteShell({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
+  const pathname =
+    usePathname();
 
-  const current: PageKey | undefined =
+  const current:
+    | PageKey
+    | undefined =
     pathname === "/"
       ? "home"
-      : pathname.startsWith("/map")
+      : pathname.startsWith(
+          "/map"
+        )
       ? "map"
-      : pathname.startsWith("/news")
+      : pathname.startsWith(
+          "/news"
+        )
       ? "news"
-      : pathname.startsWith("/gallery")
+      : pathname.startsWith(
+          "/gallery"
+        )
       ? "gallery"
-      : pathname.startsWith("/patchnotes")
+      : pathname.startsWith(
+          "/patchnotes"
+        )
       ? "patchnotes"
-      : pathname.startsWith("/apply")
+      : pathname.startsWith(
+          "/apply"
+        )
       ? "apply"
-      : pathname.startsWith("/status")
+      : pathname.startsWith(
+          "/status"
+        )
       ? "status"
-      : pathname.startsWith("/faq")
+      : pathname.startsWith(
+          "/faq"
+        )
       ? "faq"
-      : pathname.startsWith("/contact")
+      : pathname.startsWith(
+          "/contact"
+        )
       ? "contact"
-      : pathname.startsWith("/admin")
+      : pathname.startsWith(
+          "/dev"
+        )
+      ? "dev"
+      : pathname.startsWith(
+          "/admin"
+        )
       ? "admin"
-      : pathname.startsWith("/login")
+      : pathname.startsWith(
+          "/login"
+        )
       ? "login"
       : undefined;
 
@@ -57,13 +85,9 @@ export default function AurosSiteShell({
 
       <main className="aurosSiteMain">
         <div className="aurosSiteContainer">
-          <AurosTopbar current={current} />
-
-          {/*
-            pathname als key sorgt dafür,
-            dass die Animation bei jedem
-            echten Seitenwechsel neu startet.
-          */}
+          <AurosTopbar
+            current={current}
+          />
 
           <div
             key={pathname}
@@ -78,15 +102,20 @@ export default function AurosSiteShell({
 
       <style jsx global>{`
         .aurosSiteMain {
-          position: relative;
+          position:
+            relative;
 
-          z-index: 1;
+          z-index:
+            1;
 
-          min-height: 100vh;
+          min-height:
+            100vh;
 
-          display: flex;
+          display:
+            flex;
 
-          flex-direction: column;
+          flex-direction:
+            column;
 
           padding:
             24px
@@ -95,33 +124,21 @@ export default function AurosSiteShell({
         }
 
         .aurosSiteContainer {
-          width: 100%;
+          width:
+            100%;
 
-          max-width: 1280px;
+          max-width:
+            1280px;
 
-          flex: 1;
+          flex:
+            1;
 
           margin:
             0
             auto;
         }
 
-        /* =========================================
-           PAGE TRANSITION
-        ========================================== */
-
         .aurosPageTransition {
-          /*
-            Nur Transform + Opacity.
-
-            Kein Blur.
-            Kein Filter.
-            Keine großen GPU-Effekte.
-
-            Dadurch bleibt die Transition
-            sehr leicht.
-          */
-
           animation:
             aurosPageEnter
             190ms
@@ -136,7 +153,8 @@ export default function AurosSiteShell({
 
         @keyframes aurosPageEnter {
           from {
-            opacity: 0.72;
+            opacity:
+              0.72;
 
             transform:
               translate3d(
@@ -147,7 +165,8 @@ export default function AurosSiteShell({
           }
 
           to {
-            opacity: 1;
+            opacity:
+              1;
 
             transform:
               translate3d(
@@ -158,25 +177,19 @@ export default function AurosSiteShell({
           }
         }
 
-        /* =========================================
-           REDUCED MOTION
-        ========================================== */
-
         @media (
           prefers-reduced-motion:
             reduce
         ) {
           .aurosPageTransition {
-            animation: none;
+            animation:
+              none;
           }
         }
 
-        /* =========================================
-           MOBILE
-        ========================================== */
-
         @media (
-          max-width: 700px
+          max-width:
+            700px
         ) {
           .aurosSiteMain {
             padding:
