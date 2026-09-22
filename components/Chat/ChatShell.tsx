@@ -234,20 +234,24 @@ export default function ChatShell() {
 
 
     function handleScroll() {
-      const distanceFromBottom =
-        element.scrollHeight -
-        element.scrollTop -
-        element.clientHeight;
+      const scrollElement =
+        chatScrollRef.current;
 
+      if (!scrollElement) {
+        return;
+      }
+
+      const distanceFromBottom =
+        scrollElement.scrollHeight -
+        scrollElement.scrollTop -
+        scrollElement.clientHeight;
 
       const isNearBottom =
         distanceFromBottom <=
         BOTTOM_THRESHOLD;
 
-
       nearBottomRef.current =
         isNearBottom;
-
 
       if (
         isNearBottom
