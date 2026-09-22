@@ -194,6 +194,10 @@ export async function createPatchnote(
         published:
           form.published,
 
+        release_at:
+          form.release_at ||
+          null,
+
         updated_at:
           new Date().toISOString(),
       })
@@ -262,6 +266,10 @@ export async function updatePatchnote(
 
         published:
           form.published,
+
+        release_at:
+          form.release_at ||
+          null,
 
         updated_at:
           new Date().toISOString(),
@@ -486,6 +494,48 @@ export async function uploadPatchnoteImage(
     );
   }
 
+
+  return data.publicUrl;
+}
+
+export async function uploadPatchnoteVideo(
+  file: File
+) {
+  if (!file.type.startsWith("video/")) {
+    throw new Error("Only video files are allowed.");
+  }
+
+  const maxSize = 250 * 1024 * 1024;
+  if (file.size > maxSize) {
+    throw new Error("Video is too large. Maximum size is 250 MB.");
+  }
+
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData.user;
+  if (!user) {
+    throw new Error("You are not logged in.");
+  }
+
+  const clean = cleanFilename(file.name) || "video.mp4";
+  const path = `videos/${user.id}/${Date.now()}-${clean}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("patchnote-media")
+    .upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type,
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { data } = supabase.storage
+    .from("patchnote-media")
+    .getPublicUrl(path);
+
+  if (!data.publicUrl) {
+    throw new Error("Could not create video URL.");
+  }
 
   return data.publicUrl;
 }

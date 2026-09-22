@@ -26,6 +26,19 @@ export type ContentBlock =
   | {
       id?: string;
 
+      type: "video";
+
+      url: string;
+      poster?: string;
+      caption?: string;
+      autoplay?: boolean;
+      muted?: boolean;
+      loop?: boolean;
+    }
+
+  | {
+      id?: string;
+
       type: "image";
 
       url: string;
@@ -137,6 +150,10 @@ export type CommunityPatchnote = {
     | null;
 
   created_at:
+    | string
+    | null;
+
+  release_at:
     | string
     | null;
 };

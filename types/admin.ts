@@ -1,5 +1,5 @@
 /* =========================================================
-   PATCHNOTES EDITOR 3.0
+   PATCHNOTES EDITOR 4.0
    ========================================================= */
 
 export type PatchnoteSplitRatio =
@@ -21,6 +21,18 @@ export type PatchnoteTextBlock = {
   id: string;
   type: "text";
   text: string;
+};
+
+
+export type PatchnoteVideoBlock = {
+  id: string;
+  type: "video";
+  url: string;
+  poster?: string;
+  caption?: string;
+  autoplay?: boolean;
+  muted?: boolean;
+  loop?: boolean;
 };
 
 
@@ -113,6 +125,7 @@ export type PatchnoteContentBlock =
   | PatchnoteHeadingBlock
   | PatchnoteTextBlock
   | PatchnoteImageBlock
+  | PatchnoteVideoBlock
   | PatchnoteSplitBlock
   | PatchnoteHighlightBlock
   | PatchnoteGalleryBlock
@@ -153,6 +166,9 @@ export type PatchnoteItem = {
 
   updated_at?:
     string | null;
+
+  release_at?:
+    string | null;
 };
 
 
@@ -163,6 +179,7 @@ export type PatchnoteEditorForm = {
   summary: string;
   cover_url: string;
   published: boolean;
+  release_at: string;
 
   blocks:
     PatchnoteContentBlock[];
@@ -177,5 +194,6 @@ export const emptyPatchnoteEditorForm:
   summary: "",
   cover_url: "",
   published: false,
+  release_at: "",
   blocks: [],
 };

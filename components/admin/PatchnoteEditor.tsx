@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 
 import {
   useEffect,
@@ -9,6 +10,7 @@ import {
   useState,
   type DragEvent,
   type ReactNode,
+  type CSSProperties,
 } from "react";
 
 import PatchnoteContentRenderer from "../patchnotes/PatchnoteContentRenderer";
@@ -18,6 +20,7 @@ import {
   getAdminPatchnoteById,
   updatePatchnote,
   uploadPatchnoteImage,
+  uploadPatchnoteVideo,
 } from "../../services/patchnotes-admin.service";
 
 import {
@@ -187,6 +190,23 @@ function createBlock(
 
       caption:
         "",
+    };
+  }
+
+
+  if (
+    type ===
+    "video"
+  ) {
+    return {
+      id: createId(),
+      type: "video",
+      url: "",
+      poster: "",
+      caption: "",
+      autoplay: false,
+      muted: true,
+      loop: false,
     };
   }
 
@@ -586,6 +606,10 @@ function normalizeEditorForm(
     published:
       !!input.published,
 
+    release_at:
+      input.release_at ??
+      "",
+
     blocks:
       normalizeLoadedBlocks(
         input.blocks ??
@@ -612,6 +636,14 @@ function blockReady(
   if (
     block.type ===
     "image"
+  ) {
+    return !!block.url;
+  }
+
+
+  if (
+    block.type ===
+    "video"
   ) {
     return !!block.url;
   }
@@ -690,6 +722,14 @@ function blockName(
       ] as const;
 
 
+    case "video":
+      return [
+        "Video",
+        "Full-width video",
+        "▶",
+      ] as const;
+
+
     case "split":
       return [
         "Split Layout",
@@ -759,6 +799,15 @@ function formatDraftTime(
         "2-digit",
     }
   );
+}
+
+
+function toDateTimeLocalValue(value: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
 }
 
 
@@ -859,6 +908,20 @@ export default function PatchnoteEditor({
     >(
       null
     );
+
+
+  const [
+    uploadingVideoBlockId,
+    setUploadingVideoBlockId,
+  ] =
+    useState<string | null>(null);
+
+
+  const [
+    quickAddOpen,
+    setQuickAddOpen,
+  ] =
+    useState(false);
 
 
   const [
@@ -983,7 +1046,7 @@ export default function PatchnoteEditor({
   const draftKey =
     useMemo(
       () =>
-        `auros-patchnote-editor-3:${
+        `auros-patchnote-editor-4:${
           patchnoteId ??
           "new"
         }`,
@@ -1396,6 +1459,10 @@ export default function PatchnoteEditor({
                 published:
                   note.published ??
                   false,
+
+                release_at:
+                  note.release_at ??
+                  "",
 
                 blocks:
                   normalizeLoadedBlocks(
@@ -2442,6 +2509,34 @@ export default function PatchnoteEditor({
   }
 
 
+  async function uploadBlockVideo(
+    blockId: string,
+    file?: File
+  ) {
+    if (!file) return;
+
+    try {
+      setError(null);
+      setUploadingVideoBlockId(blockId);
+      const url = await uploadPatchnoteVideo(file);
+      updateBlock(blockId, (current) =>
+        current.type === "video"
+          ? { ...current, url }
+          : current
+      );
+    } catch (uploadError) {
+      console.error(uploadError);
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Could not upload video."
+      );
+    } finally {
+      setUploadingVideoBlockId(null);
+    }
+  }
+
+
   function addGalleryImage(
     blockId:
       string
@@ -2825,7 +2920,7 @@ export default function PatchnoteEditor({
   ) {
     return (
       <div className="patchEditorLoading">
-        Loading Patchnotes Editor 3.0...
+        Loading Patchnotes Editor 4.0...
       </div>
     );
   }
@@ -2845,7 +2940,7 @@ export default function PatchnoteEditor({
 
 
             <div className="editorEyebrow">
-              AUROS PATCHNOTES EDITOR 3.0
+              AUROS PATCHNOTES EDITOR 4.0
             </div>
 
 
@@ -3100,6 +3195,37 @@ export default function PatchnoteEditor({
 
 
                 <EditorField
+                  label="Release Date"
+                  hint="Optional · publish automatically at this date and time"
+                  wide
+                >
+                  <input
+                    type="datetime-local"
+                    value={toDateTimeLocalValue(form.release_at)}
+                    onChange={(event) => {
+                      const releaseAt = event.target.value
+                        ? new Date(event.target.value).toISOString()
+                        : "";
+
+                      commitForm((previous) => ({
+                        ...previous,
+                        release_at: releaseAt,
+                        published:
+                          releaseAt && new Date(releaseAt).getTime() > Date.now()
+                            ? false
+                            : previous.published,
+                      }));
+                    }}
+                  />
+                  <div className="releaseDateHint">
+                    {form.release_at
+                      ? `Scheduled for ${new Date(form.release_at).toLocaleString()}`
+                      : "No schedule — publish manually whenever you are ready."}
+                  </div>
+                </EditorField>
+
+
+                <EditorField
                   label="Summary"
                   hint="Shown below the title and on patchnote cards"
                   wide
@@ -3242,7 +3368,7 @@ export default function PatchnoteEditor({
 
             <EditorPanel
               number="03"
-              title="Content Builder 3.0"
+              title="Content Builder 4.0"
               description="Create, reorder and organize every part of the patchnote."
               right={
                 <div className="blockCounter">
@@ -3296,6 +3422,18 @@ export default function PatchnoteEditor({
                       onClick={() =>
                         addBlock(
                           "image"
+                        )
+                      }
+                    />
+
+
+                    <BlockLibraryButton
+                      icon="▶"
+                      title="Video"
+                      description="Upload or embed video"
+                      onClick={() =>
+                        addBlock(
+                          "video"
                         )
                       }
                     />
@@ -3745,6 +3883,15 @@ export default function PatchnoteEditor({
                                       file
                                     )
                                   }
+                                  uploadingVideoBlockId={
+                                    uploadingVideoBlockId
+                                  }
+                                  onVideoUpload={(file) =>
+                                    uploadBlockVideo(
+                                      block.id,
+                                      file
+                                    )
+                                  }
                                   onAddGalleryImage={() =>
                                     addGalleryImage(
                                       block.id
@@ -3902,6 +4049,21 @@ export default function PatchnoteEditor({
                   <strong>
                     {form.version ||
                       "—"}
+                  </strong>
+                </div>
+
+
+                <div className="publishInfo">
+                  <span>
+                    Release
+                  </span>
+
+                  <strong>
+                    {form.release_at
+                      ? new Date(form.release_at).toLocaleString()
+                      : form.published
+                      ? "Published now"
+                      : "Manual"}
                   </strong>
                 </div>
 
@@ -4205,6 +4367,51 @@ export default function PatchnoteEditor({
       </div>
 
 
+      {typeof document !== "undefined" && createPortal(
+        <div className={quickAddOpen ? "quickAddFab open" : "quickAddFab"}>
+          <div className="quickAddWheel" aria-hidden={!quickAddOpen}>
+            {[
+              ["heading", "H", "Heading"],
+              ["text", "T", "Text"],
+              ["image", "▧", "Image"],
+              ["video", "▶", "Video"],
+              ["split", "◫", "Split"],
+              ["highlight", "!", "Highlight"],
+              ["gallery", "▦", "Gallery"],
+              ["divider", "—", "Divider"],
+              ["spacer", "↕", "Spacer"],
+            ].map(([type, icon, label], index) => (
+              <button
+                key={type}
+                type="button"
+                className="quickAddItem"
+                style={{ "--quick-index": index } as CSSProperties}
+                title={`Add ${label}`}
+                tabIndex={quickAddOpen ? 0 : -1}
+                onClick={() => {
+                  addBlock(type as PatchnoteContentBlock["type"]);
+                  setQuickAddOpen(false);
+                }}
+              >
+                <span>{icon}</span>
+                <small>{label}</small>
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="quickAddMain"
+            aria-label="Quick add content block"
+            aria-expanded={quickAddOpen}
+            onClick={() => setQuickAddOpen((value) => !value)}
+          >
+            <span>+</span>
+          </button>
+        </div>,
+        document.body,
+      )}
+
+
       <EditorStyles />
     </>
   );
@@ -4374,6 +4581,17 @@ function BlockDropZone({
                   onInsertBlock(
                     index,
                     "image"
+                  )
+                }
+              />
+
+              <InsertMenuButton
+                icon="▶"
+                title="Video"
+                onClick={() =>
+                  onInsertBlock(
+                    index,
+                    "video"
                   )
                 }
               />
@@ -4550,9 +4768,13 @@ function BlockEditor({
 
   uploadingGalleryImageId,
 
+  uploadingVideoBlockId,
+
   onUpdate,
 
   onBlockImageUpload,
+
+  onVideoUpload,
 
   onAddGalleryImage,
 
@@ -4569,6 +4791,9 @@ function BlockEditor({
     string | null;
 
   uploadingGalleryImageId:
+    string | null;
+
+  uploadingVideoBlockId:
     string | null;
 
   onUpdate:
@@ -4588,6 +4813,9 @@ function BlockEditor({
         File
     ) =>
       void;
+
+  onVideoUpload:
+    (file?: File) => void;
 
   onAddGalleryImage:
     () =>
@@ -4718,6 +4946,27 @@ function BlockEditor({
                     ...patch,
                   }
                 : current
+          )
+        }
+      />
+    );
+  }
+
+
+  if (
+    block.type ===
+    "video"
+  ) {
+    return (
+      <VideoBlockEditor
+        block={block}
+        uploading={uploadingVideoBlockId === block.id}
+        onUpload={onVideoUpload}
+        onChange={(patch) =>
+          onUpdate((current) =>
+            current.type === "video"
+              ? { ...current, ...patch }
+              : current
           )
         }
       />
@@ -4875,6 +5124,77 @@ function BlockEditor({
         )
       }
     />
+  );
+}
+
+
+/* =========================================================
+   VIDEO
+   ========================================================= */
+
+function VideoBlockEditor({ block, uploading, onUpload, onChange }: {
+  block: Extract<PatchnoteContentBlock, { type: "video" }>;
+  uploading: boolean;
+  onUpload: (file?: File) => void;
+  onChange: (patch: Partial<Extract<PatchnoteContentBlock, { type: "video" }>>) => void;
+}) {
+  return (
+    <div className="videoBlockEditor">
+      {block.url ? (
+        <video
+          className="videoEditorPreview"
+          src={block.url}
+          poster={block.poster || undefined}
+          controls
+          muted
+          playsInline
+        />
+      ) : (
+        <label className="uploadZone videoUploadZone">
+          <div className="uploadIcon">▶</div>
+          <strong>{uploading ? "Uploading video..." : "Upload Video"}</strong>
+          <p>MP4, WEBM or browser-compatible video · Maximum 250 MB</p>
+          <input
+            hidden
+            type="file"
+            accept="video/*"
+            disabled={uploading}
+            onChange={(event) => onUpload(event.target.files?.[0])}
+          />
+        </label>
+      )}
+
+      <div className="videoEditorGrid">
+        <EditorField label="Video URL" hint="Upload above or paste a direct video URL">
+          <input
+            value={block.url}
+            placeholder="https://.../video.mp4"
+            onChange={(event) => onChange({ url: event.target.value })}
+          />
+        </EditorField>
+        <EditorField label="Poster URL" hint="Optional preview image">
+          <input
+            value={block.poster ?? ""}
+            placeholder="https://.../poster.webp"
+            onChange={(event) => onChange({ poster: event.target.value })}
+          />
+        </EditorField>
+        <EditorField label="Caption" hint="Optional text below the video" wide>
+          <input
+            value={block.caption ?? ""}
+            placeholder="Video caption..."
+            onChange={(event) => onChange({ caption: event.target.value })}
+          />
+        </EditorField>
+      </div>
+
+      <div className="videoOptions">
+        <label><input type="checkbox" checked={!!block.autoplay} onChange={(e) => onChange({ autoplay: e.target.checked })} /> Autoplay</label>
+        <label><input type="checkbox" checked={block.muted !== false} onChange={(e) => onChange({ muted: e.target.checked })} /> Muted</label>
+        <label><input type="checkbox" checked={!!block.loop} onChange={(e) => onChange({ loop: e.target.checked })} /> Loop</label>
+        {block.url ? <label className="secondaryButton fileButton">Replace Video<input hidden type="file" accept="video/*" disabled={uploading} onChange={(e) => onUpload(e.target.files?.[0])} /></label> : null}
+      </div>
+    </div>
   );
 }
 
@@ -7978,6 +8298,166 @@ function EditorStyles() {
         }
       }
 
+      .releaseDateHint { margin-top: 8px; color: #6f829f; font-size: 11px; }
+      .videoBlockEditor { display: grid; gap: 16px; }
+      .videoEditorPreview { width: 100%; max-height: 520px; border-radius: 18px; background: #020711; border: 1px solid rgba(99,221,255,.14); }
+      .videoEditorGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+      .videoOptions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; color: #9fb0cc; font-size: 12px; }
+      .videoOptions label { display: inline-flex; align-items: center; gap: 7px; }
+      .quickAddFab {
+        position: fixed;
+        left: 24px;
+        bottom: 26px;
+        z-index: 99999;
+        width: 58px;
+        height: 58px;
+      }
+
+      .quickAddMain {
+        position: absolute;
+        inset: 0;
+        width: 58px;
+        height: 58px;
+        border-radius: 50%;
+        border: 1px solid rgba(99, 221, 255, 0.42);
+        background: linear-gradient(145deg, rgba(9, 38, 55, 0.98), rgba(7, 18, 35, 0.98));
+        color: #8fe9ff;
+        box-shadow: 0 16px 42px rgba(0, 0, 0, 0.42), 0 0 28px rgba(48, 203, 255, 0.11);
+        cursor: pointer;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+      }
+
+      .quickAddMain:hover {
+        border-color: rgba(99, 221, 255, 0.72);
+        box-shadow: 0 18px 46px rgba(0, 0, 0, 0.48), 0 0 34px rgba(48, 203, 255, 0.18);
+        transform: translateY(-1px);
+      }
+
+      .quickAddMain span {
+        display: block;
+        font-size: 28px;
+        line-height: 1;
+        transition: transform 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+
+      .quickAddFab.open .quickAddMain span {
+        transform: rotate(135deg);
+      }
+
+      .quickAddWheel {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .quickAddItem {
+        position: absolute;
+        left: 5px;
+        top: 5px;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: 1px solid rgba(132, 158, 205, 0.2);
+        background: rgba(7, 18, 35, 0.98);
+        color: #dce9fb;
+        opacity: 0;
+        transform: translate(0, 0) scale(0.58);
+        transition:
+          transform 0.38s cubic-bezier(0.16, 1, 0.3, 1),
+          opacity 0.18s ease,
+          border-color 0.2s ease,
+          background 0.2s ease;
+        transition-delay: calc(var(--quick-index) * 18ms);
+        pointer-events: none;
+        cursor: pointer;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+      }
+
+      /*
+       * The FAB stays almost completely at the left edge of the viewport.
+       * The nine actions open only to the RIGHT / TOP so they never cover
+       * the editor from the left side like the old semicircle did.
+       */
+      .quickAddFab.open .quickAddItem:nth-child(1) { transform: translate(66px, 0px) scale(1); }
+      .quickAddFab.open .quickAddItem:nth-child(2) { transform: translate(118px, -16px) scale(1); }
+      .quickAddFab.open .quickAddItem:nth-child(3) { transform: translate(160px, -50px) scale(1); }
+      .quickAddFab.open .quickAddItem:nth-child(4) { transform: translate(184px, -98px) scale(1); }
+      .quickAddFab.open .quickAddItem:nth-child(5) { transform: translate(180px, -148px) scale(1); }
+      .quickAddFab.open .quickAddItem:nth-child(6) { transform: translate(150px, -190px) scale(1); }
+      .quickAddFab.open .quickAddItem:nth-child(7) { transform: translate(104px, -218px) scale(1); }
+      .quickAddFab.open .quickAddItem:nth-child(8) { transform: translate(54px, -226px) scale(1); }
+      .quickAddFab.open .quickAddItem:nth-child(9) { transform: translate(10px, -192px) scale(1); }
+
+      .quickAddFab.open .quickAddItem {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .quickAddItem:hover {
+        border-color: rgba(99, 221, 255, 0.62);
+        background: rgba(10, 29, 48, 0.99);
+      }
+
+      .quickAddItem span {
+        font-weight: 900;
+        font-size: 15px;
+      }
+
+      .quickAddItem small {
+        position: absolute;
+        left: 50%;
+        top: -24px;
+        transform: translateX(-50%);
+        padding: 4px 7px;
+        border-radius: 7px;
+        background: #07111f;
+        color: #91a5c3;
+        font-size: 9px;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.15s;
+        pointer-events: none;
+      }
+
+      .quickAddItem:hover small {
+        opacity: 1;
+      }
+
+      @media (max-width: 760px) {
+        .quickAddFab {
+          left: 12px;
+          bottom: 14px;
+          width: 54px;
+          height: 54px;
+        }
+
+        .quickAddMain {
+          width: 54px;
+          height: 54px;
+        }
+
+        .quickAddItem {
+          left: 4px;
+          top: 4px;
+          width: 46px;
+          height: 46px;
+        }
+
+        .quickAddFab.open .quickAddItem:nth-child(1) { transform: translate(62px, 0px) scale(1); }
+        .quickAddFab.open .quickAddItem:nth-child(2) { transform: translate(112px, -14px) scale(1); }
+        .quickAddFab.open .quickAddItem:nth-child(3) { transform: translate(148px, -50px) scale(1); }
+        .quickAddFab.open .quickAddItem:nth-child(4) { transform: translate(158px, -98px) scale(1); }
+        .quickAddFab.open .quickAddItem:nth-child(5) { transform: translate(142px, -146px) scale(1); }
+        .quickAddFab.open .quickAddItem:nth-child(6) { transform: translate(104px, -182px) scale(1); }
+        .quickAddFab.open .quickAddItem:nth-child(7) { transform: translate(58px, -198px) scale(1); }
+        .quickAddFab.open .quickAddItem:nth-child(8) { transform: translate(12px, -184px) scale(1); }
+        .quickAddFab.open .quickAddItem:nth-child(9) { transform: translate(0px, -132px) scale(1); }
+
+        .videoEditorGrid {
+          grid-template-columns: 1fr;
+        }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         .toggle span,
         .contentBlock,
@@ -7989,4 +8469,6 @@ function EditorStyles() {
       }
     `}</style>
   );
+
+
 }

@@ -204,6 +204,30 @@ export default function PatchnoteContentRenderer({
 
           if (
             block.type ===
+            "video"
+          ) {
+            if (!block.url) return null;
+
+            return (
+              <figure key={key} className="patchContentVideo">
+                <video
+                  src={block.url}
+                  poster={block.poster || undefined}
+                  controls
+                  autoPlay={!!block.autoplay}
+                  muted={block.muted !== false}
+                  loop={!!block.loop}
+                  playsInline
+                  preload="metadata"
+                />
+                {block.caption ? <figcaption>{block.caption}</figcaption> : null}
+              </figure>
+            );
+          }
+
+
+          if (
+            block.type ===
             "split"
           ) {
             const image = (
@@ -502,13 +526,20 @@ function RendererStyles() {
           pre-wrap;
       }
 
-      .patchContentImage {
+      .patchContentImage,
+      .patchContentVideo {
         margin:
           30px
           0;
       }
 
+      .patchContentVideo video {
+        aspect-ratio: 16 / 9;
+        background: #020711;
+      }
+
       .patchContentImage img,
+      .patchContentVideo video,
       .patchSplitImage img,
       .patchGallery img {
         display:
@@ -534,6 +565,7 @@ function RendererStyles() {
       }
 
       .patchContentImage figcaption,
+      .patchContentVideo figcaption,
       .patchSplitImage figcaption,
       .patchGallery figcaption {
         margin-top:

@@ -179,6 +179,13 @@ export default function PatchnoteDetailPage() {
         </h1>
 
 
+        {note.release_at ? (
+          <div style={{ marginTop: 14, color: "#7f91ad", fontSize: 13, fontWeight: 700 }}>
+            RELEASED {new Date(note.release_at).toLocaleString()}
+          </div>
+        ) : null}
+
+
         {note.summary ? (
           <p
             style={{
