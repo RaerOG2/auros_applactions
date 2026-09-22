@@ -24,7 +24,6 @@ export default function robots():
           "/login",
           "/beta-login",
           "/chat",
-          "/status",
           "/Test/",
         ],
       },

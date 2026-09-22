@@ -17,6 +17,10 @@ import {
 import DevPageGuard from "../../../../components/dev/DevPageGuard";
 
 import {
+  exportDevUpdatesPdf,
+} from "../../../../lib/dev-pdf-export";
+
+import {
   getDevProjectBySlug,
 } from "../../../../services/dev-project.service";
 
@@ -438,6 +442,89 @@ export default function DevUpdatesPage() {
     );
 
 
+  function handleExportPdf() {
+    if (!project) {
+      return;
+    }
+
+
+    exportDevUpdatesPdf({
+      projectName:
+        project.name,
+
+      projectShortName:
+        project.short_name,
+
+      overallProgress,
+
+      roadmapItemCount:
+        roadmapItems.length,
+
+      autoProgressCount:
+        updates.filter(
+          (update) =>
+            update.auto_progress
+        ).length,
+
+      updates:
+        updates.map(
+          (update) => ({
+            title:
+              update.title,
+
+            code:
+              update.code,
+
+            description:
+              update.description,
+
+            type:
+              typeLabel(
+                update.type
+              ),
+
+            status:
+              statusLabel(
+                update.status
+              ),
+
+            progress:
+              effectiveProgress(
+                update
+              ),
+
+            progressMode:
+              update.auto_progress
+                ? "Auto"
+                : "Manual",
+
+            targetDate:
+              update.target_date,
+
+            releaseDate:
+              update.release_date,
+
+            roadmapItems:
+              assignedItems(
+                update.id
+              ).map(
+                (item) => ({
+                  title:
+                    item.title,
+
+                  status:
+                    item.status,
+
+                  progress:
+                    item.progress,
+                })
+              ),
+          })
+        ),
+    });
+  }
+
+
   function openCreate() {
     setEditingUpdate(
       null
@@ -777,14 +864,26 @@ export default function DevUpdatesPage() {
           </div>
 
 
-          <button
-            type="button"
-            onClick={
-              openCreate
-            }
-          >
-            + Create Update
-          </button>
+          <div className="devUpdatesHeroActions">
+            <button
+              type="button"
+              onClick={
+                handleExportPdf
+              }
+            >
+              ↓ Export PDF
+            </button>
+
+            <button
+              type="button"
+              className="primary"
+              onClick={
+                openCreate
+              }
+            >
+              + Create Update
+            </button>
+          </div>
         </section>
 
 
@@ -1544,7 +1643,23 @@ export default function DevUpdatesPage() {
               #91a5c2;
           }
 
-          .devUpdatesHero button {
+          .devUpdatesHeroActions {
+            display:
+              flex;
+
+            align-items:
+              center;
+
+            gap:
+              10px;
+
+            flex:
+              0
+              0
+              auto;
+          }
+
+          .devUpdatesHeroActions button {
             padding:
               11px
               15px;
@@ -1581,6 +1696,29 @@ export default function DevUpdatesPage() {
 
             font-weight:
               800;
+          }
+
+          .devUpdatesHeroActions button.primary {
+            background:
+              linear-gradient(
+                135deg,
+                color-mix(
+                  in srgb,
+                  var(
+                    --update-accent
+                  )
+                  72%,
+                  #432f83
+                ),
+                color-mix(
+                  in srgb,
+                  var(
+                    --update-accent
+                  )
+                  44%,
+                  #144c76
+                )
+              );
           }
 
           .devUpdatesSummary {
@@ -2441,6 +2579,21 @@ export default function DevUpdatesPage() {
 
               padding:
                 25px;
+            }
+
+            .devUpdatesHeroActions {
+              width:
+                100%;
+
+              flex-wrap:
+                wrap;
+            }
+
+            .devUpdatesHeroActions button {
+              flex:
+                1
+                1
+                160px;
             }
 
             .devUpdateFormRow {

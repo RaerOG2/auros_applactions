@@ -7,18 +7,33 @@ import type {
 } from "react";
 
 import {
-  NO_INDEX_METADATA,
+  createSeoMetadata,
 } from "../../lib/seo";
 
 
 export const metadata:
   Metadata =
-  {
-    ...NO_INDEX_METADATA,
-
+  createSeoMetadata({
     title:
-      "Application Status",
-  };
+      "Live Status",
+
+    description:
+      "Check the live operational status of Auros Royale services, current incidents, outages, maintenance and system updates.",
+
+    path:
+      "/status",
+
+    keywords: [
+      "Auros Status",
+      "Auros Live Status",
+      "Auros Royale Status",
+      "Auros Service Status",
+      "Auros Outage",
+      "Auros Maintenance",
+      "Auros System Status",
+      "Auros Website Status",
+    ],
+  });
 
 
 export default function StatusLayout({

@@ -1,4 +1,8 @@
 import {
+  createServerClient,
+} from "@supabase/ssr";
+
+import {
   NextResponse,
 } from "next/server";
 
@@ -6,90 +10,212 @@ import type {
   NextRequest,
 } from "next/server";
 
-export function middleware(
-  request: NextRequest
+
+function getSupabaseConfig() {
+  const supabaseUrl =
+    process.env
+      .NEXT_PUBLIC_SUPABASE_URL;
+
+  const supabaseAnonKey =
+    process.env
+      .NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+
+  if (
+    !supabaseUrl ||
+    !supabaseAnonKey
+  ) {
+    return null;
+  }
+
+
+  return {
+    supabaseUrl,
+    supabaseAnonKey,
+  };
+}
+
+
+export async function middleware(
+  request:
+    NextRequest
 ) {
   const url =
     request.nextUrl;
 
+
   /*
-   * Beta protection only applies
-   * to beta.auros-uefn.com
+   * ==================================================
+   * BETA DOMAIN PROTECTION
+   * ==================================================
+   *
+   * For now we preserve the existing
+   * beta authentication system.
+   *
+   * The beta cookie itself will be
+   * replaced with a signed session
+   * later in Security 2.0.
    */
+
   if (
-    !url.hostname.includes(
-      "beta.auros-uefn.com"
-    )
+    url.hostname ===
+    "beta.auros-uefn.com"
   ) {
-    return NextResponse.next();
-  }
+    const allowedPaths = [
+      "/beta-login",
+      "/api/beta-login",
+    ];
 
-  /*
-   * Paths that must stay accessible
-   * without beta authentication.
-   */
-  const allowedPaths = [
-    "/beta-login",
-    "/api/beta-login",
-  ];
 
-  const isAllowedPath =
-    allowedPaths.some(
-      (path) =>
-        url.pathname.startsWith(
+    const isAllowedPath =
+      allowedPaths.some(
+        (
           path
-        )
-    );
-
-  /*
-   * Next.js assets
-   */
-  const isNextAsset =
-    url.pathname.startsWith(
-      "/_next"
-    );
-
-  /*
-   * Public files:
-   * images, icons, fonts, etc.
-   */
-  const isPublicFile =
-    url.pathname.includes(".");
-
-  if (
-    isAllowedPath ||
-    isNextAsset ||
-    isPublicFile
-  ) {
-    return NextResponse.next();
-  }
-
-  const betaAuth =
-    request.cookies.get(
-      "beta-auth"
-    )?.value;
-
-  const secret =
-    process.env.BETA_COOKIE_SECRET;
-
-  /*
-   * No secret configured or
-   * invalid/missing cookie
-   */
-  if (
-    !secret ||
-    betaAuth !== secret
-  ) {
-    const loginUrl =
-      new URL(
-        "/beta-login",
-        request.url
+        ) =>
+          url.pathname.startsWith(
+            path
+          )
       );
 
-    return NextResponse.redirect(
-      loginUrl
-    );
+
+    const isNextAsset =
+      url.pathname.startsWith(
+        "/_next"
+      );
+
+
+    const isPublicFile =
+      url.pathname.includes(
+        "."
+      );
+
+
+    if (
+      !isAllowedPath &&
+      !isNextAsset &&
+      !isPublicFile
+    ) {
+      const betaAuth =
+        request.cookies.get(
+          "beta-auth"
+        )?.value;
+
+
+      const secret =
+        process.env
+          .BETA_COOKIE_SECRET;
+
+
+      if (
+        !secret ||
+        betaAuth !== secret
+      ) {
+        const loginUrl =
+          new URL(
+            "/beta-login",
+            request.url
+          );
+
+
+        return NextResponse.redirect(
+          loginUrl
+        );
+      }
+    }
   }
 
-  return NextResponse.next();
+
+  /*
+   * ==================================================
+   * SUPABASE SESSION REFRESH
+   * ==================================================
+   */
+
+  const config =
+    getSupabaseConfig();
+
+
+  if (!config) {
+    return NextResponse.next();
+  }
+
+
+  let response =
+    NextResponse.next({
+      request,
+    });
+
+
+  const supabase =
+    createServerClient(
+      config.supabaseUrl,
+      config.supabaseAnonKey,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+
+
+          setAll(
+            cookiesToSet
+          ) {
+            cookiesToSet.forEach(
+              ({
+                name,
+                value,
+              }) => {
+                request.cookies.set(
+                  name,
+                  value
+                );
+              }
+            );
+
+
+            response =
+              NextResponse.next({
+                request,
+              });
+
+
+            cookiesToSet.forEach(
+              ({
+                name,
+                value,
+                options,
+              }) => {
+                response.cookies.set(
+                  name,
+                  value,
+                  options
+                );
+              }
+            );
+          },
+        },
+      }
+    );
+
+
+  /*
+   * getUser() validates the session
+   * with Supabase instead of trusting
+   * client-side session data.
+   */
+  await supabase.auth.getUser();
+
+
+  return response;
 }
+
+
+export const config = {
+  matcher: [
+    /*
+     * Skip static Next.js resources
+     * and common public image files.
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico)$).*)",
+  ],
+};

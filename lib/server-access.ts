@@ -1,17 +1,17 @@
 import {
-  supabase,
-} from "../lib/supabase";
+  createSupabaseServerClient,
+} from "./supabase-server";
 
 
-export type SiteAccess = {
-  user: Awaited<
-    ReturnType<
-      typeof getCurrentUser
-    >
-  >;
+export type ServerSiteAccess = {
+  userId:
+    string | null;
 
   userEmail:
     string | null;
+
+  isAuthenticated:
+    boolean;
 
   isAdmin:
     boolean;
@@ -24,43 +24,35 @@ export type SiteAccess = {
 };
 
 
-export async function getCurrentUser() {
+export async function getServerSiteAccess():
+  Promise<ServerSiteAccess> {
+  const supabase =
+    await createSupabaseServerClient();
+
+
   const {
     data: {
       user,
     },
-    error,
+    error:
+      userError,
   } =
     await supabase.auth.getUser();
 
 
-  if (error) {
-    console.error(
-      "getCurrentUser error:",
-      error
-    );
-
-    return null;
-  }
-
-
-  return user ?? null;
-}
-
-
-export async function getSiteAccess():
-  Promise<SiteAccess> {
-  const user =
-    await getCurrentUser();
-
-
-  if (!user) {
+  if (
+    userError ||
+    !user
+  ) {
     return {
-      user:
+      userId:
         null,
 
       userEmail:
         null,
+
+      isAuthenticated:
+        false,
 
       isAdmin:
         false,
@@ -78,7 +70,8 @@ export async function getSiteAccess():
     data:
       profile,
 
-    error,
+    error:
+      profileError,
   } =
     await supabase
       .from(
@@ -94,19 +87,24 @@ export async function getSiteAccess():
       .maybeSingle();
 
 
-  if (error) {
+  if (
+    profileError
+  ) {
     console.error(
-      "site access profile lookup error:",
-      error
+      "Server access profile lookup failed."
     );
 
 
     return {
-      user,
+      userId:
+        user.id,
 
       userEmail:
         user.email ??
         null,
+
+      isAuthenticated:
+        true,
 
       isAdmin:
         false,
@@ -121,27 +119,48 @@ export async function getSiteAccess():
 
 
   return {
-    user,
+    userId:
+      user.id,
 
     userEmail:
       user.email ??
       null,
 
+    isAuthenticated:
+      true,
+
     isAdmin:
-      !!profile?.is_admin,
+      profile?.is_admin ===
+      true,
 
     isDev:
-      !!profile?.is_dev,
+      profile?.is_dev ===
+      true,
 
     isBeta:
-      !!profile?.is_beta,
+      profile?.is_beta ===
+      true,
   };
 }
 
 
-export async function getDevAccess() {
+export async function getServerAdminAccess() {
   const access =
-    await getSiteAccess();
+    await getServerSiteAccess();
+
+
+  return {
+    ...access,
+
+    hasAdminAccess:
+      access.isAdmin,
+  };
+}
+
+
+export async function getServerDevAccess() {
+  const access =
+    await getServerSiteAccess();
 
 
   return {
@@ -154,23 +173,9 @@ export async function getDevAccess() {
 }
 
 
-export async function getAdminAccessV2() {
+export async function getServerBetaAccess() {
   const access =
-    await getSiteAccess();
-
-
-  return {
-    ...access,
-
-    hasAdminAccess:
-      access.isAdmin,
-  };
-}
-
-
-export async function getBetaAccess() {
-  const access =
-    await getSiteAccess();
+    await getServerSiteAccess();
 
 
   return {

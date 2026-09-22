@@ -190,24 +190,6 @@ export default function HomePage() {
             <Empty text="Gallery images will appear here." />
           )}
         </div>
-
-        {/* APPLICATIONS */}
-
-        <section className="auros-card homeApplications">
-          <div>
-            <small>
-              WANT TO HELP BUILD AUROS?
-            </small>
-
-            <h3>
-              Applications are still available.
-            </h3>
-          </div>
-
-          <Secondary href="/apply">
-            Applications
-          </Secondary>
-        </section>
       </div>
 
       <style jsx global>{`
@@ -674,44 +656,6 @@ export default function HomePage() {
         }
 
         /* =========================================
-           APPLICATIONS
-        ========================================== */
-
-        .homeApplications {
-          display: flex;
-
-          align-items: center;
-          justify-content: space-between;
-
-          gap: 18px;
-
-          flex-wrap: wrap;
-
-          padding: 26px;
-        }
-
-        .homeApplications > div {
-          min-width: 0;
-        }
-
-        .homeApplications small {
-          color: #8ea1c1;
-        }
-
-        .homeApplications h3 {
-          margin:
-            5px
-            0
-            0;
-
-          color: white;
-
-          font-size: 25px;
-
-          overflow-wrap: anywhere;
-        }
-
-        /* =========================================
            BUTTONS
         ========================================== */
 
@@ -1001,25 +945,6 @@ export default function HomePage() {
 
           .homeGalleryContent strong {
             font-size: 13px;
-          }
-
-          .homeApplications {
-            align-items:
-              flex-start;
-
-            flex-direction:
-              column;
-
-            padding: 20px;
-          }
-
-          .homeApplications h3 {
-            font-size: 21px;
-          }
-
-          .homeApplications
-            .homeSecondaryButton {
-            width: 100%;
           }
         }
 

@@ -3,25 +3,33 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+
 type AdminSectionKey =
   | "overview"
-  | "applications"
-  | "jobs"
   | "patchnotes"
+  | "operations"
+  | "feature-flags"
   | "logs";
 
+
 type AdminSidebarProps = {
-  activeSection: AdminSectionKey;
+  activeSection:
+    AdminSectionKey;
+
   setActiveSection: (
-    section: AdminSectionKey
+    section:
+      AdminSectionKey
   ) => void;
 };
+
 
 export default function AdminSidebar({
   activeSection,
   setActiveSection,
 }: AdminSidebarProps) {
-  const pathname = usePathname();
+  const pathname =
+    usePathname();
+
 
   return (
     <>
@@ -42,6 +50,7 @@ export default function AdminSidebar({
           </div>
         </div>
 
+
         <NavGroup title="GENERAL">
           <SidebarButton
             label="Overview"
@@ -58,6 +67,7 @@ export default function AdminSidebar({
             }
           />
         </NavGroup>
+
 
         <NavGroup title="CONTENT">
           <SidebarLink
@@ -101,39 +111,38 @@ export default function AdminSidebar({
           />
         </NavGroup>
 
-        <NavGroup title="RECRUITING">
-          <SidebarButton
-            label="Applications"
-            description="Manage applicants"
-            icon="A"
-            active={
-              activeSection ===
-              "applications"
-            }
-            onClick={() =>
-              setActiveSection(
-                "applications"
-              )
-            }
-          />
-
-          <SidebarButton
-            label="Jobs"
-            description="Open positions"
-            icon="J"
-            active={
-              activeSection ===
-              "jobs"
-            }
-            onClick={() =>
-              setActiveSection(
-                "jobs"
-              )
-            }
-          />
-        </NavGroup>
 
         <NavGroup title="SYSTEM">
+          <SidebarButton
+            label="Operations"
+            description="Status & incidents"
+            icon="O"
+            active={
+              activeSection ===
+              "operations"
+            }
+            onClick={() =>
+              setActiveSection(
+                "operations"
+              )
+            }
+          />
+
+          <SidebarButton
+            label="Feature Flags"
+            description="Feature control"
+            icon="F"
+            active={
+              activeSection ===
+              "feature-flags"
+            }
+            onClick={() =>
+              setActiveSection(
+                "feature-flags"
+              )
+            }
+          />
+
           <SidebarButton
             label="Logs"
             description="Admin activity"
@@ -149,6 +158,7 @@ export default function AdminSidebar({
             }
           />
         </NavGroup>
+
 
         <div className="adminSidebarFooter">
           <div className="adminSidebarStatus">
@@ -171,10 +181,13 @@ export default function AdminSidebar({
           >
             Open Website
 
-            <span>↗</span>
+            <span>
+              ↗
+            </span>
           </Link>
         </div>
       </aside>
+
 
       <style jsx global>{`
         .adminSidebar {
@@ -219,6 +232,7 @@ export default function AdminSidebar({
             );
         }
 
+
         .adminSidebarHeader {
           display: flex;
           align-items: center;
@@ -235,6 +249,7 @@ export default function AdminSidebar({
               0.09
             );
         }
+
 
         .adminSidebarIcon {
           width: 38px;
@@ -270,9 +285,11 @@ export default function AdminSidebar({
           font-weight: 950;
         }
 
+
         .adminSidebarBrandText {
           min-width: 0;
         }
+
 
         .adminSidebarBrandText strong {
           display: block;
@@ -285,6 +302,7 @@ export default function AdminSidebar({
           letter-spacing:
             0.02em;
         }
+
 
         .adminSidebarBrandText span {
           display: block;
@@ -300,10 +318,12 @@ export default function AdminSidebar({
             0.14em;
         }
 
+
         .adminNavGroup {
           display: grid;
           gap: 6px;
         }
+
 
         .adminNavGroupTitle {
           margin:
@@ -320,6 +340,7 @@ export default function AdminSidebar({
           letter-spacing:
             0.16em;
         }
+
 
         .sidebarButton,
         .sidebarLink {
@@ -358,6 +379,7 @@ export default function AdminSidebar({
             border-color 0.14s ease;
         }
 
+
         .sidebarButton:hover,
         .sidebarLink:hover {
           color: #f3f7ff;
@@ -378,6 +400,7 @@ export default function AdminSidebar({
               0.68
             );
         }
+
 
         .sidebarButton.active,
         .sidebarLink.active {
@@ -409,6 +432,7 @@ export default function AdminSidebar({
             );
         }
 
+
         .sidebarNavIcon {
           width: 29px;
           height: 29px;
@@ -434,6 +458,7 @@ export default function AdminSidebar({
           font-weight: 900;
         }
 
+
         .sidebarButton.active
           .sidebarNavIcon,
         .sidebarLink.active
@@ -447,10 +472,12 @@ export default function AdminSidebar({
             );
         }
 
+
         .sidebarNavText {
           min-width: 0;
           flex: 1;
         }
+
 
         .sidebarNavText strong {
           display: block;
@@ -466,6 +493,7 @@ export default function AdminSidebar({
           text-overflow: ellipsis;
         }
 
+
         .sidebarNavText small {
           display: block;
 
@@ -480,6 +508,7 @@ export default function AdminSidebar({
           white-space: nowrap;
           text-overflow: ellipsis;
         }
+
 
         .adminSidebarFooter {
           display: grid;
@@ -498,6 +527,7 @@ export default function AdminSidebar({
               0.08
             );
         }
+
 
         .adminSidebarStatus {
           display: flex;
@@ -526,6 +556,7 @@ export default function AdminSidebar({
             );
         }
 
+
         .statusDot {
           width: 7px;
           height: 7px;
@@ -546,6 +577,7 @@ export default function AdminSidebar({
             );
         }
 
+
         .adminSidebarStatus strong {
           display: block;
 
@@ -553,6 +585,7 @@ export default function AdminSidebar({
 
           font-size: 8px;
         }
+
 
         .adminSidebarStatus small {
           display: block;
@@ -563,6 +596,7 @@ export default function AdminSidebar({
 
           font-size: 7px;
         }
+
 
         .adminSidebarWebsiteLink {
           min-height: 38px;
@@ -603,6 +637,7 @@ export default function AdminSidebar({
           text-decoration: none;
         }
 
+
         .adminSidebarWebsiteLink:hover {
           color: #63ddff;
 
@@ -615,7 +650,11 @@ export default function AdminSidebar({
             );
         }
 
-        @media (max-width: 980px) {
+
+        @media (
+          max-width:
+            980px
+        ) {
           .adminSidebar {
             position: static;
           }
@@ -625,12 +664,16 @@ export default function AdminSidebar({
   );
 }
 
+
 function NavGroup({
   title,
   children,
 }: {
-  title: string;
-  children: React.ReactNode;
+  title:
+    string;
+
+  children:
+    React.ReactNode;
 }) {
   return (
     <div className="adminNavGroup">
@@ -643,6 +686,7 @@ function NavGroup({
   );
 }
 
+
 function SidebarButton({
   label,
   description,
@@ -650,11 +694,20 @@ function SidebarButton({
   active,
   onClick,
 }: {
-  label: string;
-  description: string;
-  icon: string;
-  active: boolean;
-  onClick: () => void;
+  label:
+    string;
+
+  description:
+    string;
+
+  icon:
+    string;
+
+  active:
+    boolean;
+
+  onClick:
+    () => void;
 }) {
   return (
     <button
@@ -664,7 +717,9 @@ function SidebarButton({
           ? "sidebarButton active"
           : "sidebarButton"
       }
-      onClick={onClick}
+      onClick={
+        onClick
+      }
     >
       <span className="sidebarNavIcon">
         {icon}
@@ -683,6 +738,7 @@ function SidebarButton({
   );
 }
 
+
 function SidebarLink({
   href,
   label,
@@ -690,15 +746,26 @@ function SidebarLink({
   icon,
   active = false,
 }: {
-  href: string;
-  label: string;
-  description: string;
-  icon: string;
-  active?: boolean;
+  href:
+    string;
+
+  label:
+    string;
+
+  description:
+    string;
+
+  icon:
+    string;
+
+  active?:
+    boolean;
 }) {
   return (
     <Link
-      href={href}
+      href={
+        href
+      }
       className={
         active
           ? "sidebarLink active"

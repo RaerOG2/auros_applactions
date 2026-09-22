@@ -119,20 +119,6 @@ export default function AurosFooter() {
               links={[
                 {
                   label:
-                    "Apply",
-                  href:
-                    "/apply",
-                },
-
-                {
-                  label:
-                    "Application Status",
-                  href:
-                    "/status",
-                },
-
-                {
-                  label:
                     "FAQ",
                   href:
                     "/faq",

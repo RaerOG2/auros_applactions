@@ -16,6 +16,7 @@ import {
 
 import AurosSiteShell from "../components/AurosSiteShell";
 import StructuredData from "../components/seo/StructuredData";
+import LanguageProvider from "../components/language/LanguageProvider";
 
 import {
   DEFAULT_DESCRIPTION,
@@ -219,32 +220,34 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <StructuredData
-          data={
-            websiteData
-          }
-        />
+        <LanguageProvider>
+          <StructuredData
+            data={
+              websiteData
+            }
+          />
 
 
-        <StructuredData
-          data={
-            organizationData
-          }
-        />
+          <StructuredData
+            data={
+              organizationData
+            }
+          />
 
 
-        <StructuredData
-          data={
-            gameData
-          }
-        />
+          <StructuredData
+            data={
+              gameData
+            }
+          />
 
 
-        <AurosSiteShell>
-          {
-            children
-          }
-        </AurosSiteShell>
+          <AurosSiteShell>
+            {
+              children
+            }
+          </AurosSiteShell>
+        </LanguageProvider>
       </body>
     </html>
   );

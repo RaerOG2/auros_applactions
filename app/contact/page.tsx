@@ -63,16 +63,18 @@ export default function ContactPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
             gap: "18px",
           }}
         >
           <div style={panelStyle}>
             <h3 style={{ marginTop: 0 }}>Discord Server</h3>
+
             <p style={{ margin: 0, color: "#9fb0d0", lineHeight: 1.7 }}>
               Join the Auros community server for updates, support, and team
               communication.
             </p>
+
             <a
               href="https://discord.gg/wYAmfDXJp6"
               target="_blank"
@@ -85,10 +87,12 @@ export default function ContactPage() {
 
           <div style={panelStyle}>
             <h3 style={{ marginTop: 0 }}>Support</h3>
+
             <p style={{ margin: 0, color: "#9fb0d0", lineHeight: 1.7 }}>
-              For help with applications or website issues, contact the team
-              through Discord or your official support email.
+              For help with the website or other Auros services, contact the
+              team through Discord or the official support email.
             </p>
+
             <a href="mailto:maurice.edel@outlook.com" style={linkStyle}>
               maurice.edel@outlook.com
             </a>
@@ -96,23 +100,14 @@ export default function ContactPage() {
 
           <div style={panelStyle}>
             <h3 style={{ marginTop: 0 }}>Business / Project Contact</h3>
+
             <p style={{ margin: 0, color: "#9fb0d0", lineHeight: 1.7 }}>
               For partnerships, project communication, or management inquiries,
               use the official business contact.
             </p>
+
             <a href="mailto:maurice.edel@outlook.com" style={linkStyle}>
               maurice.edel@outlook.com
-            </a>
-          </div>
-
-          <div style={panelStyle}>
-            <h3 style={{ marginTop: 0 }}>Applications</h3>
-            <p style={{ margin: 0, color: "#9fb0d0", lineHeight: 1.7 }}>
-              Want to join the Auros team? Visit the applications portal and
-              submit your role application directly online.
-            </p>
-            <a href="/apply" style={linkStyle}>
-              Go to Applications
             </a>
           </div>
         </div>

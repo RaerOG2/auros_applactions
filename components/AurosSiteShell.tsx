@@ -1,10 +1,13 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import {
+  usePathname,
+} from "next/navigation";
 
 import AurosBackground from "./AurosBackground";
 import AurosTopbar from "./AurosTopbar";
 import AurosFooter from "./AurosFooter";
+
 
 type PageKey =
   | "home"
@@ -12,7 +15,6 @@ type PageKey =
   | "news"
   | "gallery"
   | "patchnotes"
-  | "apply"
   | "status"
   | "faq"
   | "contact"
@@ -20,13 +22,121 @@ type PageKey =
   | "dev"
   | "login";
 
+
 export default function AurosSiteShell({
   children,
 }: {
-  children: React.ReactNode;
+  children:
+    React.ReactNode;
 }) {
   const pathname =
     usePathname();
+
+
+  /* =========================================================
+     APP ROUTES
+
+     AurosChannel is not rendered inside the normal website
+     shell.
+
+     This means:
+     - no website background
+     - no website topbar
+     - no max-width container
+     - no footer
+     - no normal page transition wrapper
+
+     /chat and all future /chat/... routes use their own
+     fullscreen application layout.
+  ========================================================= */
+
+  const isChatRoute =
+    pathname === "/chat" ||
+    pathname.startsWith(
+      "/chat/"
+    );
+
+
+  if (
+    isChatRoute
+  ) {
+    return (
+      <main className="aurosStandaloneApp">
+        {children}
+
+        <style jsx global>{`
+          html,
+          body {
+            width:
+              100%;
+
+            min-width:
+              100%;
+
+            height:
+              100%;
+
+            min-height:
+              100%;
+
+            margin:
+              0;
+
+            padding:
+              0;
+
+            overflow:
+              hidden;
+          }
+
+
+          body {
+            background:
+              #070910;
+          }
+
+
+          .aurosStandaloneApp {
+            width:
+              100vw;
+
+            height:
+              100dvh;
+
+            min-width:
+              0;
+
+            min-height:
+              0;
+
+            margin:
+              0;
+
+            padding:
+              0;
+
+            overflow:
+              hidden;
+
+            background:
+              #070910;
+          }
+
+
+          .aurosStandaloneApp
+            > * {
+            min-width:
+              0;
+          }
+        `}</style>
+      </main>
+    );
+  }
+
+
+  /* =========================================================
+     NORMAL WEBSITE ROUTES
+  ========================================================= */
 
   const current:
     | PageKey
@@ -49,10 +159,6 @@ export default function AurosSiteShell({
           "/patchnotes"
         )
       ? "patchnotes"
-      : pathname.startsWith(
-          "/apply"
-        )
-      ? "apply"
       : pathname.startsWith(
           "/status"
         )
@@ -79,26 +185,37 @@ export default function AurosSiteShell({
       ? "login"
       : undefined;
 
+
   return (
     <>
       <AurosBackground />
 
+
       <main className="aurosSiteMain">
         <div className="aurosSiteContainer">
           <AurosTopbar
-            current={current}
+            current={
+              current
+            }
           />
 
+
           <div
-            key={pathname}
+            key={
+              pathname
+            }
             className="aurosPageTransition"
           >
-            {children}
+            {
+              children
+            }
           </div>
         </div>
 
+
         <AurosFooter />
       </main>
+
 
       <style jsx global>{`
         .aurosSiteMain {
@@ -123,6 +240,7 @@ export default function AurosSiteShell({
             56px;
         }
 
+
         .aurosSiteContainer {
           width:
             100%;
@@ -138,6 +256,7 @@ export default function AurosSiteShell({
             auto;
         }
 
+
         .aurosPageTransition {
           animation:
             aurosPageEnter
@@ -150,6 +269,7 @@ export default function AurosSiteShell({
             )
             both;
         }
+
 
         @keyframes aurosPageEnter {
           from {
@@ -164,6 +284,7 @@ export default function AurosSiteShell({
               );
           }
 
+
           to {
             opacity:
               1;
@@ -177,6 +298,7 @@ export default function AurosSiteShell({
           }
         }
 
+
         @media (
           prefers-reduced-motion:
             reduce
@@ -186,6 +308,7 @@ export default function AurosSiteShell({
               none;
           }
         }
+
 
         @media (
           max-width:

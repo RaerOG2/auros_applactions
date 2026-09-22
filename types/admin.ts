@@ -1,79 +1,3 @@
-export type StatusHistoryItem = {
-  id: string;
-  application_id: string;
-  status: string;
-  changed_at: string;
-  changed_by?: string | null;
-  note?: string | null;
-};
-
-export type ApplicationItem = {
-  id: string;
-  name: string | null;
-  discord: string | null;
-  discord_id?: string | null;
-  age: string | null;
-  email?: string | null;
-  timezone: string | null;
-  experience: string | null;
-  motivation: string | null;
-  availability: string | null;
-
-  developer_skills: string | null;
-  developer_projects: string | null;
-  support_cases: string | null;
-  support_communication: string | null;
-  competitive_knowledge: string | null;
-  competitive_plans: string | null;
-  manager_leadership: string | null;
-  manager_organization: string | null;
-  director_vision: string | null;
-  director_responsibility: string | null;
-  other_strengths: string | null;
-
-  portfolio_url?: string | null;
-  extra_links?: string | null;
-  attachment_url?: string | null;
-  attachment_type?: string | null;
-  attachment_name?: string | null;
-  extra_answers?: Record<string, unknown> | null;
-
-  tracking_code: string | null;
-  status: string | null;
-  notes: string | null;
-  rating: number | null;
-  review_label: string | null;
-
-  score?: number | null;
-  auto_score?: number | null;
-  manual_score?: number | null;
-  final_score?: number | null;
-  score_breakdown?: Record<string, number> | null;
-
-  created_at: string | null;
-
-  jobs?: {
-    title?: string | null;
-    role_category?: string | null;
-  } | null;
-
-  status_history?: StatusHistoryItem[];
-};
-
-export type JobItem = {
-  id: string;
-  title: string | null;
-  department: string | null;
-  type: string | null;
-  location: string | null;
-  description: string | null;
-  requirements: string[] | null;
-  status: string | null;
-  role_category: string | null;
-  created_at?: string | null;
-};
-
-
 /* =========================================================
    PATCHNOTES EDITOR 3.0
    ========================================================= */
@@ -88,67 +12,54 @@ export type PatchnoteSplitRatio =
 
 export type PatchnoteHeadingBlock = {
   id: string;
-
   type: "heading";
-
   text: string;
 };
 
 
 export type PatchnoteTextBlock = {
   id: string;
-
   type: "text";
-
   text: string;
 };
 
 
 export type PatchnoteImageBlock = {
   id: string;
-
   type: "image";
-
   url: string;
-
   alt?: string;
-
   caption?: string;
 };
 
 
 export type PatchnoteSplitBlock = {
   id: string;
-
   type: "split";
 
-  ratio: PatchnoteSplitRatio;
+  ratio:
+    PatchnoteSplitRatio;
 
   imagePosition:
     | "left"
     | "right";
 
   heading: string;
-
   text: string;
-
   imageUrl: string;
 
   imageAlt?: string;
-
   imageCaption?: string;
 };
 
 
 export type PatchnoteHighlightBlock = {
   id: string;
-
   type: "highlight";
 
   eyebrow?: string;
 
   heading: string;
-
   text: string;
 
   tone?:
@@ -161,38 +72,34 @@ export type PatchnoteHighlightBlock = {
 
 export type PatchnoteGalleryImage = {
   id: string;
-
   url: string;
 
   alt?: string;
-
   caption?: string;
 };
 
 
 export type PatchnoteGalleryBlock = {
   id: string;
-
   type: "gallery";
 
   columns?:
     | 2
     | 3;
 
-  images: PatchnoteGalleryImage[];
+  images:
+    PatchnoteGalleryImage[];
 };
 
 
 export type PatchnoteDividerBlock = {
   id: string;
-
   type: "divider";
 };
 
 
 export type PatchnoteSpacerBlock = {
   id: string;
-
   type: "spacer";
 
   size:
@@ -216,74 +123,54 @@ export type PatchnoteContentBlock =
 export type PatchnoteItem = {
   id: string;
 
-  version: string | null;
+  version:
+    string | null;
 
-  title: string | null;
+  title:
+    string | null;
 
-  slug: string | null;
+  slug:
+    string | null;
 
-  summary: string | null;
+  summary:
+    string | null;
 
-  content: string | null;
+  content:
+    string | null;
 
-  cover_url: string | null;
+  cover_url:
+    string | null;
 
   content_blocks:
     | PatchnoteContentBlock[]
     | null;
 
-  published: boolean;
+  published:
+    boolean;
 
-  created_at: string | null;
+  created_at:
+    string | null;
 
-  updated_at?: string | null;
+  updated_at?:
+    string | null;
 };
 
 
 export type PatchnoteEditorForm = {
   version: string;
-
   title: string;
-
   slug: string;
-
   summary: string;
-
   cover_url: string;
-
   published: boolean;
 
-  blocks: PatchnoteContentBlock[];
+  blocks:
+    PatchnoteContentBlock[];
 };
 
 
-/* =========================================================
-   JOBS
-   ========================================================= */
-
-export type JobFormState = {
-  title: string;
-  department: string;
-  type: string;
-  location: string;
-  description: string;
-  requirements: string;
-  role_category: string;
-};
-
-
-export const emptyJobForm: JobFormState = {
-  title: "",
-  department: "",
-  type: "",
-  location: "",
-  description: "",
-  requirements: "",
-  role_category: "Other",
-};
-
-
-export const emptyPatchnoteEditorForm: PatchnoteEditorForm = {
+export const emptyPatchnoteEditorForm:
+  PatchnoteEditorForm = {
   version: "",
   title: "",
   slug: "",
