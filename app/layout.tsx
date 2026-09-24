@@ -8,6 +8,7 @@ import type {
 
 import "./globals.css";
 import "../styles/auros-channel.css";
+import "../event/reloadstar/reloadstar.css";
 
 import {
   Geist,
@@ -17,6 +18,8 @@ import {
 import AurosSiteShell from "../components/AurosSiteShell";
 import StructuredData from "../components/seo/StructuredData";
 import LanguageProvider from "../components/language/LanguageProvider";
+
+import ReloadstarRoot from "../event/reloadstar/ReloadstarRoot";
 
 import {
   DEFAULT_DESCRIPTION,
@@ -227,13 +230,11 @@ export default function RootLayout({
             }
           />
 
-
           <StructuredData
             data={
               organizationData
             }
           />
-
 
           <StructuredData
             data={
@@ -241,12 +242,13 @@ export default function RootLayout({
             }
           />
 
-
-          <AurosSiteShell>
-            {
-              children
-            }
-          </AurosSiteShell>
+          <ReloadstarRoot>
+            <AurosSiteShell>
+              {
+                children
+              }
+            </AurosSiteShell>
+          </ReloadstarRoot>
         </LanguageProvider>
       </body>
     </html>

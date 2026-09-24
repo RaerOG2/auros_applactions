@@ -1,7 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import {
   getPublishedGallery,
@@ -15,34 +20,191 @@ import type {
   NewsItem,
 } from "../types/community";
 
+import type {
+  PublicReleaseInfo,
+} from "../event/reloadstar/types";
+
+
+type CountdownValue = {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+};
+
+
 export default function HomePage() {
-  const [patches, setPatches] = useState<CommunityPatchnote[]>([]);
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [gallery, setGallery] = useState<GalleryItem[]>([]);
+  const [
+    patches,
+    setPatches,
+  ] =
+    useState<
+      CommunityPatchnote[]
+    >([]);
+
+  const [
+    news,
+    setNews,
+  ] =
+    useState<
+      NewsItem[]
+    >([]);
+
+  const [
+    gallery,
+    setGallery,
+  ] =
+    useState<
+      GalleryItem[]
+    >([]);
+
+  const [
+    release,
+    setRelease,
+  ] =
+    useState<
+      PublicReleaseInfo | null
+    >(null);
+
+  const [
+    releaseLoading,
+    setReleaseLoading,
+  ] =
+    useState(true);
+
 
   useEffect(() => {
     Promise.all([
-      getPublishedPatchnotes(1),
-      getPublishedNews(3),
-      getPublishedGallery(4),
+      getPublishedPatchnotes(
+        1
+      ),
+
+      getPublishedNews(
+        3
+      ),
+
+      getPublishedGallery(
+        4
+      ),
     ])
-      .then(([patchData, newsData, galleryData]) => {
-        setPatches(patchData);
-        setNews(newsData);
-        setGallery(galleryData);
-      })
-      .catch(console.error);
+      .then(
+        ([
+          patchData,
+          newsData,
+          galleryData,
+        ]) => {
+          setPatches(
+            patchData
+          );
+
+          setNews(
+            newsData
+          );
+
+          setGallery(
+            galleryData
+          );
+        }
+      )
+      .catch(
+        console.error
+      );
   }, []);
+
+
+  useEffect(() => {
+    let active =
+      true;
+
+
+    async function loadRelease() {
+      try {
+        const response =
+          await fetch(
+            "/api/release",
+            {
+              cache:
+                "no-store",
+            }
+          );
+
+
+        if (
+          !response.ok
+        ) {
+          throw new Error(
+            `Release API returned ${response.status}`
+          );
+        }
+
+
+        const data:
+          PublicReleaseInfo =
+          await response.json();
+
+
+        if (active) {
+          setRelease(
+            data
+          );
+        }
+      } catch (
+        error
+      ) {
+        console.error(
+          "[AUROS Release]",
+          error
+        );
+      } finally {
+        if (active) {
+          setReleaseLoading(
+            false
+          );
+        }
+      }
+    }
+
+
+    loadRelease();
+
+
+    /*
+     * Keep the release state fresh.
+     *
+     * This means somebody who already has the
+     * website open does not have to reload when
+     * the event/release state changes.
+     */
+
+    const interval =
+      window.setInterval(
+        loadRelease,
+        15_000
+      );
+
+
+    return () => {
+      active =
+        false;
+
+      window.clearInterval(
+        interval
+      );
+    };
+  }, []);
+
 
   return (
     <>
       <div className="homePage">
-        {/* HERO */}
+        {/* ======================================
+            HERO
+        ======================================= */}
 
         <section className="auros-card homeHero">
           <div className="homeHeroContent">
             <div className="homeHeroEyebrow">
-              AUROS ROYALE • COMMUNITY UPDATE 1.2.0
+              AUROS ROYALE • THE ISLAND IS WAITING
             </div>
 
             <h1>
@@ -52,23 +214,47 @@ export default function HomePage() {
             </h1>
 
             <p>
-              The official home for Auros Royale. Discover updates, map
-              screenshots, announcements and everything around the launch.
+              The official home for Auros Royale.
+              Discover updates, map screenshots,
+              announcements and everything around
+              the launch.
             </p>
 
             <div className="homeHeroActions">
-              <Primary href="/patchnotes">
-                Explore Updates
+              <Primary href="#auros-release">
+                AUROS Battle Royale
               </Primary>
 
-              <Secondary href="/gallery">
-                View Gallery
+              <Secondary href="/patchnotes">
+                Explore Updates
               </Secondary>
             </div>
           </div>
         </section>
 
-        {/* NEWS */}
+
+        {/* ======================================
+            AUROS RELEASE
+        ======================================= */}
+
+        <SectionTitle
+          eyebrow="AUROS BATTLE ROYALE"
+          title="The island is waiting"
+        />
+
+        <ReleaseCard
+          release={
+            release
+          }
+          loading={
+            releaseLoading
+          }
+        />
+
+
+        {/* ======================================
+            NEWS
+        ======================================= */}
 
         <SectionTitle
           eyebrow="LATEST"
@@ -78,39 +264,54 @@ export default function HomePage() {
 
         <div className="homeNewsGrid">
           {news.length ? (
-            news.map((item) => (
-              <Link
-                key={item.id}
-                href="/news"
-                className="auros-card auros-card-hover homeNewsCard"
-              >
-                {item.image_url && (
-                  <img
-                    src={item.image_url}
-                    alt=""
-                    className="homeNewsImage"
-                  />
-                )}
+            news.map(
+              (item) => (
+                <Link
+                  key={
+                    item.id
+                  }
+                  href="/news"
+                  className="auros-card auros-card-hover homeNewsCard"
+                >
+                  {item.image_url && (
+                    <img
+                      src={
+                        item.image_url
+                      }
+                      alt=""
+                      className="homeNewsImage"
+                    />
+                  )}
 
-                <small className="homeCardEyebrow">
-                  NEWS
-                </small>
+                  <small className="homeCardEyebrow">
+                    NEWS
+                  </small>
 
-                <h3>
-                  {item.title}
-                </h3>
+                  <h3>
+                    {
+                      item.title
+                    }
+                  </h3>
 
-                <p>
-                  {item.summary}
-                </p>
-              </Link>
-            ))
+                  <p>
+                    {
+                      item.summary
+                    }
+                  </p>
+                </Link>
+              )
+            )
           ) : (
-            <Empty text="News will appear here." />
+            <Empty
+              text="News will appear here."
+            />
           )}
         </div>
 
-        {/* PATCHNOTES */}
+
+        {/* ======================================
+            PATCHNOTES
+        ======================================= */}
 
         {patches[0] && (
           <>
@@ -127,7 +328,10 @@ export default function HomePage() {
               {patches[0].cover_url && (
                 <div className="homePatchImageWrap">
                   <img
-                    src={patches[0].cover_url}
+                    src={
+                      patches[0]
+                        .cover_url
+                    }
                     alt=""
                     className="homePatchImage"
                   />
@@ -136,28 +340,47 @@ export default function HomePage() {
 
               <div className="homePatchContent">
                 <div className="homePatchVersion">
-                  VERSION {patches[0].version}
+                  VERSION{" "}
+                  {
+                    patches[0]
+                      .version
+                  }
                 </div>
 
                 <h2>
-                  {patches[0].title}
+                  {
+                    patches[0]
+                      .title
+                  }
                 </h2>
 
                 <p>
-                  {patches[0].summary ||
-                    patches[0].content?.slice(0, 220)}
+                  {patches[0]
+                    .summary ||
+                    patches[0]
+                      .content
+                      ?.slice(
+                        0,
+                        220
+                      )}
                 </p>
 
                 <div className="homePatchReadMore">
                   Read Patchnotes
-                  <span>→</span>
+
+                  <span>
+                    →
+                  </span>
                 </div>
               </div>
             </Link>
           </>
         )}
 
-        {/* GALLERY */}
+
+        {/* ======================================
+            GALLERY
+        ======================================= */}
 
         <SectionTitle
           eyebrow="GALLERY"
@@ -167,30 +390,43 @@ export default function HomePage() {
 
         <div className="homeGalleryGrid">
           {gallery.length ? (
-            gallery.map((item) => (
-              <Link
-                href="/gallery"
-                key={item.id}
-                className="auros-card auros-card-hover homeGalleryCard"
-              >
-                <img
-                  src={item.image_url}
-                  alt={item.title}
-                  className="homeGalleryImage"
-                />
+            gallery.map(
+              (item) => (
+                <Link
+                  href="/gallery"
+                  key={
+                    item.id
+                  }
+                  className="auros-card auros-card-hover homeGalleryCard"
+                >
+                  <img
+                    src={
+                      item.image_url
+                    }
+                    alt={
+                      item.title
+                    }
+                    className="homeGalleryImage"
+                  />
 
-                <div className="homeGalleryContent">
-                  <strong>
-                    {item.title}
-                  </strong>
-                </div>
-              </Link>
-            ))
+                  <div className="homeGalleryContent">
+                    <strong>
+                      {
+                        item.title
+                      }
+                    </strong>
+                  </div>
+                </Link>
+              )
+            )
           ) : (
-            <Empty text="Gallery images will appear here." />
+            <Empty
+              text="Gallery images will appear here."
+            />
           )}
         </div>
       </div>
+
 
       <style jsx global>{`
         /* =========================================
@@ -199,10 +435,14 @@ export default function HomePage() {
 
         .homePage {
           display: grid;
+
           gap: 26px;
+
           width: 100%;
+
           min-width: 0;
         }
+
 
         /* =========================================
            HERO
@@ -212,6 +452,7 @@ export default function HomePage() {
           min-height: 520px;
 
           display: grid;
+
           align-items: end;
 
           position: relative;
@@ -253,8 +494,55 @@ export default function HomePage() {
             );
         }
 
+        .homeHero::before {
+          content: "";
+
+          position: absolute;
+
+          width: 520px;
+          height: 520px;
+
+          top: -190px;
+          right: -110px;
+
+          border-radius: 50%;
+
+          background:
+            radial-gradient(
+              circle,
+              rgba(
+                104,
+                225,
+                255,
+                0.17
+              ),
+              rgba(
+                143,
+                130,
+                255,
+                0.08
+              )
+                45%,
+              transparent
+                72%
+            );
+
+          filter:
+            blur(
+              4px
+            );
+
+          pointer-events:
+            none;
+        }
+
         .homeHeroContent {
+          position: relative;
+
+          z-index: 2;
+
           max-width: 760px;
+
           min-width: 0;
         }
 
@@ -262,13 +550,17 @@ export default function HomePage() {
           color: #68e1ff;
 
           font-weight: 900;
-          letter-spacing: 0.14em;
+
+          letter-spacing:
+            0.14em;
 
           font-size: 12px;
         }
 
         .homeHero h1 {
-          margin: 18px 0;
+          margin:
+            18px
+            0;
 
           color: white;
 
@@ -307,6 +599,7 @@ export default function HomePage() {
           margin-top: 28px;
         }
 
+
         /* =========================================
            SECTION TITLE
         ========================================== */
@@ -315,7 +608,9 @@ export default function HomePage() {
           display: flex;
 
           align-items: end;
-          justify-content: space-between;
+
+          justify-content:
+            space-between;
 
           gap: 16px;
 
@@ -330,6 +625,7 @@ export default function HomePage() {
           color: #63ddff;
 
           font-size: 11px;
+
           font-weight: 900;
 
           letter-spacing:
@@ -359,7 +655,8 @@ export default function HomePage() {
 
           color: #a9bbd9;
 
-          text-decoration: none;
+          text-decoration:
+            none;
 
           font-size: 14px;
 
@@ -378,6 +675,756 @@ export default function HomePage() {
             color: white;
           }
         }
+
+
+        /* =========================================
+           RELEASE CARD
+        ========================================== */
+
+        .homeReleaseCard {
+          position: relative;
+
+          min-height: 420px;
+
+          overflow: hidden;
+
+          padding:
+            clamp(
+              26px,
+              4vw,
+              46px
+            );
+
+          isolation: isolate;
+
+          background:
+            linear-gradient(
+              120deg,
+              rgba(
+                8,
+                16,
+                34,
+                0.98
+              ),
+              rgba(
+                11,
+                23,
+                48,
+                0.94
+              )
+            );
+        }
+
+        .homeReleaseCard::before {
+          content: "";
+
+          position: absolute;
+
+          z-index: -2;
+
+          width: 620px;
+          height: 620px;
+
+          top: -280px;
+          right: -150px;
+
+          border-radius: 50%;
+
+          background:
+            radial-gradient(
+              circle,
+              rgba(
+                100,
+                225,
+                255,
+                0.24
+              ),
+              rgba(
+                116,
+                132,
+                255,
+                0.11
+              )
+                40%,
+              transparent
+                70%
+            );
+
+          filter:
+            blur(
+              4px
+            );
+        }
+
+        .homeReleaseCard::after {
+          content: "";
+
+          position: absolute;
+
+          z-index: -1;
+
+          width: 380px;
+          height: 380px;
+
+          right: 7%;
+          bottom: -250px;
+
+          border-radius: 50%;
+
+          background:
+            radial-gradient(
+              circle,
+              rgba(
+                143,
+                130,
+                255,
+                0.16
+              ),
+              transparent
+                70%
+            );
+        }
+
+        .homeReleaseTop {
+          display: flex;
+
+          align-items:
+            center;
+
+          justify-content:
+            space-between;
+
+          gap: 16px;
+
+          margin-bottom:
+            44px;
+        }
+
+        .homeReleaseBrand {
+          display: flex;
+
+          align-items:
+            center;
+
+          gap: 10px;
+
+          color:
+            #d7e8ff;
+
+          font-size: 12px;
+
+          font-weight: 900;
+
+          letter-spacing:
+            0.11em;
+        }
+
+        .homeReleaseBrandOrb {
+          width: 11px;
+          height: 11px;
+
+          border-radius: 50%;
+
+          background:
+            #63ddff;
+
+          box-shadow:
+            0
+            0
+            20px
+            rgba(
+              99,
+              221,
+              255,
+              0.8
+            );
+        }
+
+        .homeReleaseStatus {
+          display:
+            inline-flex;
+
+          align-items:
+            center;
+
+          gap: 8px;
+
+          padding:
+            8px
+            12px;
+
+          border:
+            1px solid
+            rgba(
+              130,
+              160,
+              210,
+              0.18
+            );
+
+          border-radius:
+            999px;
+
+          color:
+            #91a8ca;
+
+          background:
+            rgba(
+              8,
+              17,
+              35,
+              0.58
+            );
+
+          font-size: 10px;
+
+          font-weight: 900;
+
+          letter-spacing:
+            0.1em;
+        }
+
+        .homeReleaseStatusDot {
+          width: 7px;
+          height: 7px;
+
+          border-radius: 50%;
+
+          background:
+            #ffbf69;
+
+          box-shadow:
+            0
+            0
+            12px
+            rgba(
+              255,
+              191,
+              105,
+              0.65
+            );
+        }
+
+        .homeReleaseStatusLive
+          .homeReleaseStatusDot {
+          background:
+            #63ddff;
+
+          box-shadow:
+            0
+            0
+            14px
+            rgba(
+              99,
+              221,
+              255,
+              0.85
+            );
+        }
+
+        .homeReleaseStatusReleased
+          .homeReleaseStatusDot {
+          background:
+            #61e6a6;
+
+          box-shadow:
+            0
+            0
+            14px
+            rgba(
+              97,
+              230,
+              166,
+              0.8
+            );
+        }
+
+        .homeReleaseGrid {
+          display: grid;
+
+          grid-template-columns:
+            minmax(
+              0,
+              1fr
+            )
+            minmax(
+              310px,
+              0.72fr
+            );
+
+          gap:
+            clamp(
+              28px,
+              5vw,
+              70px
+            );
+
+          align-items:
+            end;
+        }
+
+        .homeReleaseEyebrow {
+          color:
+            #63ddff;
+
+          font-size: 11px;
+
+          font-weight: 900;
+
+          letter-spacing:
+            0.14em;
+        }
+
+        .homeReleaseTitle {
+          max-width: 720px;
+
+          margin:
+            12px
+            0
+            14px;
+
+          color: white;
+
+          font-size:
+            clamp(
+              43px,
+              6vw,
+              74px
+            );
+
+          line-height:
+            0.94;
+
+          letter-spacing:
+            -0.05em;
+        }
+
+        .homeReleaseDescription {
+          max-width: 640px;
+
+          margin: 0;
+
+          color:
+            #a7b8d2;
+
+          font-size: 16px;
+
+          line-height: 1.7;
+        }
+
+
+        /* COUNTDOWN */
+
+        .homeCountdown {
+          display: grid;
+
+          grid-template-columns:
+            repeat(
+              4,
+              minmax(
+                0,
+                1fr
+              )
+            );
+
+          gap: 8px;
+
+          margin-top: 28px;
+        }
+
+        .homeCountdownItem {
+          min-width: 0;
+
+          padding:
+            14px
+            10px;
+
+          border:
+            1px solid
+            rgba(
+              130,
+              160,
+              210,
+              0.16
+            );
+
+          border-radius:
+            15px;
+
+          background:
+            rgba(
+              10,
+              21,
+              42,
+              0.72
+            );
+
+          text-align:
+            center;
+        }
+
+        .homeCountdownItem strong {
+          display: block;
+
+          color: white;
+
+          font-size:
+            clamp(
+              21px,
+              4vw,
+              31px
+            );
+
+          line-height: 1;
+
+          font-variant-numeric:
+            tabular-nums;
+        }
+
+        .homeCountdownItem span {
+          display: block;
+
+          margin-top: 7px;
+
+          color:
+            #7188aa;
+
+          font-size: 8px;
+
+          font-weight: 900;
+
+          letter-spacing:
+            0.12em;
+        }
+
+
+        /* LOCKED PANEL */
+
+        .homeReleasePanel {
+          padding: 22px;
+
+          border:
+            1px solid
+            rgba(
+              130,
+              160,
+              210,
+              0.17
+            );
+
+          border-radius: 22px;
+
+          background:
+            rgba(
+              7,
+              15,
+              31,
+              0.66
+            );
+
+          box-shadow:
+            inset
+            0
+            1px
+            0
+            rgba(
+              255,
+              255,
+              255,
+              0.035
+            );
+        }
+
+        .homeReleaseLock {
+          width: 50px;
+          height: 50px;
+
+          display: grid;
+
+          place-items:
+            center;
+
+          margin-bottom:
+            18px;
+
+          border:
+            1px solid
+            rgba(
+              99,
+              221,
+              255,
+              0.18
+            );
+
+          border-radius:
+            15px;
+
+          color:
+            #63ddff;
+
+          background:
+            rgba(
+              99,
+              221,
+              255,
+              0.07
+            );
+
+          font-size: 20px;
+        }
+
+        .homeReleasePanel small {
+          color:
+            #7188aa;
+
+          font-size: 9px;
+
+          font-weight: 900;
+
+          letter-spacing:
+            0.12em;
+        }
+
+        .homeReleasePanel h3 {
+          margin:
+            8px
+            0;
+
+          color: white;
+
+          font-size: 24px;
+        }
+
+        .homeReleasePanel p {
+          margin: 0;
+
+          color:
+            #8fa3c2;
+
+          font-size: 13px;
+
+          line-height: 1.6;
+        }
+
+
+        /* RELEASED */
+
+        .homeReleaseCardReleased {
+          border-color:
+            rgba(
+              97,
+              230,
+              166,
+              0.28
+            );
+        }
+
+        .homeReleaseCardReleased::before {
+          background:
+            radial-gradient(
+              circle,
+              rgba(
+                99,
+                221,
+                255,
+                0.25
+              ),
+              rgba(
+                97,
+                230,
+                166,
+                0.1
+              )
+                42%,
+              transparent
+                72%
+            );
+        }
+
+        .homeReleaseLiveBadge {
+          width: fit-content;
+
+          display: flex;
+
+          align-items:
+            center;
+
+          gap: 8px;
+
+          margin-bottom:
+            12px;
+
+          padding:
+            8px
+            11px;
+
+          border-radius:
+            999px;
+
+          color:
+            #77f0b9;
+
+          background:
+            rgba(
+              97,
+              230,
+              166,
+              0.08
+            );
+
+          font-size: 10px;
+
+          font-weight: 900;
+
+          letter-spacing:
+            0.11em;
+        }
+
+        .homeReleaseLiveBadge span {
+          width: 7px;
+          height: 7px;
+
+          border-radius: 50%;
+
+          background:
+            #61e6a6;
+
+          box-shadow:
+            0
+            0
+            14px
+            rgba(
+              97,
+              230,
+              166,
+              0.85
+            );
+        }
+
+        .homeIslandCode {
+          margin-top:
+            20px;
+
+          padding: 18px;
+
+          border:
+            1px solid
+            rgba(
+              99,
+              221,
+              255,
+              0.18
+            );
+
+          border-radius:
+            18px;
+
+          background:
+            rgba(
+              5,
+              13,
+              27,
+              0.78
+            );
+        }
+
+        .homeIslandCodeLabel {
+          color:
+            #7188aa;
+
+          font-size: 9px;
+
+          font-weight: 900;
+
+          letter-spacing:
+            0.13em;
+        }
+
+        .homeIslandCodeValue {
+          margin-top: 7px;
+
+          color: white;
+
+          font-family:
+            var(
+              --font-geist-mono
+            ),
+            monospace;
+
+          font-size:
+            clamp(
+              23px,
+              4vw,
+              34px
+            );
+
+          font-weight: 900;
+
+          letter-spacing:
+            0.08em;
+
+          overflow-wrap:
+            anywhere;
+        }
+
+        .homeReleaseActions {
+          display: flex;
+
+          gap: 10px;
+
+          flex-wrap: wrap;
+
+          margin-top: 14px;
+        }
+
+        .homeCopyButton {
+          min-height: 44px;
+
+          padding:
+            11px
+            16px;
+
+          border: 0;
+
+          border-radius: 13px;
+
+          cursor: pointer;
+
+          color:
+            #05101c;
+
+          background:
+            linear-gradient(
+              90deg,
+              #68e1ff,
+              #8f82ff
+            );
+
+          font-weight: 900;
+
+          transition:
+            transform
+              120ms
+              ease;
+        }
+
+        .homeCopyButton:active {
+          transform:
+            scale(
+              0.98
+            );
+        }
+
+        .homeReleasedPanel {
+          border-color:
+            rgba(
+              97,
+              230,
+              166,
+              0.18
+            );
+        }
+
 
         /* =========================================
            NEWS
@@ -410,7 +1457,8 @@ export default function HomePage() {
 
           color: white;
 
-          text-decoration: none;
+          text-decoration:
+            none;
         }
 
         .homeNewsImage {
@@ -418,13 +1466,16 @@ export default function HomePage() {
 
           display: block;
 
-          aspect-ratio: 16 / 9;
+          aspect-ratio:
+            16 / 9;
 
           object-fit: cover;
 
-          margin-bottom: 16px;
+          margin-bottom:
+            16px;
 
-          border-radius: 16px;
+          border-radius:
+            16px;
         }
 
         .homeCardEyebrow {
@@ -440,7 +1491,8 @@ export default function HomePage() {
 
           font-size: 21px;
 
-          overflow-wrap: anywhere;
+          overflow-wrap:
+            anywhere;
         }
 
         .homeNewsCard p {
@@ -450,8 +1502,10 @@ export default function HomePage() {
 
           line-height: 1.6;
 
-          overflow-wrap: anywhere;
+          overflow-wrap:
+            anywhere;
         }
+
 
         /* =========================================
            PATCHNOTES
@@ -459,11 +1513,6 @@ export default function HomePage() {
 
         .homePatchCard {
           display: grid;
-
-          /*
-            Desktop:
-            Text links / Bild rechts.
-          */
 
           grid-template-columns:
             minmax(
@@ -482,31 +1531,37 @@ export default function HomePage() {
 
           color: white;
 
-          text-decoration: none;
+          text-decoration:
+            none;
 
           min-width: 0;
         }
 
         .homePatchContent {
-          grid-area: content;
+          grid-area:
+            content;
 
           min-width: 0;
 
           display: flex;
 
-          flex-direction: column;
+          flex-direction:
+            column;
 
-          justify-content: center;
+          justify-content:
+            center;
 
           padding: 32px;
         }
 
         .homePatchImageWrap {
-          grid-area: image;
+          grid-area:
+            image;
 
           min-width: 0;
 
-          min-height: 280px;
+          min-height:
+            280px;
 
           overflow: hidden;
         }
@@ -527,7 +1582,8 @@ export default function HomePage() {
 
           font-size: 15px;
 
-          overflow-wrap: anywhere;
+          overflow-wrap:
+            anywhere;
         }
 
         .homePatchContent h2 {
@@ -549,7 +1605,8 @@ export default function HomePage() {
           letter-spacing:
             -0.025em;
 
-          overflow-wrap: anywhere;
+          overflow-wrap:
+            anywhere;
         }
 
         .homePatchContent p {
@@ -564,17 +1621,20 @@ export default function HomePage() {
 
           line-height: 1.7;
 
-          overflow-wrap: anywhere;
+          overflow-wrap:
+            anywhere;
         }
 
         .homePatchReadMore {
           display: flex;
 
-          align-items: center;
+          align-items:
+            center;
 
           gap: 8px;
 
-          margin-top: 22px;
+          margin-top:
+            22px;
 
           color: #63ddff;
 
@@ -605,6 +1665,7 @@ export default function HomePage() {
           }
         }
 
+
         /* =========================================
            GALLERY
         ========================================== */
@@ -634,7 +1695,8 @@ export default function HomePage() {
 
           color: white;
 
-          text-decoration: none;
+          text-decoration:
+            none;
         }
 
         .homeGalleryImage {
@@ -642,7 +1704,8 @@ export default function HomePage() {
 
           display: block;
 
-          aspect-ratio: 4 / 3;
+          aspect-ratio:
+            4 / 3;
 
           object-fit: cover;
         }
@@ -652,8 +1715,10 @@ export default function HomePage() {
         }
 
         .homeGalleryContent strong {
-          overflow-wrap: anywhere;
+          overflow-wrap:
+            anywhere;
         }
+
 
         /* =========================================
            BUTTONS
@@ -663,14 +1728,20 @@ export default function HomePage() {
         .homeSecondaryButton {
           min-height: 44px;
 
-          display: inline-flex;
+          display:
+            inline-flex;
 
-          align-items: center;
-          justify-content: center;
+          align-items:
+            center;
 
-          text-decoration: none;
+          justify-content:
+            center;
 
-          border-radius: 13px;
+          text-decoration:
+            none;
+
+          border-radius:
+            13px;
 
           transition:
             transform
@@ -731,7 +1802,8 @@ export default function HomePage() {
           pointer: fine
         ) {
           .homePrimaryButton:hover,
-          .homeSecondaryButton:hover {
+          .homeSecondaryButton:hover,
+          .homeCopyButton:hover {
             transform:
               translateY(
                 -1px
@@ -747,6 +1819,7 @@ export default function HomePage() {
             );
         }
 
+
         /* =========================================
            TABLET
         ========================================== */
@@ -754,15 +1827,15 @@ export default function HomePage() {
         @media (
           max-width: 820px
         ) {
-          /*
-            Der wichtigste Fix:
+          .homeReleaseGrid {
+            grid-template-columns:
+              minmax(
+                0,
+                1fr
+              );
 
-            Patchnotes wechseln auf
-            EINE Spalte.
-
-            Cover oben,
-            Text darunter.
-          */
+            gap: 26px;
+          }
 
           .homePatchCard {
             grid-template-columns:
@@ -799,6 +1872,7 @@ export default function HomePage() {
           }
         }
 
+
         /* =========================================
            MOBILE
         ========================================== */
@@ -811,7 +1885,8 @@ export default function HomePage() {
           }
 
           .homeHero {
-            min-height: 410px;
+            min-height:
+              410px;
 
             padding:
               28px
@@ -866,6 +1941,63 @@ export default function HomePage() {
             font-size: 12px;
           }
 
+          .homeReleaseCard {
+            min-height: 0;
+
+            padding:
+              24px
+              20px;
+          }
+
+          .homeReleaseTop {
+            align-items:
+              flex-start;
+
+            flex-direction:
+              column;
+
+            margin-bottom:
+              32px;
+          }
+
+          .homeReleaseTitle {
+            font-size:
+              clamp(
+                39px,
+                12vw,
+                54px
+              );
+          }
+
+          .homeReleaseDescription {
+            font-size: 14px;
+          }
+
+          .homeCountdown {
+            gap: 5px;
+          }
+
+          .homeCountdownItem {
+            padding:
+              12px
+              5px;
+
+            border-radius:
+              12px;
+          }
+
+          .homeCountdownItem strong {
+            font-size: 21px;
+          }
+
+          .homeCountdownItem span {
+            font-size: 7px;
+          }
+
+          .homeReleasePanel {
+            padding: 18px;
+          }
+
           .homeNewsGrid {
             grid-template-columns:
               minmax(
@@ -887,7 +2019,8 @@ export default function HomePage() {
           }
 
           .homePatchCard {
-            border-radius: 20px;
+            border-radius:
+              20px;
           }
 
           .homePatchImageWrap {
@@ -948,6 +2081,7 @@ export default function HomePage() {
           }
         }
 
+
         /* =========================================
            VERY SMALL MOBILE
         ========================================== */
@@ -956,7 +2090,8 @@ export default function HomePage() {
           max-width: 390px
         ) {
           .homeHero {
-            min-height: 380px;
+            min-height:
+              380px;
 
             padding:
               24px
@@ -989,6 +2124,17 @@ export default function HomePage() {
             gap: 8px;
           }
 
+          .homeCountdown {
+            grid-template-columns:
+              repeat(
+                2,
+                minmax(
+                  0,
+                  1fr
+                )
+              );
+          }
+
           .homeGalleryGrid {
             grid-template-columns:
               1fr;
@@ -1005,6 +2151,7 @@ export default function HomePage() {
           }
         }
 
+
         /* =========================================
            REDUCED MOTION
         ========================================== */
@@ -1015,6 +2162,7 @@ export default function HomePage() {
         ) {
           .homePrimaryButton,
           .homeSecondaryButton,
+          .homeCopyButton,
           .homePatchReadMore span,
           .homeSectionViewAll {
             transition: none;
@@ -1025,85 +2173,647 @@ export default function HomePage() {
   );
 }
 
+
+function ReleaseCard({
+  release,
+  loading,
+}: {
+  release:
+    PublicReleaseInfo | null;
+
+  loading:
+    boolean;
+}) {
+  const [
+    now,
+    setNow,
+  ] =
+    useState(
+      () =>
+        Date.now()
+    );
+
+  const [
+    copied,
+    setCopied,
+  ] =
+    useState(false);
+
+
+  useEffect(() => {
+    const interval =
+      window.setInterval(
+        () => {
+          setNow(
+            Date.now()
+          );
+        },
+        1000
+      );
+
+
+    return () => {
+      window.clearInterval(
+        interval
+      );
+    };
+  }, []);
+
+
+  const countdown =
+    useMemo(
+      () => {
+        if (
+          !release
+        ) {
+          return null;
+        }
+
+
+        return createCountdown(
+          release.releaseAt,
+          now
+        );
+      },
+      [
+        release,
+        now,
+      ]
+    );
+
+
+  async function copyCode() {
+    if (
+      !release?.islandCode
+    ) {
+      return;
+    }
+
+
+    try {
+      await navigator.clipboard.writeText(
+        release.islandCode
+      );
+
+      setCopied(
+        true
+      );
+
+
+      window.setTimeout(
+        () => {
+          setCopied(
+            false
+          );
+        },
+        1800
+      );
+    } catch (
+      error
+    ) {
+      console.error(
+        "Could not copy island code:",
+        error
+      );
+    }
+  }
+
+
+  if (
+    loading ||
+    !release
+  ) {
+    return (
+      <section
+        id="auros-release"
+        className="auros-card homeReleaseCard"
+      >
+        <div className="homeReleaseTop">
+          <div className="homeReleaseBrand">
+            <span className="homeReleaseBrandOrb" />
+
+            AUROS BATTLE ROYALE
+          </div>
+
+          <div className="homeReleaseStatus">
+            <span className="homeReleaseStatusDot" />
+
+            CHECKING RELEASE STATUS
+          </div>
+        </div>
+
+        <div className="homeReleaseGrid">
+          <div>
+            <div className="homeReleaseEyebrow">
+              PREPARING AUROS
+            </div>
+
+            <h2 className="homeReleaseTitle">
+              The island is
+              getting ready.
+            </h2>
+
+            <p className="homeReleaseDescription">
+              Connecting to the AUROS
+              release service...
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+
+  if (
+    release.state ===
+    "released"
+  ) {
+    return (
+      <section
+        id="auros-release"
+        className="auros-card homeReleaseCard homeReleaseCardReleased"
+      >
+        <div className="homeReleaseTop">
+          <div className="homeReleaseBrand">
+            <span className="homeReleaseBrandOrb" />
+
+            AUROS BATTLE ROYALE
+          </div>
+
+          <div className="homeReleaseStatus homeReleaseStatusReleased">
+            <span className="homeReleaseStatusDot" />
+
+            RELEASED
+          </div>
+        </div>
+
+        <div className="homeReleaseGrid">
+          <div>
+            <div className="homeReleaseLiveBadge">
+              <span />
+
+              AUROS BR IS NOW LIVE
+            </div>
+
+            <h2 className="homeReleaseTitle">
+              PLAY AUROS NOW!
+            </h2>
+
+            <p className="homeReleaseDescription">
+              The wait is over.
+              Drop onto the island,
+              explore AUROS and fight
+              for the Victory Royale.
+            </p>
+
+            {release.islandCode ? (
+              <div className="homeIslandCode">
+                <div className="homeIslandCodeLabel">
+                  FORTNITE ISLAND CODE
+                </div>
+
+                <div className="homeIslandCodeValue">
+                  {
+                    release.islandCode
+                  }
+                </div>
+
+                <div className="homeReleaseActions">
+                  <button
+                    type="button"
+                    className="homeCopyButton"
+                    onClick={
+                      copyCode
+                    }
+                  >
+                    {copied
+                      ? "COPIED!"
+                      : "COPY ISLAND CODE"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="homeIslandCode">
+                <div className="homeIslandCodeLabel">
+                  ISLAND CODE
+                </div>
+
+                <div className="homeIslandCodeValue">
+                  COMING ONLINE
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="homeReleasePanel homeReleasedPanel">
+            <div className="homeReleaseLock">
+              ✓
+            </div>
+
+            <small>
+              RELEASE STATUS
+            </small>
+
+            <h3>
+              The island is open.
+            </h3>
+
+            <p>
+              AUROS Battle Royale
+              has officially launched.
+              Copy the island code
+              and enter it inside
+              Fortnite.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+
+  if (
+    release.state ===
+    "live_event"
+  ) {
+    return (
+      <section
+        id="auros-release"
+        className="auros-card homeReleaseCard"
+      >
+        <div className="homeReleaseTop">
+          <div className="homeReleaseBrand">
+            <span className="homeReleaseBrandOrb" />
+
+            AUROS BATTLE ROYALE
+          </div>
+
+          <div className="homeReleaseStatus homeReleaseStatusLive">
+            <span className="homeReleaseStatusDot" />
+
+            LIVE EVENT
+          </div>
+        </div>
+
+        <div className="homeReleaseGrid">
+          <div>
+            <div className="homeReleaseEyebrow">
+              RELOADSTAR
+            </div>
+
+            <h2 className="homeReleaseTitle">
+              Something is
+              happening...
+            </h2>
+
+            <p className="homeReleaseDescription">
+              The AUROS release
+              sequence has begun.
+              Stay here.
+            </p>
+          </div>
+
+          <div className="homeReleasePanel">
+            <div className="homeReleaseLock">
+              ✦
+            </div>
+
+            <small>
+              RELEASE SEQUENCE
+            </small>
+
+            <h3>
+              Event in progress.
+            </h3>
+
+            <p>
+              AUROS Battle Royale
+              remains locked until
+              the release sequence
+              is complete.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+
+  return (
+    <section
+      id="auros-release"
+      className="auros-card homeReleaseCard"
+    >
+      <div className="homeReleaseTop">
+        <div className="homeReleaseBrand">
+          <span className="homeReleaseBrandOrb" />
+
+          AUROS BATTLE ROYALE
+        </div>
+
+        <div className="homeReleaseStatus">
+          <span className="homeReleaseStatusDot" />
+
+          COMING SOON
+        </div>
+      </div>
+
+      <div className="homeReleaseGrid">
+        <div>
+          <div className="homeReleaseEyebrow">
+            RELEASE COUNTDOWN
+          </div>
+
+          <h2 className="homeReleaseTitle">
+            The island is
+            almost ready.
+          </h2>
+
+          <p className="homeReleaseDescription">
+            AUROS Battle Royale
+            is approaching.
+            When the release
+            sequence begins,
+            stay on this page.
+          </p>
+
+          {countdown && (
+            <Countdown
+              value={
+                countdown
+              }
+            />
+          )}
+        </div>
+
+        <div className="homeReleasePanel">
+          <div className="homeReleaseLock">
+            ◇
+          </div>
+
+          <small>
+            RELEASE STATUS
+          </small>
+
+          <h3>
+            AUROS is locked.
+          </h3>
+
+          <p>
+            The island code and
+            PLAY AUROS NOW will
+            unlock during the
+            official AUROS release.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+
+function Countdown({
+  value,
+}: {
+  value:
+    CountdownValue;
+}) {
+  return (
+    <div className="homeCountdown">
+      <CountdownItem
+        value={
+          value.days
+        }
+        label="DAYS"
+      />
+
+      <CountdownItem
+        value={
+          value.hours
+        }
+        label="HOURS"
+      />
+
+      <CountdownItem
+        value={
+          value.minutes
+        }
+        label="MINUTES"
+      />
+
+      <CountdownItem
+        value={
+          value.seconds
+        }
+        label="SECONDS"
+      />
+    </div>
+  );
+}
+
+
+function CountdownItem({
+  value,
+  label,
+}: {
+  value:
+    number;
+
+  label:
+    string;
+}) {
+  return (
+    <div className="homeCountdownItem">
+      <strong>
+        {String(
+          value
+        ).padStart(
+          2,
+          "0"
+        )}
+      </strong>
+
+      <span>
+        {label}
+      </span>
+    </div>
+  );
+}
+
+
+function createCountdown(
+  target:
+    string,
+
+  now:
+    number
+): CountdownValue {
+  const targetTime =
+    new Date(
+      target
+    ).getTime();
+
+  const difference =
+    Math.max(
+      0,
+      targetTime -
+        now
+    );
+
+  const totalSeconds =
+    Math.floor(
+      difference /
+        1000
+    );
+
+
+  return {
+    days:
+      Math.floor(
+        totalSeconds /
+          86400
+      ),
+
+    hours:
+      Math.floor(
+        (
+          totalSeconds %
+          86400
+        ) /
+          3600
+      ),
+
+    minutes:
+      Math.floor(
+        (
+          totalSeconds %
+          3600
+        ) /
+          60
+      ),
+
+    seconds:
+      totalSeconds %
+      60,
+  };
+}
+
+
 function SectionTitle({
   eyebrow,
   title,
   href,
 }: {
-  eyebrow: string;
-  title: string;
-  href: string;
+  eyebrow:
+    string;
+
+  title:
+    string;
+
+  href?:
+    string;
 }) {
   return (
     <div className="homeSectionTitle">
       <div className="homeSectionTitleText">
         <div className="homeSectionEyebrow">
-          {eyebrow}
+          {
+            eyebrow
+          }
         </div>
 
         <h2>
-          {title}
+          {
+            title
+          }
         </h2>
       </div>
 
-      <Link
-        href={href}
-        className="homeSectionViewAll"
-      >
-        View all →
-      </Link>
+      {href && (
+        <Link
+          href={
+            href
+          }
+          className="homeSectionViewAll"
+        >
+          View all →
+        </Link>
+      )}
     </div>
   );
 }
+
 
 function Primary({
   href,
   children,
 }: {
-  href: string;
-  children: React.ReactNode;
+  href:
+    string;
+
+  children:
+    React.ReactNode;
 }) {
   return (
     <Link
-      href={href}
+      href={
+        href
+      }
       className="homePrimaryButton"
     >
-      {children}
+      {
+        children
+      }
     </Link>
   );
 }
+
 
 function Secondary({
   href,
   children,
 }: {
-  href: string;
-  children: React.ReactNode;
+  href:
+    string;
+
+  children:
+    React.ReactNode;
 }) {
   return (
     <Link
-      href={href}
+      href={
+        href
+      }
       className="homeSecondaryButton"
     >
-      {children}
+      {
+        children
+      }
     </Link>
   );
 }
 
+
 function Empty({
   text,
 }: {
-  text: string;
+  text:
+    string;
 }) {
   return (
     <div
       className="auros-card"
       style={{
-        padding: 24,
-        color: "#90a4c4",
+        padding:
+          24,
+
+        color:
+          "#90a4c4",
       }}
     >
-      {text}
+      {
+        text
+      }
     </div>
   );
 }
