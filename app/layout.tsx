@@ -2,8 +2,9 @@ import type {
   Metadata,
 } from "next";
 
-import type {
-  ReactNode,
+import {
+  Suspense,
+  type ReactNode,
 } from "react";
 
 import "./globals.css";
@@ -242,13 +243,20 @@ export default function RootLayout({
             }
           />
 
-          <ReloadstarRoot>
-            <AurosSiteShell>
-              {
-                children
-              }
-            </AurosSiteShell>
-          </ReloadstarRoot>
+
+          <Suspense
+            fallback={
+              null
+            }
+          >
+            <ReloadstarRoot>
+              <AurosSiteShell>
+                {
+                  children
+                }
+              </AurosSiteShell>
+            </ReloadstarRoot>
+          </Suspense>
         </LanguageProvider>
       </body>
     </html>
