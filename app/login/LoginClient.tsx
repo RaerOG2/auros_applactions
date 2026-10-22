@@ -44,6 +44,9 @@ export default function LoginClient() {
   const [registerConfirm, setRegisterConfirm] =
     useState("");
 
+  const [legalAccepted, setLegalAccepted] =
+    useState(false);
+
   const [submitting, setSubmitting] =
     useState(false);
 
@@ -85,6 +88,14 @@ export default function LoginClient() {
   ) {
     event.preventDefault();
 
+    if (!legalAccepted) {
+      setError(
+        "Please accept the Terms of Use and acknowledge the Privacy Policy."
+      );
+
+      return;
+    }
+
     if (
       registerPassword !==
       registerConfirm
@@ -108,6 +119,8 @@ export default function LoginClient() {
           username: registerUsername,
           displayName:
             registerDisplayName,
+          acceptedLegal:
+            legalAccepted,
         });
 
       if (result.session) {
@@ -434,11 +447,27 @@ export default function LoginClient() {
                     />
                   </div>
 
+                  <label className="accountLegalConsent">
+                    <input
+                      type="checkbox"
+                      checked={legalAccepted}
+                      onChange={(event) =>
+                        setLegalAccepted(event.target.checked)
+                      }
+                      required
+                    />
+
+                    <span>
+                      I agree to the <Link href="/terms" target="_blank">Terms of Use</Link> and acknowledge the <Link href="/privacy" target="_blank">Privacy Policy</Link>.
+                    </span>
+                  </label>
+
                   <button
                     className="primaryButton"
                     type="submit"
                     disabled={
-                      submitting
+                      submitting ||
+                      !legalAccepted
                     }
                   >
                     <span>
@@ -1102,6 +1131,37 @@ export default function LoginClient() {
               150,
               0.15
             );
+        }
+
+        .accountLegalConsent {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          padding: 13px 14px;
+          border: 1px solid rgba(118, 153, 214, 0.11);
+          border-radius: 12px;
+          color: #7f94b2;
+          background: rgba(8, 17, 34, 0.52);
+          font-size: 10px;
+          line-height: 1.55;
+          cursor: pointer;
+        }
+
+        .accountLegalConsent input {
+          width: 15px;
+          height: 15px;
+          flex: 0 0 auto;
+          margin: 1px 0 0;
+          accent-color: #63ddff;
+        }
+
+        .accountLegalConsent a {
+          color: #63ddff;
+          text-decoration: none;
+        }
+
+        .accountLegalConsent a:hover {
+          text-decoration: underline;
         }
 
         /* =====================================================

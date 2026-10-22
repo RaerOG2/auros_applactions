@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import {
   useEffect,
@@ -34,6 +35,8 @@ type CountdownValue = {
 
 
 export default function HomePage() {
+  const searchParams = useSearchParams();
+
   const [
     patches,
     setPatches,
@@ -116,8 +119,85 @@ export default function HomePage() {
     let active =
       true;
 
+    let timeout:
+      number | null =
+      null;
+
+
+    function scheduleNextCheck(
+      data:
+        PublicReleaseInfo | null
+    ) {
+      if (
+        !active
+      ) {
+        return;
+      }
+
+
+      let delay =
+        10_000;
+
+
+      if (
+        data?.state ===
+        "live_event"
+      ) {
+        /*
+         * During DESTINY we check very frequently so the
+         * Island Code / v1.3.0 switch happens almost
+         * immediately at 20:00.
+         */
+        delay =
+          500;
+      } else if (
+        data?.state ===
+        "released"
+      ) {
+        delay =
+          30_000;
+      } else if (
+        data
+      ) {
+        const serverNow =
+          new Date(
+            data.serverTime
+          ).getTime();
+
+        const eventStart =
+          new Date(
+            data.eventStartsAt
+          ).getTime();
+
+        const untilEvent =
+          eventStart -
+          serverNow;
+
+
+        if (
+          untilEvent <=
+          60_000
+        ) {
+          delay =
+            1_000;
+        }
+      }
+
+
+      timeout =
+        window.setTimeout(
+          loadRelease,
+          delay
+        );
+    }
+
 
     async function loadRelease() {
+      let nextData:
+        PublicReleaseInfo | null =
+        null;
+
+
       try {
         const response =
           await fetch(
@@ -142,6 +222,9 @@ export default function HomePage() {
           PublicReleaseInfo =
           await response.json();
 
+        nextData =
+          data;
+
 
         if (active) {
           setRelease(
@@ -160,6 +243,10 @@ export default function HomePage() {
           setReleaseLoading(
             false
           );
+
+          scheduleNextCheck(
+            nextData
+          );
         }
       }
     }
@@ -168,31 +255,41 @@ export default function HomePage() {
     loadRelease();
 
 
-    /*
-     * Keep the release state fresh.
-     *
-     * This means somebody who already has the
-     * website open does not have to reload when
-     * the event/release state changes.
-     */
-
-    const interval =
-      window.setInterval(
-        loadRelease,
-        15_000
-      );
-
-
     return () => {
       active =
         false;
 
-      window.clearInterval(
-        interval
-      );
+      if (
+        timeout !==
+        null
+      ) {
+        window.clearTimeout(
+          timeout
+        );
+      }
     };
   }, []);
 
+
+  const isDevPreview =
+    searchParams.get("reloadstar-dev") === "1";
+
+  const showV130 =
+    release?.state === "released" ||
+    isDevPreview;
+
+  if (showV130) {
+    return (
+      <V130Home
+        release={release}
+        releaseLoading={releaseLoading}
+        news={news}
+        patches={patches}
+        gallery={gallery}
+        isDevPreview={isDevPreview}
+      />
+    );
+  }
 
   return (
     <>
@@ -2174,6 +2271,287 @@ export default function HomePage() {
 }
 
 
+function V130Home({
+  release,
+  releaseLoading,
+  news,
+  patches,
+  gallery,
+  isDevPreview,
+}: {
+  release: PublicReleaseInfo | null;
+  releaseLoading: boolean;
+  news: NewsItem[];
+  patches: CommunityPatchnote[];
+  gallery: GalleryItem[];
+  isDevPreview: boolean;
+}) {
+  const [copied, setCopied] = useState(false);
+  const actuallyReleased = release?.state === "released";
+  const islandCode = actuallyReleased ? release?.islandCode : null;
+
+  async function copyCode() {
+    if (!islandCode) return;
+
+    try {
+      await navigator.clipboard.writeText(islandCode);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch (error) {
+      console.error("Could not copy island code:", error);
+    }
+  }
+
+  return (
+    <>
+      <main className="homeV130">
+        <section className="homeV130Hero">
+          <div className="homeV130HeroGrid" />
+          <div className="homeV130HeroGlow" />
+
+          <div className="homeV130HeroCopy">
+            <div className="homeV130Kicker">
+              <span className="homeV130LiveDot" />
+              REALITY STATUS
+              <b>STABLE</b>
+              <i />
+              AUROS 1.3.0
+            </div>
+
+            <h1>
+              AUROS
+              <span>BATTLE ROYALE</span>
+            </h1>
+
+            <p>
+              The island is live. Enter AUROS, explore the reconstructed
+              reality and fight for the Victory Royale.
+            </p>
+
+            <div className="homeV130Access">
+              <div className="homeV130AccessHead">
+                <div>
+                  <small>ISLAND ACCESS</small>
+                  <strong>AUROS BATTLE ROYALE</strong>
+                </div>
+                <span className={actuallyReleased ? "isOnline" : "isPreview"}>
+                  <i />
+                  {actuallyReleased ? "ONLINE" : "DEV PREVIEW"}
+                </span>
+              </div>
+
+              <div className="homeV130CodeRow">
+                <div>
+                  <small>FORTNITE ISLAND CODE</small>
+                  <strong>
+                    {releaseLoading
+                      ? "CHECKING..."
+                      : islandCode || "████-████-████"}
+                  </strong>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={copyCode}
+                  disabled={!islandCode}
+                >
+                  {islandCode ? (copied ? "COPIED" : "COPY CODE") : "LOCKED"}
+                </button>
+              </div>
+
+              <div className="homeV130AccessBottom">
+                <span><i /> NEXUS ONLINE</span>
+                <span><i /> REALITY STABLE</span>
+                <span>RELEASE 10.10.2026</span>
+              </div>
+            </div>
+
+            <div className="homeV130Actions">
+              <a
+                className={islandCode ? "homeV130Play" : "homeV130Play isDisabled"}
+                href={islandCode ? "https://www.fortnite.com/" : undefined}
+                target={islandCode ? "_blank" : undefined}
+                rel={islandCode ? "noreferrer" : undefined}
+                aria-disabled={!islandCode}
+              >
+                <span>{islandCode ? "PLAY AUROS NOW" : "PLAY ACCESS LOCKED"}</span>
+                <b>↗</b>
+              </a>
+
+              <Link href="/patchnotes" className="homeV130Secondary">
+                EXPLORE UPDATE <span>→</span>
+              </Link>
+            </div>
+          </div>
+
+          <div className="homeV130Telemetry" aria-hidden="true">
+            <span>NEXUS // CONNECTED</span>
+            <span>REALITY // 01</span>
+            <span>BUILD // 1.3.0</span>
+          </div>
+        </section>
+
+        <section className="homeV130Reality">
+          <div className="homeV130SectionHead">
+            <div>
+              <span>CURRENT REALITY</span>
+              <h2>The world after Destiny.</h2>
+            </div>
+            <p>
+              AUROS has entered a new state. The Nexuspoint is stable and the
+              island is ready for deployment.
+            </p>
+          </div>
+
+          <div className="homeV130RealityGrid">
+            <Link href="/gallery" className="homeV130FeatureCard">
+              {gallery[0]?.image_url ? (
+                <img src={gallery[0].image_url} alt={gallery[0].title || "AUROS"} />
+              ) : (
+                <div className="homeV130FeatureFallback" />
+              )}
+              <div className="homeV130FeatureShade" />
+              <div className="homeV130FeatureCopy">
+                <small>EXPLORE THE ISLAND</small>
+                <h3>{gallery[0]?.title || "The AUROS Reality"}</h3>
+                <span>OPEN GALLERY →</span>
+              </div>
+            </Link>
+
+            <div className="homeV130StatusCard">
+              <div className="homeV130StatusTop">
+                <span>AUROS SYSTEM</span>
+                <b><i /> ONLINE</b>
+              </div>
+              <StatusLine label="NEXUSPOINT" value="STABLE" />
+              <StatusLine label="REALITY SYNC" value="100%" />
+              <StatusLine label="VERSION" value="1.3.0" />
+              <StatusLine label="RELEASE" value="10 OCT 2026" />
+              <div className="homeV130StatusPulse"><i /><i /><i /><i /><i /><i /><i /><i /></div>
+            </div>
+          </div>
+        </section>
+
+        <section className="homeV130ContentSection">
+          <V130SectionHeading eyebrow="LATEST TRANSMISSIONS" title="What's new in AUROS" href="/news" />
+          <div className="homeV130NewsGrid">
+            {news.length ? news.map((item, index) => (
+              <Link href="/news" className="homeV130NewsCard" key={item.id}>
+                {item.image_url && <img src={item.image_url} alt="" />}
+                <div className="homeV130NewsBody">
+                  <div className="homeV130CardMeta"><span>NEWS</span><b>0{index + 1}</b></div>
+                  <h3>{item.title}</h3>
+                  <p>{item.summary}</p>
+                  <strong>READ TRANSMISSION →</strong>
+                </div>
+              </Link>
+            )) : <Empty text="News will appear here." />}
+          </div>
+        </section>
+
+        {patches[0] && (
+          <section className="homeV130ContentSection">
+            <V130SectionHeading eyebrow="CURRENT BUILD" title="Latest Patchnotes" href="/patchnotes" />
+            <Link href={`/patchnotes/${patches[0].slug}`} className="homeV130Patch">
+              <div className="homeV130PatchCopy">
+                <span>VERSION {patches[0].version}</span>
+                <h2>{patches[0].title}</h2>
+                <p>{patches[0].summary || patches[0].content?.slice(0, 220)}</p>
+                <strong>READ PATCHNOTES →</strong>
+              </div>
+              {patches[0].cover_url && <img src={patches[0].cover_url} alt="" />}
+            </Link>
+          </section>
+        )}
+
+        <section className="homeV130ContentSection">
+          <V130SectionHeading eyebrow="WORLD ARCHIVE" title="From the world of AUROS" href="/gallery" />
+          <div className="homeV130GalleryGrid">
+            {gallery.length ? gallery.map((item) => (
+              <Link href="/gallery" className="homeV130GalleryCard" key={item.id}>
+                <img src={item.image_url} alt={item.title} />
+                <div><strong>{item.title}</strong><span>VIEW ↗</span></div>
+              </Link>
+            )) : <Empty text="Gallery images will appear here." />}
+          </div>
+        </section>
+
+        {isDevPreview && !actuallyReleased && (
+          <div className="homeV130DevFlag">DEV PREVIEW // RELEASE DATA REMAINS LOCKED</div>
+        )}
+      </main>
+
+      <style jsx global>{`
+        .homeV130 { display:grid; gap:42px; width:100%; min-width:0; }
+        .homeV130Hero { min-height:min(760px, calc(100vh - 150px)); position:relative; overflow:hidden; display:flex; align-items:center; padding:clamp(34px,6vw,78px); border:1px solid rgba(115,174,231,.18); border-radius:30px; background:linear-gradient(112deg,rgba(4,10,22,.93) 0%,rgba(7,17,35,.76) 52%,rgba(8,19,38,.28) 100%); box-shadow:inset 0 1px rgba(255,255,255,.035),0 30px 90px rgba(0,0,0,.2); isolation:isolate; }
+        .homeV130HeroGrid { position:absolute; inset:0; z-index:-2; opacity:.32; background-image:linear-gradient(rgba(99,221,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(99,221,255,.055) 1px,transparent 1px); background-size:42px 42px; mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.78) 50%,transparent 95%); }
+        .homeV130HeroGlow { position:absolute; z-index:-1; left:-15%; bottom:-60%; width:70%; aspect-ratio:1; border-radius:50%; background:radial-gradient(circle,rgba(64,196,255,.12),rgba(102,80,255,.055) 36%,transparent 69%); filter:blur(18px); }
+        .homeV130HeroCopy { width:min(720px,61%); position:relative; z-index:2; }
+        .homeV130Kicker { display:flex; align-items:center; gap:10px; color:#8da4c4; font-size:10px; font-weight:900; letter-spacing:.14em; }
+        .homeV130Kicker b { color:#70efb5; } .homeV130Kicker>i { width:42px; height:1px; background:linear-gradient(90deg,rgba(99,221,255,.55),transparent); }
+        .homeV130LiveDot { width:7px; height:7px; border-radius:50%; background:#65e7aa; box-shadow:0 0 14px rgba(101,231,170,.9); }
+        .homeV130Hero h1 { margin:22px 0 20px; color:#fff; font-size:clamp(64px,8.5vw,118px); line-height:.77; letter-spacing:-.075em; font-weight:950; }
+        .homeV130Hero h1 span { display:block; margin-top:20px; color:transparent; font-size:.52em; letter-spacing:-.045em; -webkit-text-stroke:1px rgba(197,224,255,.72); text-shadow:0 0 38px rgba(99,221,255,.09); }
+        .homeV130HeroCopy>p { max-width:610px; margin:0; color:#a7b9d4; font-size:17px; line-height:1.72; }
+        .homeV130Access { margin-top:30px; padding:18px; border:1px solid rgba(111,185,235,.2); border-radius:20px; background:linear-gradient(135deg,rgba(9,22,43,.78),rgba(8,17,35,.54)); backdrop-filter:blur(22px); box-shadow:inset 0 1px rgba(255,255,255,.04),0 20px 50px rgba(0,0,0,.16); }
+        .homeV130AccessHead,.homeV130CodeRow,.homeV130AccessBottom { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+        .homeV130AccessHead small,.homeV130CodeRow small { display:block; color:#7189aa; font-size:8px; font-weight:900; letter-spacing:.14em; }
+        .homeV130AccessHead strong { display:block; margin-top:5px; color:#dceaff; font-size:12px; letter-spacing:.06em; }
+        .homeV130AccessHead>span { display:inline-flex; align-items:center; gap:7px; padding:7px 10px; border:1px solid rgba(97,230,166,.15); border-radius:999px; color:#70efb5; background:rgba(97,230,166,.055); font-size:8px; font-weight:900; letter-spacing:.12em; }
+        .homeV130AccessHead>span.isPreview { color:#70dfff; border-color:rgba(99,221,255,.16); background:rgba(99,221,255,.055); }
+        .homeV130AccessHead>span i { width:6px; height:6px; border-radius:50%; background:currentColor; box-shadow:0 0 10px currentColor; }
+        .homeV130CodeRow { margin-top:14px; padding:15px 16px; border:1px solid rgba(122,172,221,.14); border-radius:15px; background:rgba(3,10,22,.55); }
+        .homeV130CodeRow strong { display:block; margin-top:5px; color:#fff; font-family:var(--font-geist-mono),monospace; font-size:clamp(20px,2.5vw,28px); letter-spacing:.09em; }
+        .homeV130CodeRow button { min-width:112px; min-height:42px; padding:10px 14px; border:0; border-radius:11px; color:#06111e; background:linear-gradient(90deg,#68e1ff,#8f82ff); font-size:9px; font-weight:950; letter-spacing:.08em; cursor:pointer; }
+        .homeV130CodeRow button:disabled { cursor:not-allowed; color:#6f85a5; background:rgba(100,132,174,.1); border:1px solid rgba(120,160,210,.12); }
+        .homeV130AccessBottom { justify-content:flex-start; margin-top:13px; color:#7288a8; font-size:8px; font-weight:850; letter-spacing:.09em; flex-wrap:wrap; }
+        .homeV130AccessBottom span { display:flex; align-items:center; gap:6px; } .homeV130AccessBottom i { width:5px; height:5px; border-radius:50%; background:#63ddff; box-shadow:0 0 8px rgba(99,221,255,.8); }
+        .homeV130Actions { display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
+        .homeV130Play,.homeV130Secondary { min-height:47px; display:inline-flex; align-items:center; justify-content:center; gap:24px; padding:12px 18px; border-radius:13px; text-decoration:none; font-size:10px; font-weight:950; letter-spacing:.1em; }
+        .homeV130Play { color:#06111e; background:linear-gradient(90deg,#68e1ff,#8f82ff); box-shadow:0 10px 32px rgba(89,202,255,.14); }
+        .homeV130Play.isDisabled { pointer-events:none; color:#7389a8; border:1px solid rgba(120,160,210,.15); background:rgba(12,24,45,.62); box-shadow:none; }
+        .homeV130Secondary { color:#c8d8ee; border:1px solid rgba(120,160,210,.19); background:rgba(10,21,42,.5); }
+        .homeV130Telemetry { position:absolute; right:24px; bottom:22px; display:flex; gap:16px; color:rgba(135,167,203,.45); font-size:7px; font-weight:900; letter-spacing:.13em; }
+        .homeV130SectionHead { display:grid; grid-template-columns:minmax(0,1fr) minmax(260px,.7fr); gap:28px; align-items:end; }
+        .homeV130SectionHead span,.homeV130SectionHead>div>span { color:#63ddff; font-size:9px; font-weight:950; letter-spacing:.16em; }
+        .homeV130SectionHead h2 { margin:8px 0 0; color:#fff; font-size:clamp(30px,4vw,46px); letter-spacing:-.04em; }
+        .homeV130SectionHead p { margin:0; color:#8ea4c3; line-height:1.65; font-size:13px; }
+        .homeV130RealityGrid { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(280px,.55fr); gap:16px; margin-top:18px; }
+        .homeV130FeatureCard,.homeV130StatusCard { position:relative; min-height:360px; overflow:hidden; border:1px solid rgba(120,166,215,.17); border-radius:24px; background:rgba(7,16,32,.68); }
+        .homeV130FeatureCard { display:block; color:#fff; text-decoration:none; } .homeV130FeatureCard img,.homeV130FeatureFallback { width:100%; height:100%; position:absolute; inset:0; object-fit:cover; }
+        .homeV130FeatureFallback { background:radial-gradient(circle at 70% 35%,rgba(99,221,255,.16),transparent 32%),linear-gradient(135deg,#081328,#050b16); }
+        .homeV130FeatureShade { position:absolute; inset:0; background:linear-gradient(180deg,rgba(3,8,18,.05),rgba(3,8,18,.18) 40%,rgba(3,8,18,.93)); }
+        .homeV130FeatureCopy { position:absolute; left:26px; right:26px; bottom:24px; } .homeV130FeatureCopy small { color:#68e1ff; font-size:9px; font-weight:950; letter-spacing:.14em; }
+        .homeV130FeatureCopy h3 { margin:7px 0 14px; font-size:clamp(26px,4vw,40px); letter-spacing:-.035em; } .homeV130FeatureCopy span { color:#c4d7ef; font-size:9px; font-weight:900; letter-spacing:.11em; }
+        .homeV130StatusCard { padding:24px; min-height:360px; background:linear-gradient(145deg,rgba(9,22,43,.84),rgba(5,12,25,.78)); }
+        .homeV130StatusTop { display:flex; align-items:center; justify-content:space-between; padding-bottom:18px; margin-bottom:5px; border-bottom:1px solid rgba(120,160,210,.12); color:#7790b0; font-size:8px; font-weight:950; letter-spacing:.13em; }
+        .homeV130StatusTop b { display:flex; align-items:center; gap:6px; color:#70efb5; } .homeV130StatusTop i { width:6px;height:6px;border-radius:50%;background:#70efb5;box-shadow:0 0 10px rgba(112,239,181,.8); }
+        .homeV130StatusLine { display:flex; justify-content:space-between; gap:15px; padding:15px 0; border-bottom:1px solid rgba(120,160,210,.09); } .homeV130StatusLine span { color:#7187a6; font-size:8px; font-weight:900; letter-spacing:.1em; } .homeV130StatusLine strong { color:#d7e7fa; font-size:9px; letter-spacing:.08em; }
+        .homeV130StatusPulse { height:52px; display:flex; align-items:end; gap:5px; margin-top:20px; opacity:.6; } .homeV130StatusPulse i { flex:1; border-radius:3px 3px 0 0; background:linear-gradient(#63ddff,rgba(99,221,255,.08)); animation:homeV130Bar 2.2s ease-in-out infinite; } .homeV130StatusPulse i:nth-child(1){height:22%}.homeV130StatusPulse i:nth-child(2){height:55%;animation-delay:-.3s}.homeV130StatusPulse i:nth-child(3){height:36%;animation-delay:-.7s}.homeV130StatusPulse i:nth-child(4){height:82%;animation-delay:-1.1s}.homeV130StatusPulse i:nth-child(5){height:48%;animation-delay:-.5s}.homeV130StatusPulse i:nth-child(6){height:68%;animation-delay:-1.5s}.homeV130StatusPulse i:nth-child(7){height:30%;animation-delay:-.9s}.homeV130StatusPulse i:nth-child(8){height:58%;animation-delay:-1.8s}
+        @keyframes homeV130Bar { 0%,100%{transform:scaleY(.7);opacity:.45}50%{transform:scaleY(1);opacity:1} }
+        .homeV130ContentSection { display:grid; gap:18px; }
+        .homeV130Heading { display:flex; align-items:end; justify-content:space-between; gap:20px; } .homeV130Heading small { color:#63ddff; font-size:9px;font-weight:950;letter-spacing:.15em; } .homeV130Heading h2 { margin:6px 0 0;color:#fff;font-size:clamp(27px,3.5vw,36px);letter-spacing:-.035em; } .homeV130Heading>a { color:#91a8c8;text-decoration:none;font-size:10px;font-weight:900;letter-spacing:.08em; }
+        .homeV130NewsGrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; } .homeV130NewsCard { min-width:0; overflow:hidden; color:#fff;text-decoration:none;border:1px solid rgba(120,160,210,.15);border-radius:21px;background:rgba(7,16,32,.72);backdrop-filter:blur(14px);transition:transform .16s ease,border-color .16s ease; } .homeV130NewsCard:hover { transform:translateY(-3px);border-color:rgba(99,221,255,.28); } .homeV130NewsCard>img { width:100%;aspect-ratio:16/9;object-fit:cover;display:block; } .homeV130NewsBody { padding:18px; } .homeV130CardMeta { display:flex;justify-content:space-between;color:#63ddff;font-size:8px;font-weight:950;letter-spacing:.12em; } .homeV130CardMeta b{color:#536b8c}.homeV130NewsBody h3{margin:10px 0 8px;font-size:20px}.homeV130NewsBody p{margin:0;color:#91a5c3;line-height:1.55;font-size:13px}.homeV130NewsBody>strong{display:block;margin-top:18px;color:#bcd2ea;font-size:8px;letter-spacing:.1em}
+        .homeV130Patch { display:grid;grid-template-columns:minmax(0,.85fr) minmax(340px,1.15fr);min-height:330px;overflow:hidden;color:#fff;text-decoration:none;border:1px solid rgba(120,160,210,.16);border-radius:24px;background:rgba(7,16,32,.72); } .homeV130PatchCopy{padding:clamp(25px,4vw,42px);display:flex;flex-direction:column;justify-content:center}.homeV130PatchCopy>span{color:#63ddff;font-size:9px;font-weight:950;letter-spacing:.14em}.homeV130PatchCopy h2{margin:10px 0;font-size:clamp(30px,4vw,44px);letter-spacing:-.04em}.homeV130PatchCopy p{margin:0;color:#98abc6;line-height:1.65}.homeV130PatchCopy strong{margin-top:22px;color:#c4d8ee;font-size:9px;letter-spacing:.1em}.homeV130Patch>img{width:100%;height:100%;object-fit:cover;min-height:330px}
+        .homeV130GalleryGrid { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.homeV130GalleryCard{position:relative;min-height:230px;overflow:hidden;color:#fff;text-decoration:none;border:1px solid rgba(120,160,210,.14);border-radius:19px;background:#071020}.homeV130GalleryCard img{width:100%;height:100%;position:absolute;inset:0;object-fit:cover;transition:transform .3s ease}.homeV130GalleryCard::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 45%,rgba(3,8,18,.9))}.homeV130GalleryCard>div{position:absolute;z-index:2;left:15px;right:15px;bottom:14px;display:flex;justify-content:space-between;gap:12px;align-items:end}.homeV130GalleryCard strong{font-size:13px}.homeV130GalleryCard span{color:#9fb5d0;font-size:8px;font-weight:900}.homeV130GalleryCard:hover img{transform:scale(1.035)}
+        .homeV130DevFlag { position:fixed;z-index:80;right:18px;bottom:18px;padding:9px 12px;border:1px solid rgba(99,221,255,.18);border-radius:10px;color:#63ddff;background:rgba(5,13,27,.88);backdrop-filter:blur(14px);font-size:7px;font-weight:950;letter-spacing:.12em;pointer-events:none; }
+        @media(max-width:900px){.homeV130Hero{min-height:680px;align-items:end}.homeV130HeroCopy{width:100%;max-width:680px}.homeV130Telemetry{display:none}.homeV130RealityGrid{grid-template-columns:1fr}.homeV130NewsGrid{grid-template-columns:1fr 1fr}.homeV130GalleryGrid{grid-template-columns:1fr 1fr}.homeV130Patch{grid-template-columns:1fr}.homeV130Patch>img{order:-1;min-height:240px;max-height:360px}.homeV130SectionHead{grid-template-columns:1fr}}
+        @media(max-width:600px){.homeV130{gap:32px}.homeV130Hero{min-height:650px;padding:28px 20px;border-radius:22px}.homeV130Hero h1{font-size:clamp(54px,18vw,78px)}.homeV130Hero h1 span{margin-top:14px}.homeV130HeroCopy>p{font-size:14px}.homeV130Kicker{font-size:8px;flex-wrap:wrap}.homeV130Access{padding:14px}.homeV130AccessHead,.homeV130CodeRow{align-items:flex-start;flex-direction:column}.homeV130CodeRow button{width:100%}.homeV130Actions{display:grid;grid-template-columns:1fr}.homeV130Play,.homeV130Secondary{width:100%}.homeV130NewsGrid,.homeV130GalleryGrid{grid-template-columns:1fr}.homeV130FeatureCard,.homeV130StatusCard{min-height:310px}.homeV130Heading{align-items:flex-start;flex-direction:column;gap:8px}.homeV130PatchCopy{padding:24px 20px}}
+        @media(prefers-reduced-motion:reduce){.homeV130StatusPulse i,.homeV130NewsCard,.homeV130GalleryCard img{animation:none!important;transition:none!important}}
+      `}</style>
+    </>
+  );
+}
+
+function StatusLine({ label, value }: { label: string; value: string }) {
+  return <div className="homeV130StatusLine"><span>{label}</span><strong>{value}</strong></div>;
+}
+
+function V130SectionHeading({ eyebrow, title, href }: { eyebrow: string; title: string; href: string }) {
+  return <div className="homeV130Heading"><div><small>{eyebrow}</small><h2>{title}</h2></div><Link href={href}>VIEW ALL →</Link></div>;
+}
+
+
 function ReleaseCard({
   release,
   loading,
@@ -2458,7 +2836,7 @@ function ReleaseCard({
         <div className="homeReleaseGrid">
           <div>
             <div className="homeReleaseEyebrow">
-              RELOADSTAR
+              DESTINY
             </div>
 
             <h2 className="homeReleaseTitle">

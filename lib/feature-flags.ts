@@ -4,6 +4,9 @@ export const FEATURE_FLAGS = {
 
   MULTI_LANGUAGE:
     "MULTI_LANGUAGE",
+
+  COMPETITIVE:
+    "COMPETITIVE",
 } as const;
 
 

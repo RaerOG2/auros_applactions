@@ -1,52 +1,40 @@
 "use client";
-
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-
 import { getPublishedNews } from "../../services/community.service";
 import type { NewsItem } from "../../types/community";
-
 export default function NewsPage() {
   const [items, setItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     getPublishedNews()
       .then(setItems)
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
-
   const pinned = useMemo(() => {
     return items.filter((item) => item.pinned);
   }, [items]);
-
   const normalNews = useMemo(() => {
     return items.filter((item) => !item.pinned);
   }, [items]);
-
   const featured = pinned[0] ?? items[0] ?? null;
-
   const remaining = useMemo(() => {
     if (!featured) {
       return [];
     }
-
     return items.filter((item) => item.id !== featured.id);
   }, [items, featured]);
-
   function formatDate(value?: string | null) {
     if (!value) {
       return "";
     }
-
     return new Intl.DateTimeFormat("en-GB", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     }).format(new Date(value));
   }
-
   return (
     <>
       <div className="newsPage">
@@ -54,15 +42,12 @@ export default function NewsPage() {
           <div className="newsEyebrow">
             COMMUNITY
           </div>
-
           <h1>News</h1>
-
           <p>
             Announcements, reveals and smaller updates from the world of Auros
             Royale.
           </p>
         </header>
-
         {loading ? (
           <div className="newsEmpty">
             Loading news...
@@ -80,13 +65,11 @@ export default function NewsPage() {
                     <span>
                       {featured.pinned ? "PINNED" : "LATEST"}
                     </span>
-
                     <h2>
                       Latest from Auros
                     </h2>
                   </div>
                 </div>
-
                 <Link
                   href={`/news/${featured.slug}`}
                   className="featuredNewsCard"
@@ -97,11 +80,9 @@ export default function NewsPage() {
                         src={featured.image_url}
                         alt={featured.title}
                       />
-
                       <div className="featuredImageShade" />
                     </div>
                   )}
-
                   <div className="featuredNewsContent">
                     <div className="newsMeta">
                       <span
@@ -115,23 +96,19 @@ export default function NewsPage() {
                           ? "PINNED NEWS"
                           : "NEWS"}
                       </span>
-
                       {featured.created_at && (
                         <span className="newsDate">
                           {formatDate(featured.created_at)}
                         </span>
                       )}
                     </div>
-
                     <h2>
                       {featured.title}
                     </h2>
-
                     <p>
                       {featured.summary ||
                         featured.content}
                     </p>
-
                     <div className="readMore">
                       Read article
                       <span>→</span>
@@ -140,7 +117,6 @@ export default function NewsPage() {
                 </Link>
               </section>
             )}
-
             {remaining.length > 0 && (
               <section className="allNewsSection">
                 <div className="sectionHeader sectionHeaderRow">
@@ -148,12 +124,10 @@ export default function NewsPage() {
                     <span>
                       COMMUNITY FEED
                     </span>
-
                     <h2>
                       More News
                     </h2>
                   </div>
-
                   <small>
                     {remaining.length}{" "}
                     {remaining.length === 1
@@ -161,7 +135,6 @@ export default function NewsPage() {
                       : "articles"}
                   </small>
                 </div>
-
                 <div className="newsGrid">
                   {remaining.map((item) => (
                     <Link
@@ -178,7 +151,6 @@ export default function NewsPage() {
                           />
                         </div>
                       )}
-
                       <div className="newsCardContent">
                         <div className="newsMeta">
                           <span
@@ -192,23 +164,19 @@ export default function NewsPage() {
                               ? "PINNED"
                               : "NEWS"}
                           </span>
-
                           {item.created_at && (
                             <span className="newsDate">
                               {formatDate(item.created_at)}
                             </span>
                           )}
                         </div>
-
                         <h3>
                           {item.title}
                         </h3>
-
                         <p>
                           {item.summary ||
                             item.content}
                         </p>
-
                         <div className="readMore small">
                           Read more
                           <span>→</span>
@@ -222,7 +190,6 @@ export default function NewsPage() {
           </>
         )}
       </div>
-
       <style jsx global>{`
         .newsPage {
           width: 100%;
@@ -230,25 +197,21 @@ export default function NewsPage() {
           margin: 0 auto;
           padding-bottom: 70px;
         }
-
         .newsHeader {
           padding: 45px 0 32px;
         }
-
         .newsEyebrow {
           color: #63ddff;
           font-size: 11px;
           font-weight: 900;
           letter-spacing: 0.15em;
         }
-
         .newsHeader h1 {
           margin: 8px 0 12px;
           font-size: clamp(44px, 7vw, 72px);
           line-height: 1;
           letter-spacing: -0.045em;
         }
-
         .newsHeader p {
           max-width: 700px;
           margin: 0;
@@ -256,41 +219,37 @@ export default function NewsPage() {
           font-size: 16px;
           line-height: 1.7;
         }
-
         .sectionHeader {
           margin-bottom: 14px;
         }
-
         .sectionHeaderRow {
           display: flex;
           align-items: flex-end;
           justify-content: space-between;
           gap: 18px;
         }
-
         .sectionHeader span {
           color: #63ddff;
           font-size: 9px;
           font-weight: 900;
           letter-spacing: 0.13em;
         }
-
         .sectionHeader h2 {
           margin: 4px 0 0;
           font-size: 24px;
         }
-
         .sectionHeader small {
           color: #667d9d;
           font-size: 10px;
         }
-
         .featuredNewsSection {
           margin-bottom: 42px;
         }
-
         .featuredNewsCard {
           position: relative;
+          isolation: isolate;
+          width: 100%;
+          min-width: 0;
           min-height: 460px;
           display: flex;
           align-items: flex-end;
@@ -305,51 +264,66 @@ export default function NewsPage() {
         .featuredImageWrap {
           position: absolute;
           inset: 0;
+          z-index: 0;
+          overflow: hidden;
+          pointer-events: none;
         }
 
         .featuredImageWrap img {
+          display: block;
           width: 100%;
           height: 100%;
           object-fit: cover;
+          object-position: center;
           transition: transform 0.3s ease;
         }
 
-        .featuredNewsCard:hover
-          .featuredImageWrap img {
+        .featuredNewsCard:hover .featuredImageWrap img {
           transform: scale(1.02);
         }
 
         .featuredImageShade {
           position: absolute;
           inset: 0;
+          z-index: 1;
           background:
             linear-gradient(
               to top,
-              rgba(3, 8, 18, 0.98) 0%,
-              rgba(3, 8, 18, 0.72) 35%,
-              rgba(3, 8, 18, 0.18) 75%
+              rgba(3, 8, 18, 0.99) 0%,
+              rgba(3, 8, 18, 0.84) 34%,
+              rgba(3, 8, 18, 0.26) 72%,
+              rgba(3, 8, 18, 0.08) 100%
             );
         }
 
         .featuredNewsContent {
           position: relative;
-          z-index: 2;
-          max-width: 780px;
+          z-index: 3;
+          width: min(100%, 780px);
+          min-width: 0;
           padding: 34px;
+          box-sizing: border-box;
         }
 
         .featuredNewsContent h2 {
+          max-width: 100%;
           margin: 10px 0;
+          color: #ffffff;
           font-size: clamp(30px, 5vw, 48px);
           line-height: 1.05;
+          overflow-wrap: anywhere;
         }
 
         .featuredNewsContent p {
+          display: -webkit-box;
           max-width: 700px;
+          overflow: hidden;
           margin: 0;
           color: #b1bfd4;
           font-size: 14px;
           line-height: 1.7;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
         }
 
         .newsMeta {
@@ -358,23 +332,19 @@ export default function NewsPage() {
           gap: 10px;
           flex-wrap: wrap;
         }
-
         .newsBadge {
           color: #63ddff;
           font-size: 8px;
           font-weight: 900;
           letter-spacing: 0.1em;
         }
-
         .newsBadge.pinned {
           color: #ffd66b;
         }
-
         .newsDate {
           color: #7086a6;
           font-size: 9px;
         }
-
         .readMore {
           display: inline-flex;
           align-items: center;
@@ -384,21 +354,17 @@ export default function NewsPage() {
           font-size: 11px;
           font-weight: 800;
         }
-
         .readMore.small {
           margin-top: 14px;
           color: #b7c9df;
           font-size: 9px;
         }
-
         .readMore span {
           color: #63ddff;
         }
-
         .allNewsSection {
           margin-top: 20px;
         }
-
         .newsGrid {
           display: grid;
           grid-template-columns: repeat(
@@ -407,7 +373,6 @@ export default function NewsPage() {
           );
           gap: 14px;
         }
-
         .newsCard {
           min-width: 0;
           overflow: hidden;
@@ -421,19 +386,16 @@ export default function NewsPage() {
             border-color 0.18s ease,
             background 0.18s ease;
         }
-
         .newsCard:hover {
           transform: translateY(-3px);
           border-color: rgba(99, 221, 255, 0.27);
           background: rgba(9, 20, 39, 0.92);
         }
-
         .newsCardImage {
           aspect-ratio: 16 / 9;
           overflow: hidden;
           background: #030812;
         }
-
         .newsCardImage img {
           display: block;
           width: 100%;
@@ -441,22 +403,18 @@ export default function NewsPage() {
           object-fit: cover;
           transition: transform 0.22s ease;
         }
-
         .newsCard:hover
           .newsCardImage img {
           transform: scale(1.025);
         }
-
         .newsCardContent {
           padding: 16px;
         }
-
         .newsCardContent h3 {
           margin: 8px 0 6px;
           font-size: 18px;
           line-height: 1.25;
         }
-
         .newsCardContent p {
           display: -webkit-box;
           overflow: hidden;
@@ -467,7 +425,6 @@ export default function NewsPage() {
           -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
         }
-
         .newsEmpty {
           padding: 55px 20px;
           text-align: center;
@@ -476,7 +433,6 @@ export default function NewsPage() {
           color: #6e84a5;
           background: rgba(6, 14, 28, 0.5);
         }
-
         @media (max-width: 950px) {
           .newsGrid {
             grid-template-columns: repeat(
@@ -488,6 +444,15 @@ export default function NewsPage() {
           .featuredNewsCard {
             min-height: 400px;
           }
+
+          .featuredNewsContent {
+            width: min(100%, 680px);
+            padding: 28px;
+          }
+
+          .featuredNewsContent h2 {
+            font-size: clamp(28px, 6vw, 42px);
+          }
         }
 
         @media (max-width: 650px) {
@@ -496,11 +461,22 @@ export default function NewsPage() {
           }
 
           .featuredNewsCard {
-            min-height: 400px;
+            min-height: 390px;
+            border-radius: 18px;
           }
 
           .featuredNewsContent {
+            width: 100%;
             padding: 22px;
+          }
+
+          .featuredNewsContent h2 {
+            font-size: clamp(26px, 8vw, 36px);
+          }
+
+          .featuredNewsContent p {
+            font-size: 13px;
+            -webkit-line-clamp: 2;
           }
 
           .newsGrid {
@@ -516,11 +492,9 @@ export default function NewsPage() {
           .featuredNewsCard img {
             transition: none;
           }
-
           .newsCard:hover {
             transform: none;
           }
-
           .newsCard:hover img,
           .featuredNewsCard:hover img {
             transform: none;

@@ -5,9 +5,9 @@ import type {
 
 export const RELOADSTAR_DEV_NAME = "reloadstar";
 
-export const RELOADSTAR_EVENT_START = "2026-10-10T19:55:00+02:00";
+export const RELOADSTAR_EVENT_START = "2026-10-24T14:00:00+02:00";
 
-export const AUROS_RELEASE_TIME = "2026-10-10T20:00:00+02:00";
+export const AUROS_RELEASE_TIME = "2026-10-24T14:05:00+02:00";
 
 export const RELOADSTAR_DURATION = 300;
 

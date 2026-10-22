@@ -1,0 +1,422 @@
+/* ============================================================
+   AUROS COMPETITIVE — STANDALONE OBS BROADCAST SOURCE
+   Designed for Chromium / OBS Browser Source at 1920 x 1080.
+   Transparent outside the overlays.
+   ============================================================ */
+
+html:has(.aurosStandaloneBroadcast),
+body:has(.aurosStandaloneBroadcast) {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent !important;
+}
+
+.aurosStandaloneBroadcast {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  overflow: hidden;
+  background: transparent;
+}
+
+.compObsCanvas {
+  --obs-red: #ff3143;
+  --obs-gold: #f5c451;
+  --obs-white: #fff8f6;
+
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  min-height: 350px;
+  overflow: hidden;
+
+  background: transparent;
+  color: var(--obs-white);
+
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.compObsCanvas--empty {
+  display: grid;
+  place-items: center;
+}
+
+.compObsLoading,
+.compObsUnavailable {
+  padding: 16px 22px;
+  border: 1px solid rgba(255, 49, 67, 0.44);
+  border-radius: 12px;
+  background: rgba(7, 6, 9, 0.94);
+  color: #f0b9bc;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+}
+
+.compObsUnavailable {
+  display: grid;
+  gap: 14px;
+  text-align: center;
+}
+
+.compObsUnavailable > span {
+  max-width: 400px;
+  color: #b0a2a3;
+  font-size: 11px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.compObsUnavailable > a {
+  color: var(--obs-gold);
+  font-size: 10px;
+  text-decoration: none;
+}
+
+.compObsUpperLeft {
+  position: absolute;
+  top: 5%;
+  left: 3%;
+  display: grid;
+  gap: 7px;
+  max-width: 58%;
+}
+
+.compObsEventTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 56, 70, 0.36);
+  border-radius: 6px;
+  background: rgba(13, 7, 11, 0.94);
+  color: #ff6472;
+  font-size: clamp(8px, 0.66vw, 12px);
+  letter-spacing: 0.13em;
+}
+
+.compObsSignal {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--obs-red);
+  box-shadow: 0 0 16px rgba(255, 49, 67, 0.7);
+}
+
+.compObsTitleBlock {
+  padding: 18px 22px 20px;
+  border: 1px solid rgba(255, 49, 67, 0.3);
+  border-left: 4px solid var(--obs-red);
+  border-radius: 0 10px 10px 0;
+  background:
+    linear-gradient(
+      115deg,
+      rgba(8, 6, 9, 0.98),
+      rgba(39, 7, 12, 0.92)
+    );
+  box-shadow: 0 24px 75px rgba(0, 0, 0, 0.32);
+}
+
+.compObsTitleBlock > small {
+  color: var(--obs-gold);
+  font-size: clamp(10px, 0.85vw, 17px);
+  letter-spacing: 0.16em;
+}
+
+.compObsTitleBlock > h1 {
+  margin: 5px 0 9px;
+  font-size: clamp(19px, 2vw, 40px);
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.compObsTitleBlock > p {
+  margin: 0;
+  color: #d2b7b6;
+  font-size: clamp(9px, 0.75vw, 14px);
+  letter-spacing: 0.08em;
+}
+
+.compObsLeaderboard {
+  position: absolute;
+  top: 5%;
+  right: 3%;
+  width: min(31%, 580px);
+  min-width: 355px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 55, 71, 0.44);
+  border-radius: 13px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(13, 7, 11, 0.98),
+      rgba(2, 2, 4, 0.96)
+    );
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.48);
+}
+
+.compObsLeaderboard > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 22px;
+  border-bottom: 2px solid var(--obs-red);
+  background: rgba(183, 8, 26, 0.13);
+}
+
+.compObsLeaderboard > header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.compObsLeaderboard > header small {
+  color: #ff6875;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+}
+
+.compObsLeaderboard > header strong {
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 950;
+}
+
+.compObsLeaderboard > header > span {
+  color: var(--obs-gold);
+  font-size: 15px;
+}
+
+.compObsRows {
+  display: grid;
+}
+
+.compObsRow {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 45px 62px;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+  font-size: clamp(11px, 0.87vw, 17px);
+}
+
+.compObsRow:nth-child(1) {
+  background: rgba(245, 196, 81, 0.075);
+}
+
+.compObsRow > strong {
+  color: var(--obs-gold);
+}
+
+.compObsRow > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compObsRow > small {
+  color: #e0b5b6;
+  font-size: 10px;
+  text-align: center;
+}
+
+.compObsRow > b {
+  color: #ffffff;
+  text-align: right;
+}
+
+.compObsWaiting {
+  padding: 20px;
+  color: #bcb0b1;
+  font-size: 11px;
+  line-height: 1.6;
+  text-transform: none;
+}
+
+.compObsLeaderboard > footer {
+  padding: 13px 18px;
+  color: #96888a;
+  font-size: 9px;
+  letter-spacing: 0.11em;
+  text-align: right;
+}
+
+.compObsFooterTag {
+  position: absolute;
+  bottom: 3%;
+  right: 3%;
+  padding: 9px 12px;
+  border-left: 2px solid var(--obs-gold);
+  background: rgba(4, 4, 6, 0.87);
+  color: #d9c5c3;
+  font-size: clamp(8px, 0.65vw, 12px);
+  letter-spacing: 0.1em;
+}
+
+/* Top 3 is deliberately large for in-game camera compositions. */
+.compObsCanvas--top3 .compObsUpperLeft,
+.compObsCanvas--ticker .compObsUpperLeft {
+  display: none;
+}
+
+.compObsPodium {
+  position: absolute;
+  top: 6%;
+  right: 4%;
+  width: min(39%, 740px);
+  border: 1px solid rgba(245, 196, 81, 0.3);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(7, 5, 8, 0.96);
+}
+
+.compObsPodium > header {
+  padding: 16px 20px;
+  border-bottom: 2px solid var(--obs-gold);
+  background: rgba(245, 196, 81, 0.08);
+  color: var(--obs-gold);
+  font-size: 14px;
+  letter-spacing: 0.14em;
+}
+
+.compObsPodiumRow {
+  display: grid;
+  grid-template-columns: 65px minmax(0, 1fr) 55px 100px;
+  align-items: center;
+  gap: 12px;
+  padding: 23px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: clamp(12px, 1.15vw, 20px);
+}
+
+.compObsPodiumRow > strong {
+  color: var(--obs-gold);
+  font-size: 26px;
+}
+
+.compObsPodiumRow > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compObsPodiumRow > small {
+  color: #e1b0b3;
+  text-align: center;
+}
+
+.compObsPodiumRow > b {
+  text-align: right;
+}
+
+.compObsTicker {
+  position: absolute;
+  right: 3%;
+  bottom: 4%;
+  left: 3%;
+  display: flex;
+  align-items: stretch;
+  min-height: 84px;
+  border: 1px solid rgba(245, 196, 81, 0.3);
+  border-radius: 9px;
+  overflow: hidden;
+  background: rgba(6, 5, 8, 0.97);
+}
+
+.compObsTickerLabel {
+  display: grid;
+  place-content: center;
+  gap: 2px;
+  min-width: 105px;
+  padding: 14px 17px;
+  background: linear-gradient(135deg, #a5091b, #43060e);
+  color: #ffe2e5;
+  font-size: 12px;
+  text-align: center;
+}
+
+.compObsTickerLabel > strong {
+  color: #ffffff;
+  font-size: 20px;
+}
+
+.compObsTickerPlayer {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 12px;
+  border-right: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.compObsTickerPlayer > small {
+  color: var(--obs-gold);
+  font-size: 12px;
+}
+
+.compObsTickerPlayer > strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(10px, 0.87vw, 17px);
+}
+
+.compObsTickerPlayer > span {
+  font-size: 13px;
+}
+
+.compObsTickerRound {
+  display: grid;
+  place-items: center;
+  min-width: 140px;
+  padding: 14px;
+  color: var(--obs-gold);
+  font-size: 12px;
+}
+
+.compObsCanvas--ticker .compObsFooterTag {
+  display: none;
+}
+
+@media (max-width: 960px) {
+  .compObsUpperLeft {
+    top: 3%;
+    left: 3%;
+    max-width: 44%;
+  }
+
+  .compObsLeaderboard {
+    top: 3%;
+    right: 2%;
+    width: 50%;
+    min-width: 0;
+  }
+
+  .compObsRow {
+    grid-template-columns: 32px minmax(0, 1fr) 35px 50px;
+    gap: 5px;
+    padding: 9px;
+  }
+
+  .compObsPodium {
+    width: 65%;
+  }
+
+  .compObsTicker {
+    left: 1%;
+    right: 1%;
+  }
+
+  .compObsTickerRound {
+    display: none;
+  }
+}

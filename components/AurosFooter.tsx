@@ -166,6 +166,16 @@ export default function AurosFooter() {
 
           <div className="aurosFooterDivider" />
 
+          <div className="aurosFooterLegalNotice">
+            <strong>Created with UEFN.</strong> This is not sponsored, endorsed, or administered by Epic Games, Inc.
+          </div>
+
+          <div className="aurosFooterLegalLinks">
+            <Link href="/imprint">Legal Notice</Link>
+            <Link href="/privacy">Privacy Policy</Link>
+            <Link href="/terms">Terms of Use</Link>
+          </div>
+
           <div className="aurosFooterBottom">
             <div className="aurosFooterCopyright">
               © 2026 Auros. All rights reserved.
@@ -917,6 +927,35 @@ export default function AurosFooter() {
         }
 
 
+        .aurosFooterLegalNotice {
+          margin-bottom: 14px;
+          color: #607694;
+          font-size: 9px;
+          line-height: 1.6;
+        }
+
+        .aurosFooterLegalNotice strong {
+          color: #8298b6;
+        }
+
+        .aurosFooterLegalLinks {
+          display: flex;
+          gap: 14px;
+          flex-wrap: wrap;
+          margin-bottom: 18px;
+        }
+
+        .aurosFooterLegalLinks a {
+          color: #7187a5;
+          font-size: 9px;
+          text-decoration: none;
+          transition: color 140ms ease;
+        }
+
+        .aurosFooterLegalLinks a:hover {
+          color: #63ddff;
+        }
+
         .aurosFooterBottom {
           display:
             flex;
@@ -1187,7 +1226,36 @@ export default function AurosFooter() {
           }
 
 
-          .aurosFooterBottom {
+          .aurosFooterLegalNotice {
+          margin-bottom: 14px;
+          color: #607694;
+          font-size: 9px;
+          line-height: 1.6;
+        }
+
+        .aurosFooterLegalNotice strong {
+          color: #8298b6;
+        }
+
+        .aurosFooterLegalLinks {
+          display: flex;
+          gap: 14px;
+          flex-wrap: wrap;
+          margin-bottom: 18px;
+        }
+
+        .aurosFooterLegalLinks a {
+          color: #7187a5;
+          font-size: 9px;
+          text-decoration: none;
+          transition: color 140ms ease;
+        }
+
+        .aurosFooterLegalLinks a:hover {
+          color: #63ddff;
+        }
+
+        .aurosFooterBottom {
             align-items:
               flex-start;
 

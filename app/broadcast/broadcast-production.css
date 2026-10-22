@@ -1,0 +1,377 @@
+/* ============================================================
+   AUROS COMPETITIVE — CINEMATIC BROADCAST PRODUCTION
+   Standalone OBS Browser Source, transparent background.
+   Requires broadcast.css from the prior Broadcast V0.1 release.
+   ============================================================ */
+
+.compProductionObs {
+  --production-red: #fa293b;
+  --production-gold: #ffd37a;
+  --production-background: rgba(5, 4, 7, 0.94);
+
+  font-family: var(--font-geist-sans), Arial, sans-serif;
+  isolation: isolate;
+}
+
+.compProductionObs .compObsUpperLeft {
+  z-index: 2;
+}
+
+.compProductionObs .compObsFooterTag {
+  z-index: 2;
+}
+
+.compProductionOverlayEyebrow {
+  color: var(--production-gold);
+  font-size: clamp(12px, 1vw, 21px);
+  font-weight: 950;
+  letter-spacing: 0.22em;
+}
+
+/* ============================================================
+   PLAYER SPOTLIGHT
+   ============================================================ */
+
+.compProductionSpotlight {
+  position: absolute;
+  right: 4%;
+  top: 24%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+
+  width: min(55vw, 950px);
+  padding: 42px 48px;
+  box-sizing: border-box;
+
+  border: 1px solid rgba(252, 65, 80, 0.52);
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      115deg,
+      rgba(43, 4, 10, 0.9),
+      rgba(6, 5, 8, 0.97) 58%
+    );
+
+  box-shadow:
+    0 35px 100px rgba(0, 0, 0, 0.5),
+    0 0 70px rgba(255, 30, 53, 0.12),
+    inset 0 1px rgba(255, 230, 180, 0.1);
+
+  clip-path: polygon(
+    0 0,
+    97% 0,
+    100% 12%,
+    100% 100%,
+    3% 100%,
+    0 88%
+  );
+
+  animation: production-take-in 600ms both;
+}
+
+.compProductionSpotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+
+  background: linear-gradient(
+    to bottom,
+    var(--production-gold),
+    var(--production-red)
+  );
+
+  box-shadow: 0 0 26px rgba(255, 42, 58, 0.7);
+}
+
+.compProductionSpotlightRank {
+  color: var(--production-gold);
+  font-size: clamp(70px, 8vw, 155px);
+  font-weight: 950;
+  line-height: 1;
+  text-shadow: 0 0 40px rgba(255, 213, 113, 0.23);
+}
+
+.compProductionSpotlight h2 {
+  max-width: 100%;
+  margin: 0;
+
+  color: #ffffff;
+  font-size: clamp(28px, 3.4vw, 67px);
+  font-weight: 950;
+  line-height: 1.05;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.compProductionSpotlightStats {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  margin-top: 12px;
+}
+
+.compProductionSpotlightStats span {
+  padding: 13px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+
+  background: rgba(255, 255, 255, 0.04);
+  color: #d1c4c0;
+  font-size: clamp(11px, 0.85vw, 15px);
+}
+
+.compProductionSpotlightStats strong {
+  color: var(--production-gold);
+  font-size: 1.25em;
+}
+
+/* ============================================================
+   ROUND RESULTS REVEAL
+   ============================================================ */
+
+.compProductionReveal {
+  position: absolute;
+  inset: 19% 16% 14%;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(255, 53, 69, 0.56);
+  border-radius: 20px;
+
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgba(208, 19, 35, 0.31),
+      transparent 62%
+    ),
+    linear-gradient(
+      145deg,
+      rgba(10, 6, 8, 0.98),
+      rgba(3, 3, 4, 0.95)
+    );
+
+  box-shadow:
+    0 0 110px rgba(218, 15, 33, 0.22),
+    0 30px 100px rgba(0, 0, 0, 0.5),
+    inset 0 1px rgba(255, 255, 255, 0.08);
+
+  animation: production-reveal-entrance 800ms both;
+}
+
+.compProductionReveal::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  border-radius: 20px 20px 0 0;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      var(--production-red) 35%,
+      var(--production-gold) 50%,
+      var(--production-red) 65%,
+      transparent
+    );
+}
+
+.compProductionReveal h2 {
+  margin: 15px 0 0;
+  color: #ffffff;
+  font-size: clamp(48px, 5.7vw, 112px);
+  font-weight: 950;
+  line-height: 1;
+  text-shadow: 0 0 55px rgba(255, 35, 55, 0.23);
+}
+
+.compProductionReveal > p {
+  margin: 8px 0 24px;
+  color: #e9bd8a;
+  font-size: clamp(12px, 1.1vw, 22px);
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.compProductionRevealLeaders {
+  display: grid;
+  gap: 10px;
+  width: min(78%, 900px);
+}
+
+.compProductionRevealLeaders > div {
+  display: grid;
+  grid-template-columns: 65px minmax(0, 1fr) 120px 64px;
+  gap: 15px;
+  align-items: center;
+
+  padding: 13px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+
+  background: rgba(255, 255, 255, 0.035);
+
+  animation: production-take-in 500ms ease both;
+}
+
+.compProductionRevealLeaders > div:first-child {
+  border-color: rgba(255, 210, 123, 0.36);
+  background: rgba(255, 210, 123, 0.065);
+}
+
+.compProductionRevealLeaders strong,
+.compProductionRevealLeaders b {
+  color: var(--production-gold);
+  font-size: clamp(15px, 1.25vw, 24px);
+}
+
+.compProductionRevealLeaders span {
+  font-size: clamp(15px, 1.25vw, 23px);
+  font-weight: 900;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.compProductionRevealLeaders small {
+  color: #e1a0a5;
+  font-size: 12px;
+}
+
+/* ============================================================
+   INTERMISSION / LOWER THIRD
+   ============================================================ */
+
+.compProductionIntermission {
+  position: absolute;
+  inset: 28% 15% auto;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 13px;
+
+  padding: 50px 35px;
+  border: 1px solid rgba(255, 53, 69, 0.43);
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(52, 5, 12, 0.94),
+      rgba(6, 5, 8, 0.97) 65%
+    );
+
+  box-shadow:
+    0 20px 100px rgba(0, 0, 0, 0.45),
+    0 0 85px rgba(255, 34, 52, 0.12);
+
+  text-align: center;
+  animation: production-take-in 650ms both;
+}
+
+.compProductionIntermission h2 {
+  max-width: 100%;
+  margin: 0;
+
+  font-size: clamp(26px, 3.5vw, 75px);
+  font-weight: 950;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.compProductionIntermission p {
+  margin: 0;
+  color: #f7c887;
+  font-size: clamp(13px, 1.1vw, 24px);
+  letter-spacing: 0.13em;
+  overflow-wrap: anywhere;
+}
+
+.compProductionIntermissionStatus {
+  margin-top: 20px;
+  padding: 12px 22px;
+  border: 1px solid rgba(255, 215, 143, 0.24);
+  border-radius: 5px;
+
+  color: #e8d0bb;
+  background: rgba(255, 255, 255, 0.04);
+
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+}
+
+@keyframes production-take-in {
+  from {
+    opacity: 0;
+    transform: translateX(40px) scale(0.975);
+    filter: blur(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes production-reveal-entrance {
+  from {
+    opacity: 0;
+    transform: scale(0.90);
+    filter: blur(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compProductionSpotlight,
+  .compProductionReveal,
+  .compProductionIntermission,
+  .compProductionRevealLeaders > div {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .compProductionSpotlight {
+    width: 78vw;
+    top: 31%;
+    padding: 22px;
+  }
+
+  .compProductionReveal {
+    inset: 28% 4% 14%;
+  }
+
+  .compProductionRevealLeaders {
+    width: 95%;
+  }
+
+  .compProductionRevealLeaders > div {
+    grid-template-columns: 44px minmax(0, 1fr) 85px 40px;
+    gap: 6px;
+    padding: 9px;
+  }
+
+  .compProductionIntermission {
+    inset: 32% 5% auto;
+    padding: 30px 15px;
+  }
+}

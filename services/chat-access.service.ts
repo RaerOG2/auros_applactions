@@ -51,10 +51,15 @@ export async function signUpForChat(input: {
   password: string;
   username: string;
   displayName: string;
+  acceptedLegal: boolean;
 }) {
   const email = input.email.trim().toLowerCase();
   const username = normalizeUsername(input.username);
   const displayName = input.displayName.trim().slice(0, 32);
+
+  if (!input.acceptedLegal) {
+    throw new Error("Terms of Use and Privacy Policy must be accepted.");
+  }
 
   if (!email) throw new Error("Email is required.");
   if (!username) throw new Error("Username is required.");
@@ -79,6 +84,8 @@ export async function signUpForChat(input: {
       data: {
         username,
         display_name: displayName,
+        legal_version: "2026-10-05",
+        legal_accepted_at: new Date().toISOString(),
       },
     },
   });

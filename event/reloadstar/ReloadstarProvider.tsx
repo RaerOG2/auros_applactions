@@ -20,6 +20,7 @@ import {
 } from "./config";
 
 import type {
+  PublicReleaseInfo,
   ReloadstarPhase,
   ReloadstarRuntimeMode,
   ReloadstarSpeed,
@@ -72,8 +73,8 @@ type ReloadstarContextValue = {
 
 const ReloadstarContext =
   createContext<
-    ReloadstarContextValue
-    | null
+    ReloadstarContextValue |
+    null
   >(null);
 
 export default function ReloadstarProvider({
@@ -121,32 +122,99 @@ export default function ReloadstarProvider({
       null
     );
 
+  /*
+   * =========================================================
+   * URL / DEVELOPMENT MODE
+   * =========================================================
+   *
+   * The old Reloadstar dev URL is supported again:
+   *
+   * ?reloadstar-dev=1
+   *
+   * The dedicated event-dev URL also remains available:
+   *
+   * ?reloadstar-event-dev=1
+   *
+   * In either mode the automatic clock is disabled and the
+   * existing ReloadstarDevPanel controls the event manually.
+   */
   useEffect(() => {
     const params =
       new URLSearchParams(
         window.location.search
       );
 
-    const enabled =
+    const eventDevEnabled =
       params.get(
         "reloadstar-dev"
+      ) === "1" ||
+      params.get(
+        "reloadstar-event-dev"
       ) === "1";
 
     setDevMode(
-      enabled
+      eventDevEnabled
     );
 
-    if (enabled) {
+    if (
+      eventDevEnabled
+    ) {
+      /*
+       * Manual Event Mode:
+       * - no release clock
+       * - no automatic start
+       * - old Dev Panel has full control
+       */
       setMode(
         "development"
+      );
+
+      setRunning(
+        false
+      );
+
+      setSpeedState(
+        1
       );
 
       setEventTime(
         -1
       );
+
+      return;
     }
+
+    /*
+     * Normal production mode:
+     * the real event follows /api/release + release time.
+     */
+    setRunning(
+      false
+    );
+
+    setSpeedState(
+      1
+    );
+
+    setMode(
+      "realtime"
+    );
   }, []);
 
+  /*
+   * =========================================================
+   * REALTIME EVENT CLOCK
+   * =========================================================
+   *
+   * /api/release is the source of truth.
+   *
+   * This prevents:
+   *
+   * Release API = live_event
+   * Event Provider = inactive
+   *
+   * from ever happening again.
+   */
   useEffect(() => {
     if (
       mode !==
@@ -155,7 +223,48 @@ export default function ReloadstarProvider({
       return;
     }
 
-    function syncRealtime() {
+    let active =
+      true;
+
+    /*
+     * Difference between browser clock
+     * and server clock.
+     */
+    let serverOffsetMs =
+      0;
+
+    let synced =
+      false;
+
+    /*
+     * Local fallbacks.
+     *
+     * After the first API sync these are
+     * replaced by the API values.
+     */
+    let eventStartMs =
+      new Date(
+        RELOADSTAR_EVENT_START
+      ).getTime();
+
+    let releaseMs =
+      new Date(
+        AUROS_RELEASE_TIME
+      ).getTime();
+
+    /*
+     * Runs the event clock locally.
+     *
+     * This allows smooth eventTime updates
+     * without constantly calling the API.
+     */
+    function applyRealtime() {
+      if (
+        !active
+      ) {
+        return;
+      }
+
       if (
         !RELOADSTAR_ENABLED
       ) {
@@ -167,21 +276,19 @@ export default function ReloadstarProvider({
       }
 
       const now =
-        Date.now();
+        Date.now() +
+        (
+          synced
+            ? serverOffsetMs
+            : 0
+        );
 
-      const eventStart =
-        new Date(
-          RELOADSTAR_EVENT_START
-        ).getTime();
-
-      const release =
-        new Date(
-          AUROS_RELEASE_TIME
-        ).getTime();
-
+      /*
+       * Before DESTINY.
+       */
       if (
         now <
-        eventStart
+        eventStartMs
       ) {
         setEventTime(
           -1
@@ -190,9 +297,12 @@ export default function ReloadstarProvider({
         return;
       }
 
+      /*
+       * AUROS has released.
+       */
       if (
         now >=
-        release
+        releaseMs
       ) {
         setEventTime(
           RELOADSTAR_DURATION
@@ -201,38 +311,253 @@ export default function ReloadstarProvider({
         return;
       }
 
+      /*
+       * DESTINY is currently running.
+       */
       const seconds =
         (
           now -
-          eventStart
+          eventStartMs
         ) /
         1000;
 
       setEventTime(
-        Math.min(
-          seconds,
-          RELOADSTAR_DURATION
+        Math.max(
+          0,
+          Math.min(
+            seconds,
+            RELOADSTAR_DURATION
+          )
         )
       );
     }
 
-    syncRealtime();
+    /*
+     * Synchronize with the same API
+     * used by the release card.
+     */
+    async function syncWithReleaseApi() {
+      try {
+        const response =
+          await fetch(
+            "/api/release",
+            {
+              cache:
+                "no-store",
+            }
+          );
 
-    const interval =
+        if (
+          !response.ok
+        ) {
+          throw new Error(
+            `Release API returned ${response.status}`
+          );
+        }
+
+        const data:
+          PublicReleaseInfo =
+          await response.json();
+
+        if (
+          !active
+        ) {
+          return;
+        }
+
+        /*
+         * Synchronize client clock
+         * against Vercel/server clock.
+         */
+        const serverTimeMs =
+          new Date(
+            data.serverTime
+          ).getTime();
+
+        if (
+          Number.isFinite(
+            serverTimeMs
+          )
+        ) {
+          serverOffsetMs =
+            serverTimeMs -
+            Date.now();
+
+          synced =
+            true;
+        }
+
+        /*
+         * Take event times directly
+         * from the server response.
+         */
+        const apiEventStartMs =
+          new Date(
+            data.eventStartsAt
+          ).getTime();
+
+        const apiReleaseMs =
+          new Date(
+            data.releaseAt
+          ).getTime();
+
+        if (
+          Number.isFinite(
+            apiEventStartMs
+          )
+        ) {
+          eventStartMs =
+            apiEventStartMs;
+        }
+
+        if (
+          Number.isFinite(
+            apiReleaseMs
+          )
+        ) {
+          releaseMs =
+            apiReleaseMs;
+        }
+
+        /*
+         * IMPORTANT:
+         *
+         * Trust the API state immediately.
+         */
+
+        if (
+          data.state ===
+          "pre_release"
+        ) {
+          setEventTime(
+            -1
+          );
+
+          return;
+        }
+
+        if (
+          data.state ===
+          "released"
+        ) {
+          setEventTime(
+            RELOADSTAR_DURATION
+          );
+
+          return;
+        }
+
+        /*
+         * state === live_event
+         *
+         * Calculate the exact position
+         * in the DESTINY timeline.
+         */
+        applyRealtime();
+      } catch (
+        error
+      ) {
+        console.error(
+          "[DESTINY Runtime] Failed to sync release clock:",
+          error
+        );
+
+        /*
+         * If the API is temporarily unavailable,
+         * fall back to config + browser time.
+         */
+        applyRealtime();
+      }
+    }
+
+    /*
+     * Initial sync immediately when
+     * the website loads.
+     */
+    void syncWithReleaseApi();
+
+    /*
+     * Smooth event clock.
+     *
+     * We do NOT request the server
+     * every 100ms.
+     */
+    const clockInterval =
       window.setInterval(
-        syncRealtime,
-        250
+        applyRealtime,
+        100
       );
 
+    /*
+     * Correct clock drift and make
+     * sure API/Event state stay synced.
+     */
+    const serverSyncInterval =
+      window.setInterval(
+        () => {
+          void syncWithReleaseApi();
+        },
+        5_000
+      );
+
+    /*
+     * Immediately sync again when a
+     * user returns to the browser tab.
+     */
+    function handleVisibility() {
+      if (
+        document.visibilityState ===
+        "visible"
+      ) {
+        void syncWithReleaseApi();
+      }
+    }
+
+    function handleFocus() {
+      void syncWithReleaseApi();
+    }
+
+    window.addEventListener(
+      "focus",
+      handleFocus
+    );
+
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibility
+    );
+
     return () => {
+      active =
+        false;
+
       window.clearInterval(
-        interval
+        clockInterval
+      );
+
+      window.clearInterval(
+        serverSyncInterval
+      );
+
+      window.removeEventListener(
+        "focus",
+        handleFocus
+      );
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibility
       );
     };
   }, [
     mode,
   ]);
 
+  /*
+   * =========================================================
+   * DEVELOPMENT TIMELINE
+   * =========================================================
+   */
   useEffect(() => {
     if (
       mode !==
@@ -317,6 +642,10 @@ export default function ReloadstarProvider({
     speed,
   ]);
 
+  /*
+   * Stop the manual timeline when
+   * reaching the end.
+   */
   useEffect(() => {
     if (
       mode ===
@@ -333,6 +662,11 @@ export default function ReloadstarProvider({
     mode,
   ]);
 
+  /*
+   * =========================================================
+   * CURRENT PHASE
+   * =========================================================
+   */
   const phase =
     useMemo(
       () =>
@@ -344,6 +678,11 @@ export default function ReloadstarProvider({
       ]
     );
 
+  /*
+   * =========================================================
+   * EVENT PROGRESS
+   * =========================================================
+   */
   const progress =
     useMemo(
       () => {
@@ -364,6 +703,11 @@ export default function ReloadstarProvider({
       ]
     );
 
+  /*
+   * =========================================================
+   * DEVELOPMENT CONTROLS
+   * =========================================================
+   */
   const start =
     useCallback(
       () => {
@@ -519,6 +863,11 @@ export default function ReloadstarProvider({
       []
     );
 
+  /*
+   * =========================================================
+   * CONTEXT VALUE
+   * =========================================================
+   */
   const value =
     useMemo<
       ReloadstarContextValue
@@ -527,9 +876,12 @@ export default function ReloadstarProvider({
         mode,
         phase,
         eventTime,
+
         duration:
           RELOADSTAR_DURATION,
+
         progress,
+
         speed,
         running,
         devMode,

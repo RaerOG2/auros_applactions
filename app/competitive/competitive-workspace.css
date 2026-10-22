@@ -1,0 +1,860 @@
+/* ==============================================================
+   AUROS COMPETITIVE V3 — ONE PLATFORM / CLEAN WORKSPACE
+   This stylesheet sits AFTER the original Competitive CSS.
+   Scope: Competitive only. No changes to global AUROS styles.
+============================================================== */
+
+.aurosStandaloneCompetitive {
+  min-height: 100dvh;
+  width: 100%;
+  background: #0b0d11;
+  color: #f5f5f7;
+}
+
+.comp3Shell {
+  --comp3-bg: #0c0d11;
+  --comp3-sidebar: #111218;
+  --comp3-surface: #15171e;
+  --comp3-surface-2: #1b1e26;
+  --comp3-line: rgba(255, 255, 255, 0.085);
+  --comp3-muted: #9397a5;
+  --comp3-text: #f5f5f7;
+  --comp3-accent: #ed4254;
+  --comp3-gold: #e4b864;
+
+  display: grid;
+  grid-template-columns: 248px minmax(0, 1fr);
+  min-height: 100dvh;
+  width: 100%;
+  background: var(--comp3-bg);
+  color: var(--comp3-text);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.comp3Shell *, .comp3Shell *::before, .comp3Shell *::after {
+  box-sizing: border-box;
+}
+
+.comp3Shell button, .comp3Shell input, .comp3Shell select,
+.comp3Shell textarea, .comp3Shell a {
+  font: inherit;
+}
+
+.comp3Shell a {
+  text-decoration: none;
+}
+.comp3Shell button {
+  cursor: pointer;
+}
+.comp3Shell button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.comp3Sidebar {
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--comp3-line);
+  background: var(--comp3-sidebar);
+}
+
+.comp3Brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 88px;
+  padding: 0 22px;
+  color: #fff;
+  border-bottom: 1px solid var(--comp3-line);
+}
+
+.comp3BrandMark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border: 1px solid rgba(240, 78, 94, 0.45);
+  border-radius: 12px;
+  background: linear-gradient(145deg, #78202b, #250e15);
+  color: #ffe5e5;
+  font-size: 24px;
+  font-weight: 950;
+}
+
+.comp3BrandText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1;
+}
+.comp3BrandText strong {
+  letter-spacing: 0.17em;
+  font-size: 17px;
+}
+.comp3BrandText small {
+  color: var(--comp3-muted);
+  letter-spacing: 0.19em;
+  font-size: 9px;
+}
+.comp3SidebarScroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px 11px;
+  flex: 1;
+}
+.comp3NavSection + .comp3NavSection {
+  margin-top: 24px;
+}
+.comp3NavLabel {
+  display: block;
+  padding: 7px 12px 12px;
+  color: #747786;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+.comp3NavSection nav {
+  display: grid;
+  gap: 4px;
+}
+.comp3NavItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 43px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #a9adba;
+  font-weight: 650;
+  font-size: 12px;
+  transition: background 140ms ease, color 140ms ease;
+}
+.comp3NavItem:hover {
+  background: rgba(255, 255, 255, 0.045);
+  color: #fff;
+}
+.comp3NavItem.is-active {
+  background: rgba(237, 66, 84, 0.12);
+  border-color: rgba(237, 66, 84, 0.18);
+  color: #fff;
+}
+.comp3NavIcon {
+  display: grid;
+  place-items: center;
+  width: 19px;
+  flex: 0 0 19px;
+  font-size: 17px;
+  color: #8e92a0;
+}
+.comp3NavItem.is-active .comp3NavIcon {
+  color: #ff6573;
+}
+.comp3ActiveIndicator {
+  position: absolute;
+  right: 10px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--comp3-accent);
+}
+.comp3SidebarFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 13px 19px;
+  border-top: 1px solid var(--comp3-line);
+}
+.comp3ExitLink {
+  color: #aeb0b9;
+  font-size: 12px;
+}
+.comp3ExitLink:hover {
+  color: #fff;
+}
+.comp3Collapse {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  border: 1px solid var(--comp3-line);
+  border-radius: 7px;
+  color: #a4a6af;
+  background: transparent;
+}
+
+.comp3Main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.comp3Topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  height: 75px;
+  padding: 0 clamp(22px, 3.5vw, 56px);
+  border-bottom: 1px solid var(--comp3-line);
+  background: #111218;
+}
+.comp3TopbarLeft, .comp3TopbarRight {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+.comp3Breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #717686;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.comp3Breadcrumb strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #e8e9ed;
+  font-weight: 700;
+}
+.comp3ModeSwitch {
+  padding: 10px 14px;
+  color: #dedfe5;
+  border: 1px solid var(--comp3-line);
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.comp3ModeSwitch:hover {
+  border-color: rgba(237, 66, 84, 0.5);
+  background: rgba(237, 66, 84, 0.05);
+}
+.comp3ModeSwitch.is-active {
+  border-color: rgba(237, 66, 84, 0.35);
+}
+.comp3StatusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #bf9b58;
+  box-shadow: 0 0 0 4px rgba(191, 155, 88, 0.12);
+}
+.comp3MenuButton {
+  display: none;
+  border: 1px solid var(--comp3-line);
+  border-radius: 8px;
+  color: #fff;
+  background: #181a20;
+  width: 36px;
+  height: 36px;
+}
+.comp3Content {
+  width: 100%;
+  min-width: 0;
+  max-width: 1650px;
+  margin: 0 auto;
+  padding: 30px clamp(20px, 3.5vw, 56px) 70px;
+  flex: 1;
+}
+.comp3Footer {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 15px clamp(20px, 3.5vw, 56px);
+  border-top: 1px solid var(--comp3-line);
+  color: #707583;
+  font-size: 10px;
+  letter-spacing: 0.09em;
+}
+
+/* The entire site shares the same surfaces, fonts and spacing. */
+.comp3Shell .competitivePage {
+  color: #f3f4f7;
+  padding-bottom: 0;
+  --comp-line: var(--comp3-line);
+  --comp-muted: var(--comp3-muted);
+  --comp-text: #f5f5f7;
+  --comp-violet: #ed4254;
+  --comp-cyan: #e4b864;
+  --comp-gold: #e4b864;
+}
+.comp3Shell .competitiveHero, .comp3Shell .competitivePanel, .comp3Shell .competitiveGate,
+.comp3Shell .compV2HubCard, .comp3Shell .compV2Info {
+  border: 1px solid var(--comp3-line);
+  background: var(--comp3-surface);
+  box-shadow: none;
+  backdrop-filter: none;
+  border-radius: 14px;
+}
+.comp3Shell .competitiveHero::before {
+  display: none;
+}
+.comp3Shell .competitiveHero {
+  min-height: unset;
+  padding: 33px;
+}
+.comp3Shell .competitiveHero h1 {
+  font-size: clamp(32px, 4.1vw, 53px);
+  line-height: 1.07;
+  letter-spacing: -0.045em;
+}
+.comp3Shell .competitiveHero p {
+  color: #9da2b0;
+  line-height: 1.65;
+}
+.comp3Shell .competitivePanel {
+  padding: 22px;
+}
+.comp3Shell .competitiveNav {
+  display: none !important;
+}
+.comp3Shell .compPrimaryButton, .comp3Shell .compSecondaryButton,
+.comp3Shell .compV2SoftButton, .comp3Shell .compCreateButton,
+.comp3Shell .compV2InlineLink, .comp3Shell .compStaffEntry,
+.comp3Shell .comp3Button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  border-radius: 9px;
+  padding: 10px 15px;
+  border: 1px solid rgba(237, 66, 84, 0.28);
+  background: rgba(237, 66, 84, 0.09);
+  color: #f5f5f7;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  letter-spacing: 0.015em !important;
+  line-height: 1.35;
+  text-transform: none;
+  text-decoration: none;
+  box-shadow: none;
+}
+.comp3Shell .compPrimaryButton, .comp3Shell .compCreateButton,
+.comp3Shell .comp3Button--primary {
+  background: #ce3347;
+  border-color: #d93e51;
+  color: #fff;
+}
+.comp3Shell .compPrimaryButton:hover, .comp3Shell .comp3Button--primary:hover {
+  background: #e14859;
+}
+.comp3Shell .compSecondaryButton:hover, .comp3Shell .compV2SoftButton:hover,
+.comp3Shell .comp3Button:hover {
+  border-color: rgba(237, 66, 84, 0.55);
+  background: rgba(237, 66, 84, 0.16);
+}
+.comp3Shell .compPrimaryButton:disabled, .comp3Shell .comp3Button:disabled {
+  opacity: 0.5;
+}
+.comp3Shell .compShortcutCard, .comp3Shell .compV2HubCard, .comp3Shell .compActionCard {
+  background: var(--comp3-surface);
+  border: 1px solid var(--comp3-line);
+  border-radius: 13px;
+  box-shadow: none;
+}
+.comp3Shell .compShortcutCard:hover, .comp3Shell .compV2HubCard:hover {
+  border-color: rgba(237, 66, 84, 0.45);
+}
+.comp3Shell .compV2TitleBar h1, .comp3Shell .compCreatorTop h1 {
+  font-size: clamp(30px, 3.5vw, 45px);
+  letter-spacing: -0.045em;
+  line-height: 1.12;
+}
+.comp3Shell .compField input, .comp3Shell .compField textarea, .comp3Shell .compField select,
+.comp3Shell .compV2Field input, .comp3Shell .compV2Field select, .comp3Shell .compV2Field textarea {
+  background: #101117;
+  color: #f4f4f6;
+  border: 1px solid #353741;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 13px;
+}
+.comp3Shell .compField input:focus, .comp3Shell .compV2Field select:focus {
+  outline: 2px solid rgba(237, 66, 84, 0.45);
+  outline-offset: 1px;
+}
+.comp3Shell .competitiveMetric {
+  background: var(--comp3-surface);
+  border: 1px solid var(--comp3-line);
+  border-radius: 12px;
+}
+.comp3Shell .competitiveEyebrow {
+  color: #e4b864;
+  letter-spacing: 0.12em;
+}
+.comp3Shell .compError {
+  border-radius: 9px;
+}
+
+/* New dashboard components */
+.comp3PageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+.comp3Overline {
+  color: var(--comp3-gold);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  font-weight: 850;
+}
+.comp3PageHeader h1 {
+  margin: 7px 0 7px;
+  font-size: clamp(31px, 3.5vw, 44px);
+  font-weight: 850;
+  letter-spacing: -0.05em;
+  line-height: 1.1;
+}
+.comp3PageHeader p {
+  margin: 0;
+  max-width: 680px;
+  color: var(--comp3-muted);
+  line-height: 1.6;
+}
+.comp3Actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.comp3Cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 0 25px;
+}
+.comp3Cards--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.comp3Surface {
+  background: var(--comp3-surface);
+  border: 1px solid var(--comp3-line);
+  border-radius: 14px;
+  padding: 22px;
+}
+.comp3Stat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.comp3Stat > span {
+  color: var(--comp3-muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+.comp3Stat strong {
+  font-size: 31px;
+  line-height: 1;
+  font-weight: 850;
+  letter-spacing: -0.04em;
+}
+.comp3Columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+  gap: 14px;
+}
+.comp3SectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 19px;
+}
+.comp3SectionHeader h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+}
+.comp3Muted {
+  color: var(--comp3-muted);
+}
+.comp3List {
+  display: grid;
+  gap: 0;
+}
+.comp3ListRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 15px 0;
+  border-top: 1px solid var(--comp3-line);
+}
+.comp3ListRow:first-child {
+  border-top: none;
+  padding-top: 4px;
+}
+.comp3ListRow > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.comp3ListRow strong {
+  color: #fff;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.comp3ListRow small {
+  color: var(--comp3-muted);
+  font-size: 11px;
+}
+.comp3ListRow > a {
+  flex: 0 0 auto;
+  color: var(--comp3-gold);
+  font-size: 11px;
+  font-weight: 800;
+}
+.comp3QuickLink {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px 0;
+  border-top: 1px solid var(--comp3-line);
+  color: #fff;
+}
+.comp3QuickLink:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+.comp3QuickLink > span {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #2a2027;
+  color: #ffc3c9;
+  font-size: 17px;
+}
+.comp3QuickLink > div {
+  display: grid;
+  gap: 3px;
+}
+.comp3QuickLink strong {
+  font-size: 12px;
+}
+.comp3QuickLink small {
+  font-size: 11px;
+  color: var(--comp3-muted);
+}
+.comp3QuickLink:hover strong {
+  color: #f27f8b;
+}
+.comp3Empty {
+  padding: 25px;
+  border: 1px dashed var(--comp3-line);
+  border-radius: 10px;
+  color: var(--comp3-muted);
+}
+.comp3Badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 8px;
+  border: 1px solid rgba(228, 184, 100, 0.25);
+  border-radius: 6px;
+  background: rgba(228, 184, 100, 0.09);
+  color: #e4b864;
+  font-size: 10px;
+  font-weight: 800;
+}
+.comp3Badge--test {
+  color: #ffc9d1;
+  border-color: rgba(237, 66, 84, 0.4);
+  background: rgba(237, 66, 84, 0.13);
+}
+.comp3FormGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+}
+.comp3FormField {
+  display: grid;
+  gap: 7px;
+}
+.comp3FormField label {
+  color: #aeb0ba;
+  font-size: 11px;
+  font-weight: 750;
+}
+.comp3FormField select, .comp3FormField input {
+  display: block;
+  width: 100%;
+  height: 43px;
+  padding: 0 12px;
+  background: #0c0d13;
+  color: #fff;
+  border: 1px solid #343740;
+  border-radius: 9px;
+}
+.comp3FormField select:focus, .comp3FormField input:focus {
+  outline: 2px solid rgba(237,66,84,.44);
+  outline-offset: 1px;
+}
+.comp3Helper {
+  color: #9397a5;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.comp3RehearsalPreview {
+  padding: 22px;
+  border: 1px solid rgba(228,184,100,.24);
+  background: linear-gradient(135deg,#241b1c,#101219);
+  border-radius: 13px;
+}
+.comp3PreviewWatermark {
+  color: #e4b864;
+  font-size: 10px;
+  letter-spacing: .12em;
+  font-weight: 950;
+}
+.comp3PreviewRows {
+  margin-top: 17px;
+  display: grid;
+}
+.comp3PreviewRow {
+  display: grid;
+  grid-template-columns: 42px minmax(0,1fr) 60px 76px;
+  gap: 10px;
+  padding: 11px 0;
+  border-top: 1px solid rgba(255,255,255,.09);
+  font-size: 12px;
+}
+.comp3PreviewRow > span:last-child {
+  text-align: right;
+  color: #e4b864;
+  font-weight: 850;
+}
+.comp3PreviewRow > span:first-child {
+  color: #e4b864;
+  font-weight: 850;
+}
+.comp3DangerNote {
+  padding: 13px 16px;
+  border: 1px solid rgba(228,184,100,.26);
+  border-radius: 9px;
+  background: rgba(228,184,100,.065);
+  color: #f1d6a0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.comp3Shell--compact {
+  grid-template-columns: 78px minmax(0,1fr);
+}
+.comp3Shell--compact .comp3Sidebar .comp3BrandText,
+.comp3Shell--compact .comp3Sidebar .comp3NavLabel,
+.comp3Shell--compact .comp3Sidebar .comp3NavItem > span:not(.comp3NavIcon),
+.comp3Shell--compact .comp3Sidebar .comp3ExitLink span {
+  display: none;
+}
+.comp3Shell--compact .comp3Sidebar .comp3Brand {
+  padding: 0 18px;
+}
+.comp3Shell--compact .comp3Sidebar .comp3NavItem {
+  justify-content: center;
+}
+.comp3Shell--compact .comp3Sidebar .comp3SidebarFooter {
+  padding: 14px 7px;
+}
+.comp3Shell--compact .comp3Sidebar .comp3ExitLink {
+  padding-left: 8px;
+}
+
+@media (max-width: 1050px) {
+  .comp3Cards--four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .comp3Cards {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+  .comp3Columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 780px) {
+  .comp3Shell, .comp3Shell--compact {
+    display: block;
+  }
+  .comp3Sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 265px;
+    transform: translateX(-100%);
+    transition: transform 180ms ease;
+  }
+  .comp3Sidebar.is-open {
+    transform: translateX(0);
+  }
+  .comp3Shell--compact .comp3Sidebar .comp3BrandText,
+  .comp3Shell--compact .comp3Sidebar .comp3NavLabel,
+  .comp3Shell--compact .comp3Sidebar .comp3NavItem > span:not(.comp3NavIcon) {
+    display: initial;
+  }
+  .comp3Shell--compact .comp3Sidebar .comp3NavItem {
+    justify-content: flex-start;
+  }
+  .comp3MobileScrim {
+    position: fixed;
+    inset: 0;
+    z-index: 79;
+    border: 0;
+    background: rgba(0,0,0,.72);
+  }
+  .comp3Topbar {
+    height: 64px;
+    padding: 0 16px;
+  }
+  .comp3MenuButton {
+    display: grid;
+    place-items: center;
+  }
+  .comp3Content {
+    padding: 23px 15px 55px;
+  }
+  .comp3ModeSwitch {
+    font-size: 10px;
+    padding: 9px;
+  }
+  .comp3Breadcrumb {
+    font-size: 10px;
+    gap: 6px;
+  }
+  .comp3Shell .competitiveHero, .comp3Shell .competitivePanel {
+    padding: 19px;
+  }
+  .comp3Cards {
+    grid-template-columns: 1fr;
+  }
+  .comp3Cards--four {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  .comp3FormGrid {
+    grid-template-columns: 1fr;
+  }
+  .comp3Footer {
+    padding: 14px 15px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .comp3Sidebar, .comp3Shell .comp3NavItem {
+    transition: none;
+  }
+}
+
+/* Creator, scoring, registry and race control inherit this typography. */
+.comp3Shell .compV2TitleBar, .comp3Shell .compCreatorTop {
+  margin-bottom: 22px;
+}
+.comp3Shell .compV2Chips button,
+.comp3Shell .compV2Search,
+.comp3Shell .compControlTabs a,
+.comp3Shell .compControlTabs span {
+  font-family: inherit !important;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  font-weight: 700;
+}
+.comp3Shell .compV2Chips button {
+  border-radius: 8px;
+}
+.comp3Shell .compPublicEventTile {
+  border-radius: 11px;
+  background: #181a21;
+  box-shadow: none;
+}
+.comp3Shell .compEventHero {
+  border: 1px solid var(--comp3-line);
+  background: var(--comp3-surface);
+  box-shadow: none;
+  border-radius: 14px;
+}
+.comp3Shell .compV2DataRow {
+  border-bottom-color: var(--comp3-line);
+}
+.comp3Shell .compCreatorSide .compSticky {
+  position: sticky;
+  top: 22px;
+}
+
+/* Critical: remove the legacy FIXED page-layer backgrounds. Without this,
+   scrolling between Competitive sections shows visible background seams. */
+.comp3Shell .competitivePage {
+  min-height: 0;
+  padding-top: 0;
+  overflow: visible;
+  isolation: auto;
+  background: transparent;
+}
+.comp3Shell .competitivePage::before,
+.comp3Shell .competitivePage::after,
+.comp3Shell .competitiveHero::after,
+.comp3Shell .compCreatorTop::after,
+.comp3Shell .competitiveOpsHeader::after {
+  content: none !important;
+  display: none !important;
+}
+
+.comp3TournamentFilters {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 19px;
+}
+.comp3Chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.comp3Chips button {
+  border: 1px solid var(--comp3-line);
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: #101117;
+  color: #a6a9b4;
+  font-size: 12px;
+  font-weight: 750;
+}
+.comp3Chips button.is-active, .comp3Chips button:hover {
+  background: rgba(237,66,84,.14);
+  border-color: rgba(237,66,84,.45);
+  color: #fff;
+}
+.comp3SearchField {
+  min-width: 245px;
+}
+.comp3Badge--subtle {
+  color: #a7abb7;
+  background: #22242b;
+  border-color: var(--comp3-line);
+}
+.comp3TournamentRow {
+  padding: 18px 0;
+}
+.comp3TournamentRow > .comp3Actions {
+  align-self: center;
+}
+@media (max-width: 780px) { .comp3SearchField { width: 100%; } .comp3TournamentRow { flex-direction: column; align-items: flex-start; } }

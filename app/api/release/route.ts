@@ -6,11 +6,10 @@ import {
   AUROS_RELEASE_TIME,
   RELOADSTAR_ENABLED,
   RELOADSTAR_EVENT_START,
-  //getAurosIslandCode,
-  //getReleaseState,
 } from "../../../event/reloadstar/config";
 
 import type {
+  AurosReleaseState,
   PublicReleaseInfo,
 } from "../../../event/reloadstar/types";
 
@@ -18,35 +17,82 @@ import type {
 export const dynamic =
   "force-dynamic";
 
+export const revalidate =
+  0;
+
+
+function getReleaseState(
+  now: Date
+): AurosReleaseState {
+  const nowMs =
+    now.getTime();
+
+  const eventStartMs =
+    new Date(
+      RELOADSTAR_EVENT_START
+    ).getTime();
+
+  const releaseMs =
+    new Date(
+      AUROS_RELEASE_TIME
+    ).getTime();
+
+
+  if (
+    nowMs >=
+    releaseMs
+  ) {
+    return "released";
+  }
+
+
+  if (
+    RELOADSTAR_ENABLED &&
+    nowMs >=
+      eventStartMs
+  ) {
+    return "live_event";
+  }
+
+
+  return "pre_release";
+}
+
+
+function getReleasedIslandCode() {
+  const code =
+    process.env.AUROS_ISLAND_CODE?.trim();
+
+  return code || null;
+}
+
 
 export async function GET() {
   const now =
     new Date();
 
-  const //state =
-    //getReleaseState(now);
+  const state =
+    getReleaseState(
+      now
+    );
 
 
   /*
    * SECURITY:
    *
-   * The island code is ONLY attached once the
-   * release state has actually reached "released".
-   *
-   * During pre_release and live_event the value
-   * sent to the browser is null.
+   * AUROS_ISLAND_CODE is a server-only environment variable.
+   * It is never included in the response before 20:00.
    */
+  const islandCode =
+    state === "released"
+      ? getReleasedIslandCode()
+      : null;
 
-  //const islandCode =
-    //state === "released"
-      //? //getAurosIslandCode()
-      //: null;
 
-
-  //const response:
+  const response:
     PublicReleaseInfo =
   {
-    //state,
+    state,
 
     releaseAt:
       AUROS_RELEASE_TIME,
@@ -57,7 +103,7 @@ export async function GET() {
     serverTime:
       now.toISOString(),
 
-    //islandCode,
+    islandCode,
 
     event: {
       devName:
@@ -70,11 +116,17 @@ export async function GET() {
 
 
   return NextResponse.json(
-    //response,
+    response,
     {
       headers: {
         "Cache-Control":
-          "no-store, no-cache, must-revalidate",
+          "no-store, no-cache, must-revalidate, proxy-revalidate",
+
+        Pragma:
+          "no-cache",
+
+        Expires:
+          "0",
       },
     }
   );

@@ -7,6 +7,7 @@ import {
 import AurosBackground from "./AurosBackground";
 import AurosTopbar from "./AurosTopbar";
 import AurosFooter from "./AurosFooter";
+import CompetitiveBackground from "./competitive/CompetitiveBackground";
 
 
 type PageKey =
@@ -16,8 +17,10 @@ type PageKey =
   | "gallery"
   | "patchnotes"
   | "status"
+  | "developers"
   | "faq"
   | "contact"
+  | "competitive"
   | "admin"
   | "dev"
   | "login";
@@ -50,12 +53,46 @@ export default function AurosSiteShell({
      fullscreen application layout.
   ========================================================= */
 
+  const isCompetitiveRoute =
+    pathname === "/competitive" ||
+    pathname.startsWith("/competitive/");
+
+
+  const isBroadcastRoute =
+    pathname === "/broadcast" ||
+    pathname.startsWith(
+      "/broadcast/"
+    );
+
+
   const isChatRoute =
     pathname === "/chat" ||
     pathname.startsWith(
       "/chat/"
     );
 
+
+  /*
+   * Dedicated OBS browser-source presentation.
+   * No website background, topbar, footer or max-width wrapper.
+   * Access is controlled by the public-only broadcast RPC.
+   */
+  if (
+    isBroadcastRoute
+  ) {
+    return (
+      <main className="aurosStandaloneBroadcast">
+        {children}
+      </main>
+    );
+  }
+
+
+  /* All Competitive routes use a purpose-built, responsive workspace.
+     The public website and OBS remain unchanged. */
+  if (isCompetitiveRoute) {
+    return <div className="aurosStandaloneCompetitive competitiveTheme">{children}</div>;
+  }
 
   if (
     isChatRoute
@@ -164,6 +201,10 @@ export default function AurosSiteShell({
         )
       ? "status"
       : pathname.startsWith(
+          "/developers"
+        )
+      ? "developers"
+      : pathname.startsWith(
           "/faq"
         )
       ? "faq"
@@ -171,6 +212,10 @@ export default function AurosSiteShell({
           "/contact"
         )
       ? "contact"
+      : pathname.startsWith(
+          "/competitive"
+        )
+      ? "competitive"
       : pathname.startsWith(
           "/dev"
         )
@@ -187,8 +232,8 @@ export default function AurosSiteShell({
 
 
   return (
-    <>
-      <AurosBackground />
+    <div className={isCompetitiveRoute ? "aurosSiteShell competitiveTheme" : "aurosSiteShell"}>
+      {isCompetitiveRoute ? <CompetitiveBackground /> : <AurosBackground />}
 
 
       <main className="aurosSiteMain">
@@ -322,6 +367,6 @@ export default function AurosSiteShell({
           }
         }
       `}</style>
-    </>
+    </div>
   );
 }

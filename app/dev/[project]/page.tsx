@@ -92,6 +92,18 @@ function moduleHref(
   }
 
 
+  if (
+    title ===
+      "concepts" ||
+    title ===
+      "concept" ||
+    title ===
+      "concept lab"
+  ) {
+    return `/dev/${projectSlug}/concepts`;
+  }
+
+
   return null;
 }
 
@@ -338,7 +350,22 @@ export default function DevProjectPage() {
 
 
           <div className="devProjectModuleGrid">
-            {project.modules.map(
+            {[
+              ...project.modules,
+              ...(project.modules.some(
+                (module) =>
+                  module.title.trim().toLowerCase() === "concepts"
+              )
+                ? []
+                : [
+                    {
+                      title: "Concepts",
+                      description:
+                        "Capture seasons, events, gameplay ideas and experiments before they enter production.",
+                      status: "ready" as const,
+                    },
+                  ]),
+            ].map(
               (
                 module
               ) => {

@@ -43,6 +43,13 @@ const DEFAULT_MODULES: DevProjectModule[] = [
   },
 
   {
+    title: "Concepts",
+    description:
+      "Capture seasons, events, gameplay ideas and experiments before they enter production.",
+    status: "ready",
+  },
+
+  {
     title: "Notes",
     description:
       "Store internal ideas, decisions and project development notes.",

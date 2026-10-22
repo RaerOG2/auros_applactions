@@ -14,6 +14,8 @@ import {
   getReloadstarPhaseStart,
 } from "./config";
 
+const RELEASE_VIDEO_URL =
+  "/event/reloadstar/video/auros-release.mp4";
 
 export default function ReloadstarOverlay() {
   const {
@@ -125,7 +127,9 @@ export default function ReloadstarOverlay() {
 
       {phase ===
         "release_video" && (
-        <ReleaseVideo />
+        <ReleaseVideo
+          phaseTime={phaseTime}
+        />
       )}
 
 
@@ -575,7 +579,7 @@ function ScreenDischarges({
    NEXUSPOINT
 ========================================================= */
 
-function Nexuspoint({
+export function Nexuspoint({
   unstable =
     false,
 }: {
@@ -1080,22 +1084,202 @@ function TerminalLine({
    VIDEO
 ========================================================= */
 
-function ReleaseVideo() {
+function ReleaseVideo({
+  phaseTime,
+}: {
+  phaseTime: number;
+}) {
+  const videoRef =
+    useRef<HTMLVideoElement | null>(
+      null
+    );
+
+
+  useEffect(() => {
+    const syncVideo = () => {
+      /*
+       * IMPORTANT:
+       *
+       * Read the ref inside the callback.
+       * This keeps TypeScript happy because
+       * the callback may execute later.
+       */
+      const video =
+        videoRef.current;
+
+
+      if (
+        !video
+      ) {
+        return;
+      }
+
+
+      const duration =
+        Number.isFinite(
+          video.duration
+        ) &&
+        video.duration > 0
+          ? video.duration
+          : 60;
+
+
+      const targetTime =
+        Math.max(
+          0,
+          Math.min(
+            phaseTime,
+            Math.max(
+              0,
+              duration - 0.05
+            )
+          )
+        );
+
+
+      const drift =
+        Math.abs(
+          video.currentTime -
+            targetTime
+        );
+
+
+      /*
+       * Only correct meaningful drift.
+       */
+      if (
+        drift >
+        1.25
+      ) {
+        try {
+          video.currentTime =
+            targetTime;
+        } catch {
+          // Metadata may not be ready yet.
+        }
+      }
+
+
+      /*
+       * Try normal playback first.
+       */
+      if (
+        video.paused
+      ) {
+        void video
+          .play()
+          .catch(() => {
+            /*
+             * Browser blocked autoplay
+             * with sound.
+             *
+             * Fall back to muted playback.
+             */
+            const currentVideo =
+              videoRef.current;
+
+
+            if (
+              !currentVideo
+            ) {
+              return;
+            }
+
+
+            currentVideo.muted =
+              true;
+
+
+            void currentVideo
+              .play()
+              .catch(() => {
+                // Ignore autoplay rejection.
+              });
+          });
+      }
+    };
+
+
+    const video =
+      videoRef.current;
+
+
+    if (
+      !video
+    ) {
+      return;
+    }
+
+
+    if (
+      video.readyState >= 1
+    ) {
+      syncVideo();
+    } else {
+      video.addEventListener(
+        "loadedmetadata",
+        syncVideo,
+        {
+          once: true,
+        }
+      );
+    }
+
+
+    return () => {
+      video.removeEventListener(
+        "loadedmetadata",
+        syncVideo
+      );
+    };
+  }, [
+    phaseTime,
+  ]);
+
+
+  function enableVideoAudio() {
+    const video =
+      videoRef.current;
+
+
+    if (
+      !video
+    ) {
+      return;
+    }
+
+
+    video.muted =
+      false;
+
+
+    void video
+      .play()
+      .catch(() => {
+        // Ignore browser playback rejection.
+      });
+  }
+
+
   return (
-    <div className="reloadstarPlaceholder">
-      <div>
-        <small>
-          RELOADSTAR
-        </small>
+    <div className="reloadstarReleaseVideo">
+      <video
+        ref={videoRef}
+        src={RELEASE_VIDEO_URL}
+        autoPlay
+        playsInline
+        preload="auto"
+        controls={false}
+        onClick={
+          enableVideoAudio
+        }
+      />
 
-        <strong>
-          RELEASE VIDEO
-        </strong>
 
-        <span>
-          Video asset will be connected here.
-        </span>
-      </div>
+      <div
+        className="reloadstarReleaseVideoShade"
+        aria-hidden="true"
+      />
     </div>
   );
 }

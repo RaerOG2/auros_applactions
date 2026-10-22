@@ -13,6 +13,10 @@ import { useRouter } from "next/navigation";
 
 import { supabase } from "../lib/supabase";
 import { getSiteAccess } from "../services/access.service";
+import { getFeatureFlagByKey } from "../services/feature-flag.service";
+import { canAccessFeature } from "../lib/feature-access";
+import { FEATURE_FLAGS } from "../lib/feature-flags";
+import { useReloadstar } from "../event/reloadstar/ReloadstarProvider";
 
 type PageKey =
   | "home"
@@ -21,8 +25,10 @@ type PageKey =
   | "gallery"
   | "patchnotes"
   | "status"
+  | "developers"
   | "faq"
   | "contact"
+  | "competitive"
   | "admin"
   | "dev"
   | "login";
@@ -73,6 +79,11 @@ const mainNav: NavItem[] = [
     href: "/status",
     key: "status",
   },
+  {
+    label: "Competitive",
+    href: "/competitive",
+    key: "competitive",
+  },
 ];
 
 export default function AurosTopbar({
@@ -82,6 +93,9 @@ export default function AurosTopbar({
 }) {
   const router =
     useRouter();
+
+  const { phase } =
+    useReloadstar();
 
   const [
     isLoggedIn,
@@ -96,6 +110,11 @@ export default function AurosTopbar({
   const [
     isDev,
     setIsDev,
+  ] = useState(false);
+
+  const [
+    canSeeCompetitive,
+    setCanSeeCompetitive,
   ] = useState(false);
 
   const [
@@ -159,6 +178,48 @@ export default function AurosTopbar({
         const access =
           await getSiteAccess();
 
+        let competitiveAllowed =
+          access.isAdmin;
+
+        if (
+          !competitiveAllowed
+        ) {
+          try {
+            const competitiveFlag =
+              await getFeatureFlagByKey(
+                FEATURE_FLAGS.COMPETITIVE
+              );
+
+            competitiveAllowed =
+              canAccessFeature(
+                competitiveFlag,
+                {
+                  isLoggedIn:
+                    !!access.user,
+
+                  isBeta:
+                    access.isBeta,
+
+                  isDev:
+                    access.isDev,
+
+                  isAdmin:
+                    access.isAdmin,
+                }
+              );
+          } catch (
+            featureError
+          ) {
+            console.error(
+              "Competitive feature flag lookup failed:",
+              featureError
+            );
+
+            competitiveAllowed =
+              false;
+          }
+        }
+
         if (!alive) {
           return;
         }
@@ -178,6 +239,10 @@ export default function AurosTopbar({
 
         setIsDev(
           access.isDev
+        );
+
+        setCanSeeCompetitive(
+          competitiveAllowed
         );
 
         if (!access.user) {
@@ -207,6 +272,10 @@ export default function AurosTopbar({
           );
 
           setIsDev(
+            false
+          );
+
+          setCanSeeCompetitive(
             false
           );
 
@@ -343,6 +412,10 @@ export default function AurosTopbar({
         false
       );
 
+      setCanSeeCompetitive(
+        false
+      );
+
       router.push(
         "/"
       );
@@ -367,8 +440,17 @@ export default function AurosTopbar({
   ========================================== */
 
   const navItems: NavItem[] = [
-    ...mainNav,
+    ...mainNav.filter(
+      (item) =>
+        item.key !==
+          "competitive" ||
+        canSeeCompetitive
+    ),
   ];
+
+  if (phase === "released") {
+    navItems.push({ label: "Developers", href: "/developers", key: "developers" });
+  }
 
   if (isDev) {
     navItems.push({
@@ -463,15 +545,6 @@ export default function AurosTopbar({
     });
   }
 
-  useLayoutEffect(() => {
-    updateIndicator();
-  }, [
-    current,
-    isAdmin,
-    isDev,
-    isLoggedIn,
-  ]);
-
   useEffect(() => {
     let frame:
       | number
@@ -532,6 +605,7 @@ export default function AurosTopbar({
     isAdmin,
     isDev,
     isLoggedIn,
+    canSeeCompetitive,
   ]);
 
   return (
